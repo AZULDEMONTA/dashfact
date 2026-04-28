@@ -771,6 +771,7 @@ export default function App(){
   const[saveProgress,setSaveProgress]=useState(0)
   const[saveMsg,setSaveMsg]=useState("")
   const[activeTab,setActiveTab]=useState("resumen")
+  const[fileKey,setFileKey]=useState(0)
   const fileRef=useRef()
   const[fYear,setFYear]=useState("__ALL__")
   const[fMes,setFMes]=useState("__ALL__")
@@ -804,7 +805,7 @@ export default function App(){
       setRawHeaders(json[0]?.map(s => String(s).trim()) ?? [])
       setRawRows(json.slice(1).filter(r=>r.some(c=>c!=="")))
     }
-    reader.readAsArrayBuffer(file);e.target.value=""
+    reader.readAsArrayBuffer(file);setFileKey(k=>k+1)
   },[])
 
   const handleMappingConfirm=useCallback((mapping,pet=true)=>{
@@ -974,7 +975,7 @@ export default function App(){
             <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
             {hasData&&<button onClick={handleClear} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${BORDER}`,borderRadius:6,color:MUTED,cursor:"pointer",fontSize:11}}>Limpiar</button>}
             <button onClick={()=>fileRef.current?.click()} style={{padding:"6px 14px",background:CYAN,border:"none",borderRadius:6,color:"#000",cursor:"pointer",fontWeight:700,fontSize:12}}>↑ Importar Excel</button>
-            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
+            <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
           </div>
         </div>
         {storageInfo&&(
@@ -1004,7 +1005,7 @@ export default function App(){
             Los datos se guardan en Supabase y quedan disponibles para todos.
           </div>
           <button onClick={()=>fileRef.current?.click()} style={{marginTop:24,padding:"10px 28px",background:CYAN,border:"none",borderRadius:8,color:"#000",cursor:"pointer",fontWeight:700,fontSize:14}}>↑ Importar Excel</button>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
+          <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
         </div>
       ):(
         <>
