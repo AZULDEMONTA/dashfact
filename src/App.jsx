@@ -134,6 +134,12 @@ const toPeriod=(y,m)=>y*100+m
 const periodLabel=(p,short=false)=>{const y=Math.floor(p/100),m=p%100;return short?`${MESES[m]?.slice(0,3)} ${y}`:`${MESES[m]} ${y}`}
 
 const LOGO_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEF0lEQVR4nO1WXWhcRRT+zrl/m8ZEGmpJk6a2IbFQQUIjSA0VimAj2FqDK0bBR31RRBDNJo3TpU3NFhR9sBCVFqxI01CQKhIf7EMREooiQoNik5jSNO0mWJq/3ezeO3N8uEtd0+puuuqL+eA+3JnhnO/75pzDAKtYxcpBue9/h1MWAGyojz23saHr+fy1UsDFHx0RpRT7gYlns4ESEQJGpFQCRULZAFDbGGtbt6lb1tXtl5rNHXvz9+4UxTpglFLsZ0y3GG0EYnxj3oIIATD/MgFlA3Hz8Wd6n4HXRDAM0Szwmmu2xPYAcVNKLRTjQKg+G3QCjlg2Prcs+hJwxTfSVWotFOhnZQPxoLY+1pYJ7NMEEW+NfoBhe+mUfCcguI7/5NRY75nQhWf0SgkUKiCjlOKjx9OdwBohLAxO/py4AADrN3ecFbNml+9nY0Q4IzJCtxbk/QIMANiWc+iA5DTfdOxvHAjVV9fH2oLAPg0JjOfpliujR4YBodr6jl2ZwP2G4MBxUs9OjfX2r1R9IQKsFHD0ePq8oGI708JX05cSewDlAPEsAKzf9OYxtiq2M6eGAfpEB3IfM9UITCVDiC1OQfCb7fK0Y1vXIp6V3FClZ3bswI14PG6Av7yCUH3fiVibwGsmLCESsQ8DECCe3fpwomIxOdcSaIiRRVdn5TFifhQwSRH6AYwLwjQuLEmb3DkjfoYylq/LtclkkC3CgXz1lc3M8yenJxLttY3dDwW+eUEbaWcuX2v0wg3LorPMVkqMP3ttovflf+AK8u/eOS0SLLquxHSAnSJulNgDzMKP7PC7TY2z/T9N3rVlcZZGQC5bdvqJ5Hjka+C6BVT5Ybz48hb90//tCLBSwAfH0t8DXpMgkybAI17LkPmLjkPdV8d7+kX+OH9PXfoLocpWyPzQzOXEToKicEAVxrJBFE69vhPpfaBIk5iMD7HKQB4zLbx3d7Xz4NRYT78IKOz78Lzj8iFICiC3ZWN9Z+tKpuPySWgAxYFP3SLagNgm5pRrB+3JiZ7XRs/H53K9LuHQiQdA1Joa6x1i0oOAC1/rrpBgcdMxj0CopnrL0lMgt0lEE7M1VxbB7qnxt0/mElOY9FaUOe4hSNoYcVvqtnbtLtaFfAeMUoqNYL8Y0Uzke16w9/IvPd8CLzq5xLdRNaCBqHVp7OAQkx4keJJZ8mPhXmEXOF/9R59mnxZT1sSWa9m26Zy8mDgH9DnAh36hQADguNZBkTQJIo9U3/vG48W4wAAIOKBbW9/3tMbrIEpanDqS/DXxTkjspSKSD2hA8ZXRw8NEwSmQsxgIvRqNRq1CLtxsw23blDtPQZ1Xbs+ExbZiEAA0NLzi3shWVBmT5uuTlVeLbcdliJb82LxDKAak1Dc/hTFKjrOK/wa/A3rQ7dfNECyuAAAAAElFTkSuQmCC"
+const BG="#141d77",CARD="rgba(255,255,255,0.07)",CARD2="rgba(255,255,255,0.04)",BORDER="rgba(255,255,255,0.12)",TEXT="#FFFFFF",MUTED="rgba(255,255,255,0.55)"
+const BRAND="#ffffff",BRAND2="#e8eaf6",BRANDBG="rgba(255,255,255,0.1)"
+const CYAN="#7CB9FF",CORAL="#FF8A80",MINT="#69F0AE",PURPLE="#CE93D8",GOLD="#FFD54F",ORANGE="#FFAB40",BLUE="#7CB9FF",VIOLET="#CE93D8",TEAL="#4DD0E1"
+const RENT_COLOR={Alta:"#69F0AE",Media:"#FFAB40",Baja:"#FF8A80","Sin dato":"rgba(255,255,255,0.4)"}
+const RENT_BG={Alta:"rgba(105,240,174,0.15)",Media:"rgba(255,171,64,0.15)",Baja:"rgba(255,138,128,0.15)","Sin dato":"rgba(255,255,255,0.05)"}
+const VENDOR_COLORS=["#7CB9FF","#69F0AE","#CE93D8","#FFAB40","#FF8A80","#4DD0E1","#FFD54F","#B39DDB","#80CBC4","#EF9A9A","#A5D6A7","#90CAF9"]
 const BG="#F4F5F7",CARD="#FFFFFF",CARD2="#F0F2F5",BORDER="#DDE1E7",TEXT="#1A2332",MUTED="#6B7A8D"
 const BRAND="#141d77",BRAND2="#1e2da0",BRANDBG="#EEF0FA"
 const CYAN="#2B5FA5",CORAL="#C0392B",MINT="#1A7A5E",PURPLE="#5B4A9E",GOLD="#B8860B",ORANGE="#B8721A",BLUE="#2B5FA5",VIOLET="#5B4A9E",TEAL="#1A6B7A"
@@ -143,10 +149,11 @@ const VENDOR_COLORS=["#2B5FA5","#1A7A5E","#5B4A9E","#B8721A","#C0392B","#1A6B7A"
 
 function RentBadge({nivel}){const n=nivel||"Sin dato";return<span style={{color:RENT_COLOR[n],fontSize:10,padding:"2px 8px",background:RENT_BG[n],borderRadius:20,whiteSpace:"nowrap",fontWeight:600}}>{n}</span>}
 function KpiCard({icon,label,value,sub,accent}){return(
-  <div style={{flex:1,minWidth:150,background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"14px 16px",position:"relative",overflow:"hidden",borderTop:`3px solid ${accent}`}}>
+  <div style={{flex:1,minWidth:150,background:"rgba(255,255,255,0.10)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,padding:"14px 16px",position:"relative",overflow:"hidden",backdropFilter:"blur(10px)"}}>
+    <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:accent,opacity:0.8}}/>
     <div style={{fontSize:16,marginBottom:5}}>{icon}</div>
-    <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:3}}>{label}</div>
-    <div style={{fontSize:20,fontWeight:500,color:TEXT,lineHeight:1,wordBreak:"break-word"}}>{value}</div>
+    <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:"rgba(255,255,255,0.5)",marginBottom:3}}>{label}</div>
+    <div style={{fontSize:20,fontWeight:500,color:"#ffffff",lineHeight:1,wordBreak:"break-word"}}>{value}</div>
     {sub&&<div style={{fontSize:11,color:accent,fontWeight:500,marginTop:4}}>{sub}</div>}
   </div>
 )}
@@ -163,9 +170,9 @@ function Dropdown({label,value,options,onChange}){
   )
 }
 function MetricToggle({value,onChange}){return(
-  <div style={{display:"flex",background:CARD2,border:`1px solid ${BORDER}`,borderRadius:8,padding:3,gap:3}}>
+  <div style={{display:"flex",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:3,gap:3}}>
     {["pesos","unidades"].map(v=>(
-      <button key={v} onClick={()=>onChange(v)} style={{padding:"5px 14px",background:value===v?CARD:"transparent",border:`1px solid ${value===v?BORDER:"transparent"}`,borderRadius:6,color:value===v?TEXT:MUTED,cursor:"pointer",fontSize:12,fontWeight:value===v?600:400}}>
+      <button key={v} onClick={()=>onChange(v)} style={{padding:"5px 14px",background:value===v?"rgba(255,255,255,0.15)":"transparent",border:`1px solid ${value===v?"rgba(255,255,255,0.2)":"transparent"}`,borderRadius:6,color:value===v?TEXT:MUTED,cursor:"pointer",fontSize:12,fontWeight:value===v?600:400}}>
         {v==="pesos"?"$ Pesos":"📦 Unidades"}
       </button>
     ))}
@@ -181,7 +188,7 @@ function SaveBar({stage,progress,msg}){
         <span style={{fontSize:11,color}}>{label.slice(0,60)}</span>
         {stage!=="error"&&stage!=="saved"&&<span style={{fontSize:10,color:MUTED}}>{progress}%</span>}
       </div>
-      {stage!=="error"&&<div style={{height:4,background:BORDER,borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${progress}%`,background:stage==="saved"?MINT:CYAN,borderRadius:2,transition:"width 0.35s ease"}}/></div>}
+      {stage!=="error"&&<div style={{height:4,background:"rgba(255,255,255,0.15)",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${progress}%`,background:stage==="saved"?MINT:CYAN,borderRadius:2,transition:"width 0.35s ease"}}/></div>}
     </div>
   )
 }
@@ -198,7 +205,7 @@ function MappingModal({headers,onConfirm,onCancel}){
           <div key={key} style={{display:"flex",alignItems:"center",gap:10,marginBottom:9}}>
             <span style={{color:req?CYAN:MUTED,width:130,fontSize:12,flexShrink:0}}>{label}{req?" *":""}</span>
             <select value={mapping[key]||""} onChange={e=>setMapping(m=>({...m,[key]:e.target.value||undefined}))}
-              style={{flex:1,background:mapping[key]?"#1f2937":BG,border:`1px solid ${mapping[key]?CYAN:BORDER}`,borderRadius:6,color:mapping[key]?TEXT:MUTED,padding:"5px 9px",fontSize:12,outline:"none"}}>
+              style={{flex:1,background:mapping[key]?"rgba(255,255,255,0.15)":"rgba(0,0,0,0.2)",border:`1px solid ${mapping[key]?"rgba(255,255,255,0.5)":"rgba(255,255,255,0.15)"}`,borderRadius:6,color:mapping[key]?TEXT:MUTED,padding:"5px 9px",fontSize:12,outline:"none"}}>
               <option value="">— no mapear —</option>
               {headers.map(h=><option key={h} value={h}>{h}</option>)}
             </select>
@@ -227,7 +234,7 @@ function ConfirmImportModal({stats,onConfirm,onCancel}){
   const{rows,ventas,unidades,hasCantidad,periods,existingRows,cubeKB}=stats
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
-      <div style={{background:CARD,border:`2px solid ${CYAN}40`,borderRadius:14,padding:32,width:480,maxWidth:"96vw"}}>
+      <div style={{background:"#1a2580",border:"2px solid rgba(255,255,255,0.2)",borderRadius:14,padding:32,width:480,maxWidth:"96vw"}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
           <span style={{fontSize:22}}>📋</span>
           <div><div style={{fontSize:16,fontWeight:800,color:TEXT}}>Confirmar importación</div><div style={{fontSize:12,color:MUTED}}>Revisá los datos antes de agregar</div></div>
@@ -235,7 +242,7 @@ function ConfirmImportModal({stats,onConfirm,onCancel}){
         <div style={{height:1,background:BORDER,margin:"16px 0"}}/>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
           {[["Filas a importar",fmtN(rows),CYAN],["Importe total",fmtM(ventas),ORANGE],...(hasCantidad?[["Unidades",fmtU(unidades),MINT]]:[]),["Períodos",String(periods.length),PURPLE]].map(([l,v,c])=>(
-            <div key={l} style={{background:BG,border:`1px solid ${BORDER}`,borderRadius:8,padding:"12px 14px"}}>
+            <div key={l} style={{background:"rgba(0,0,0,0.2)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"12px 14px"}}>
               <div style={{fontSize:10,color:MUTED,textTransform:"uppercase",letterSpacing:1.5,marginBottom:4}}>{l}</div>
               <div style={{fontSize:26,fontWeight:800,color:c}}>{v}</div>
             </div>
@@ -286,7 +293,7 @@ function DualRanking({title,data,colorPesos,colorUnid,totalVentas,totalUnidades,
   const valFn=d=>metric==="pesos"?fmtM(d.ventas):fmtU(d.cantidad)
   const shown=expanded?sorted:sorted.slice(0,limit)
   return(
-    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px",flex:1,minWidth:280}}>
+    <div style={{background:"rgba(255,255,255,0.09)",border:"1px solid rgba(255,255,255,0.13)",borderRadius:10,padding:"16px 18px",flex:1,minWidth:280}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <div><span style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>{title}</span><span style={{fontSize:11,color:MUTED,marginLeft:8}}>{data.length} cat.</span></div>
         {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
@@ -299,7 +306,7 @@ function DualRanking({title,data,colorPesos,colorUnid,totalVentas,totalUnidades,
             <span style={{fontSize:12,fontWeight:700,color,whiteSpace:"nowrap"}}>{valFn(d)}</span>
             <span style={{fontSize:11,color:MUTED,width:38,textAlign:"right"}}>{fmtPct(total>0?(metric==="pesos"?d.ventas:d.cantidad)/total*100:0)}</span>
           </div>
-          <div style={{height:3,background:BORDER,borderRadius:2,marginLeft:24}}>
+          <div style={{height:3,background:"rgba(255,255,255,0.1)",borderRadius:2,marginLeft:24}}>
             <div style={{height:"100%",width:`${(metric==="pesos"?d.ventas:d.cantidad)/maxV*100}%`,background:color,borderRadius:2}}/>
           </div>
         </div>
@@ -320,7 +327,7 @@ function DetailTab({data,hasCantidad,totalVentas,totalUnidades,dimLabel,colorPes
   const valFn=d=>metric==="pesos"?fmtM(d.ventas):fmtU(d.cantidad)
   const shown=expanded?sorted:sorted.slice(0,15)
   return(
-    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px"}}>
+    <div style={{background:"rgba(255,255,255,0.09)",border:"1px solid rgba(255,255,255,0.13)",borderRadius:10,padding:"16px 18px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <div><span style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Ranking por {dimLabel}</span><span style={{fontSize:11,color:MUTED,marginLeft:8}}>{data.length} {dimLabel.toLowerCase()}s</span></div>
         {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
@@ -334,7 +341,7 @@ function DetailTab({data,hasCantidad,totalVentas,totalUnidades,dimLabel,colorPes
             <span style={{fontSize:11,color:MUTED,width:38,textAlign:"right"}}>{fmtPct(total>0?(metric==="pesos"?d.ventas:d.cantidad)/total*100:0)}</span>
             {hasCantidad&&<span style={{fontSize:11,color:MUTED,minWidth:60,textAlign:"right",whiteSpace:"nowrap"}}>{metric==="pesos"?`${fmtU(d.cantidad)} u.`:fmtM(d.ventas)}</span>}
           </div>
-          <div style={{height:3,background:BORDER,borderRadius:2,marginLeft:26}}>
+          <div style={{height:3,background:"rgba(255,255,255,0.1)",borderRadius:2,marginLeft:26}}>
             <div style={{height:"100%",width:`${(metric==="pesos"?d.ventas:d.cantidad)/maxV*100}%`,background:color,borderRadius:2}}/>
           </div>
         </div>
@@ -351,7 +358,7 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas}){
   const sorted=metric==="pesos"?[...data].sort((a,b)=>b.precio-a.precio):[...data].sort((a,b)=>b.cantidad-a.cantidad)
   const shown=expanded?sorted:sorted.slice(0,10)
   return(
-    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px"}}>
+    <div style={{background:"rgba(255,255,255,0.09)",border:"1px solid rgba(255,255,255,0.13)",borderRadius:10,padding:"16px 18px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <div><span style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Por Artículo</span><span style={{fontSize:11,color:MUTED,marginLeft:8}}>{data.length} artículos</span></div>
         {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
@@ -359,10 +366,10 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas}){
       <div style={{overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
           <thead><tr>{["#","Artículo","$ Ventas",...(hasCantidad?["Unidades"]:[]),...(hasRentabilidad?["Rentabilidad"]:[]),"Part. %"].map(h=>(
-            <th key={h} style={{padding:"6px 8px",textAlign:h==="Artículo"?"left":"right",color:MUTED,fontSize:10,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap"}}>{h}</th>
+            <th key={h} style={{padding:"6px 8px",textAlign:h==="Artículo"?"left":"right",color:MUTED,fontSize:10,textTransform:"uppercase",letterSpacing:1,borderBottom:'1px solid rgba(255,255,255,0.12)',whiteSpace:"nowrap"}}>{h}</th>
           ))}</tr></thead>
           <tbody>{shown.map((d,i)=>(
-            <tr key={d.name} onMouseEnter={e=>e.currentTarget.style.background=CARD2} onMouseLeave={e=>e.currentTarget.style.background="transparent"} style={{borderBottom:`1px solid #1a1f2a`}}>
+            <tr key={d.name} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.06)'} onMouseLeave={e=>e.currentTarget.style.background="transparent"} style={{borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
               <td style={{padding:"8px",color:MUTED,fontSize:11,textAlign:"right",width:24}}>{i+1}</td>
               <td style={{padding:"8px",color:TEXT,maxWidth:180,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.name}</td>
               <td style={{padding:"8px",color:CYAN,textAlign:"right",fontWeight:600}}>{fmtM(d.precio)}</td>
@@ -386,7 +393,7 @@ function RentabilidadSection({data,artData,hasCantidad}){
       {["Alta","Media","Baja"].map(n=>{
         const d=data.find(x=>x.name===n)
         return(
-          <div key={n} style={{flex:1,minWidth:150,background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"14px 16px",position:"relative",overflow:"hidden"}}>
+          <div key={n} style={{flex:1,minWidth:150,background:"rgba(255,255,255,0.09)",border:"1px solid rgba(255,255,255,0.13)",borderRadius:10,padding:"14px 16px",position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:RENT_COLOR[n]}}/>
             <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:6}}>Rent. {n}</div>
             <div style={{fontSize:24,fontWeight:800,color:RENT_COLOR[n]}}>{d?fmtM(d.ventas):"$0"}</div>
@@ -455,17 +462,17 @@ function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
       </div>
 
       {/* Ranking con búsqueda */}
-      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px"}}>
+      <div style={{background:"rgba(255,255,255,0.09)",border:"1px solid rgba(255,255,255,0.13)",borderRadius:10,padding:"18px 20px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
           <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,fontWeight:600}}>Ranking de clientes ({cliList.length})</div>
           <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..." style={{background:CARD2,border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,padding:"5px 10px",fontSize:12,outline:"none",width:180}}/>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..." style={{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6,color:"#fff",padding:"5px 10px",fontSize:12,outline:"none",width:180}}/>
             {meta?.hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
           </div>
         </div>
         {filtered.map((c,i)=>(
           <div key={c.name} onClick={()=>setSel(sel===c.name?null:c.name)}
-            style={{marginBottom:10,cursor:"pointer",padding:"10px 12px",borderRadius:8,border:`1px solid ${sel===c.name?TEAL:BORDER}`,background:sel===c.name?TEAL+"11":"transparent",transition:"all .15s"}}>
+            style={{marginBottom:10,cursor:"pointer",padding:"10px 12px",borderRadius:8,border:`1px solid ${sel===c.name?'rgba(255,255,255,0.3)':'rgba(255,255,255,0.1)'}`,background:sel===c.name?'rgba(255,255,255,0.12)':'transparent',transition:"all .15s"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
               <span style={{fontSize:11,color:MUTED,width:24,textAlign:"right",flexShrink:0}}>{cliList.indexOf(c)+1}.</span>
               <div style={{width:8,height:8,borderRadius:"50%",background:c.color,flexShrink:0}}/>
@@ -476,7 +483,7 @@ function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
               <span style={{fontSize:11,color:MUTED,minWidth:56,textAlign:"right"}}>{fmtN(c.rows)} ops.</span>
               {c.periodos>0&&<span style={{fontSize:11,color:MUTED,minWidth:50,textAlign:"right"}}>{c.periodos} per.</span>}
             </div>
-            <div style={{height:4,background:BORDER,borderRadius:2,marginLeft:42}}>
+            <div style={{height:4,background:"rgba(255,255,255,0.1)",borderRadius:2,marginLeft:42}}>
               <div style={{height:"100%",width:`${(metric==="pesos"?c.ventas:c.cantidad)/maxV*100}%`,background:TEAL,borderRadius:2,opacity:.8}}/>
             </div>
 
@@ -547,7 +554,7 @@ function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
 
       {/* Evolución mes a mes */}
       {perData.length>0&&(
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px"}}>
+        <div style={{background:"rgba(255,255,255,0.09)",border:"1px solid rgba(255,255,255,0.13)",borderRadius:10,padding:"18px 20px"}}>
           <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14,fontWeight:600}}>Evolución de top clientes por período</div>
           {perData.map(per=>(
             <div key={per.p} style={{marginBottom:14}}>
@@ -556,7 +563,7 @@ function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
                 <div key={c.name} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
                   <div style={{width:8,height:8,borderRadius:"50%",background:c.color,flexShrink:0}}/>
                   <span style={{fontSize:11,color:MUTED,width:160,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</span>
-                  <div style={{flex:1,height:6,background:BORDER,borderRadius:3}}><div style={{height:"100%",width:`${val/perMax*100}%`,background:c.color,borderRadius:3,opacity:.8}}/></div>
+                  <div style={{flex:1,height:6,background:"rgba(255,255,255,0.1)",borderRadius:3}}><div style={{height:"100%",width:`${val/perMax*100}%`,background:c.color,borderRadius:3,opacity:.8}}/></div>
                   <span style={{fontSize:11,fontWeight:600,color:c.color,minWidth:64,textAlign:"right"}}>{fmtM(val)}</span>
                   <span style={{fontSize:10,color:MUTED,minWidth:40,textAlign:"right"}}>{fmtPct(per.total>0?val/per.total*100:0)}</span>
                 </div>
@@ -567,7 +574,7 @@ function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
       )}
 
       {/* Barra de participación */}
-      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px"}}>
+      <div style={{background:"rgba(255,255,255,0.09)",border:"1px solid rgba(255,255,255,0.13)",borderRadius:10,padding:"18px 20px"}}>
         <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14,fontWeight:600}}>Participación de clientes</div>
         <div style={{display:"flex",height:28,borderRadius:6,overflow:"hidden",gap:1}}>
           {cliList.map(c=><div key={c.name} title={`${c.name}: ${fmtM(c.ventas)} (${fmtPct(totalVentas>0?c.ventas/totalVentas*100:0)})`} style={{flex:c.ventas,background:c.color,minWidth:2,opacity:.85}}/>)}
@@ -607,11 +614,11 @@ function VendedoresTab({filteredRecords,meta,totalVentas,totalUnidades}){
         {vendList[0]&&<KpiCard icon="🏆" label="Líder de ventas" value={vendList[0].name} sub={`${fmtM(vendList[0].ventas)} — ${fmtPct(totalVentas>0?vendList[0].ventas/totalVentas*100:0)}`} accent={GOLD}/>}
         {vendList.length>1&&<KpiCard icon="📉" label="Menor performance" value={vendList[vendList.length-1].name} sub={fmtM(vendList[vendList.length-1].ventas)} accent={CORAL}/>}
       </div>
-      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px"}}>
+      <div style={{background:"rgba(255,255,255,0.09)",border:"1px solid rgba(255,255,255,0.13)",borderRadius:10,padding:"18px 20px"}}>
         <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14,fontWeight:600}}>Ranking de vendedores</div>
         {vendList.map((v,i)=>(
           <div key={v.name} onClick={()=>setSel(sel===v.name?null:v.name)}
-            style={{marginBottom:12,cursor:"pointer",padding:"10px 12px",borderRadius:8,border:`1px solid ${sel===v.name?v.color:BORDER}`,background:sel===v.name?v.color+"11":"transparent",transition:"all .15s"}}>
+            style={{marginBottom:12,cursor:"pointer",padding:"10px 12px",borderRadius:8,border:`1px solid ${sel===v.name?'rgba(255,255,255,0.3)':'rgba(255,255,255,0.1)'}`,background:sel===v.name?'rgba(255,255,255,0.12)':'transparent',transition:"all .15s"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
               <span style={{fontSize:12,color:MUTED,width:22,textAlign:"right",flexShrink:0}}>{i+1}.</span>
               <div style={{width:8,height:8,borderRadius:"50%",background:v.color,flexShrink:0}}/>
@@ -621,7 +628,7 @@ function VendedoresTab({filteredRecords,meta,totalVentas,totalUnidades}){
               {meta?.hasCantidad&&<span style={{fontSize:11,color:MINT,minWidth:60,textAlign:"right"}}>{fmtU(v.cantidad)} u.</span>}
               <span style={{fontSize:11,color:MUTED,minWidth:64,textAlign:"right"}}>{fmtN(v.rows)} ops.</span>
             </div>
-            <div style={{height:4,background:BORDER,borderRadius:2,marginLeft:40}}>
+            <div style={{height:4,background:"rgba(255,255,255,0.1)",borderRadius:2,marginLeft:40}}>
               <div style={{height:"100%",width:`${v.ventas/maxV2*100}%`,background:v.color,borderRadius:2,opacity:.85}}/>
             </div>
             {sel===v.name&&(
@@ -692,12 +699,12 @@ function EvolucionTab({filteredRecords,meta}){
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
       <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {dims.map(d=><button key={d.key} onClick={()=>setDim(d.key)} style={{padding:"5px 14px",background:dim===d.key?d.color+"22":"transparent",border:`1px solid ${dim===d.key?d.color:BORDER}`,borderRadius:6,color:dim===d.key?d.color:MUTED,cursor:"pointer",fontSize:12,fontWeight:600}}>{d.label}</button>)}
+          {dims.map(d=><button key={d.key} onClick={()=>setDim(d.key)} style={{padding:"5px 14px",background:dim===d.key?"rgba(255,255,255,0.15)":"transparent",border:`1px solid ${dim===d.key?"rgba(255,255,255,0.4)":"rgba(255,255,255,0.1)"}`,borderRadius:6,color:dim===d.key?"#fff":"rgba(255,255,255,0.45)",cursor:"pointer",fontSize:12,fontWeight:600}}>{d.label}</button>)}
         </div>
         {meta?.hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
       </div>
       {periods.length>0&&(
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px"}}>
+        <div style={{background:"rgba(255,255,255,0.09)",border:"1px solid rgba(255,255,255,0.13)",borderRadius:10,padding:"18px 20px"}}>
           <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14}}>Evolución total por período</div>
           <div style={{display:"flex",gap:6,alignItems:"flex-end",height:110,overflowX:"auto"}}>
             {periodTotals.map((pt,i)=>{
@@ -715,19 +722,19 @@ function EvolucionTab({filteredRecords,meta}){
         </div>
       )}
       {periods.length>0&&entities.length>0&&(
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px",overflowX:"auto"}}>
+        <div style={{background:"rgba(255,255,255,0.09)",border:"1px solid rgba(255,255,255,0.13)",borderRadius:10,padding:"18px 20px",overflowX:"auto"}}>
           <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14}}>Tabla período a período — {activeDim?.label}</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:520}}>
             <thead><tr>
-              <th style={{padding:"6px 10px",textAlign:"left",color:MUTED,fontSize:10,textTransform:"uppercase",borderBottom:`1px solid ${BORDER}`,minWidth:130}}>{activeDim?.label?.replace(/s$/,"")}</th>
-              {periods.map(p=><th key={p} style={{padding:"6px 8px",textAlign:"right",color:MUTED,fontSize:10,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap",minWidth:88}}>{periodLabel(p,true)}</th>)}
-              <th style={{padding:"6px 8px",textAlign:"right",color:MUTED,fontSize:10,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap"}}>Total</th>
+              <th style={{padding:"6px 10px",textAlign:"left",color:MUTED,fontSize:10,textTransform:"uppercase",borderBottom:'1px solid rgba(255,255,255,0.12)',minWidth:130}}>{activeDim?.label?.replace(/s$/,"")}</th>
+              {periods.map(p=><th key={p} style={{padding:"6px 8px",textAlign:"right",color:MUTED,fontSize:10,borderBottom:'1px solid rgba(255,255,255,0.12)',whiteSpace:"nowrap",minWidth:88}}>{periodLabel(p,true)}</th>)}
+              <th style={{padding:"6px 8px",textAlign:"right",color:MUTED,fontSize:10,borderBottom:'1px solid rgba(255,255,255,0.12)',whiteSpace:"nowrap"}}>Total</th>
             </tr></thead>
             <tbody>
               {entities.slice(0,20).map(entity=>{
                 const tot=Object.values(matrix[entity]).reduce((s,x)=>s+(metric==="pesos"?x.ventas:x.cantidad),0)
                 return(
-                  <tr key={entity} onMouseEnter={e=>e.currentTarget.style.background=CARD2} onMouseLeave={e=>e.currentTarget.style.background="transparent"} style={{borderBottom:`1px solid #1a1f2a`}}>
+                  <tr key={entity} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.06)'} onMouseLeave={e=>e.currentTarget.style.background="transparent"} style={{borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
                     <td style={{padding:"8px 10px",color:TEXT,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:130}}>{entity}</td>
                     {periods.map((p,pi)=>{const val=valFn(entity,p),pct=momPct(entity,pi);return(
                       <td key={p} style={{padding:"8px",textAlign:"right",verticalAlign:"top"}}>
@@ -740,7 +747,7 @@ function EvolucionTab({filteredRecords,meta}){
                   </tr>
                 )
               })}
-              <tr style={{borderTop:`2px solid ${BORDER}`,background:CARD2}}>
+              <tr style={{borderTop:"2px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.08)"}}>
                 <td style={{padding:"8px 10px",color:TEXT,fontWeight:700,fontSize:12}}>TOTAL</td>
                 {periodTotals.map((pt,i)=>{const prev=i>0?periodTotals[i-1].val:null,pct=prev&&prev>0?((pt.val-prev)/prev)*100:null;return(
                   <td key={pt.p} style={{padding:"8px",textAlign:"right",verticalAlign:"top"}}>
@@ -961,7 +968,7 @@ export default function App(){
 
   return(
     <div style={{background:BG,minHeight:"100vh",color:TEXT,fontFamily:"system-ui,-apple-system,sans-serif"}}>
-      <div style={{background:CARD,borderBottom:`1px solid ${BORDER}`,padding:"10px 16px"}}>
+      <div style={{background:CARD,borderBottom:'1px solid rgba(255,255,255,0.12)',padding:"10px 16px"}}>
         <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginRight:12}}>
             <img src={LOGO_SRC} style={{height:28,width:28,objectFit:"contain",filter:"brightness(0) invert(1)"}} alt="Azul de Montaña"/>
@@ -1009,7 +1016,7 @@ export default function App(){
         <div style={{textAlign:"center",padding:"100px 20px"}}>
           <img src={LOGO_SRC} style={{height:52,width:52,objectFit:"contain",marginBottom:12,opacity:0.3}} alt="logo"/>
           <div style={{fontSize:16,fontWeight:500,color:TEXT,marginBottom:8}}>Sin datos cargados</div>
-          <div style={{fontSize:13,color:MUTED,lineHeight:1.9}}>
+          <div style={{fontSize:13,color:"rgba(255,255,255,0.55)",lineHeight:1.9}}>
             Importá un Excel con columnas: FECHA, VENTA, CLIENTE, ARTICULO, CANTIDAD, RUBRO, PROVEEDOR, EMPRESA, RENTABILIDAD, VENDEDOR, PROVINCIA.<br/>
             Los datos se guardan en Supabase y quedan disponibles para todos.
           </div>
@@ -1018,10 +1025,10 @@ export default function App(){
         </div>
       ):(
         <>
-          <div style={{background:"#fff",borderBottom:"1px solid #DDE1E7",padding:"0 16px",display:"flex",gap:0,overflowX:"auto",boxShadow:"0 1px 3px rgba(0,0,0,0.06)"}}>
+          <div style={{background:"rgba(255,255,255,0.06)",borderBottom:"1px solid rgba(255,255,255,0.1)",padding:"0 16px",display:"flex",gap:0,overflowX:"auto"}}>
             {tabs.map(t=>(
               <button key={t.key} onClick={()=>setActiveTab(t.key)}
-                style={{padding:"12px 18px",background:"transparent",border:"none",borderBottom:`2px solid ${safeTab===t.key?BRAND:"transparent"}`,color:safeTab===t.key?BRAND:MUTED,cursor:"pointer",fontSize:13,fontWeight:safeTab===t.key?600:400,whiteSpace:"nowrap"}}>
+                style={{padding:"12px 18px",background:"transparent",border:"none",borderBottom:`2px solid ${safeTab===t.key?"rgba(255,255,255,0.9)":"transparent"}`,color:safeTab===t.key?"#ffffff":"rgba(255,255,255,0.45)",cursor:"pointer",fontSize:13,fontWeight:safeTab===t.key?500:400,whiteSpace:"nowrap"}}>
                 {t.label}
               </button>
             ))}
@@ -1038,7 +1045,7 @@ export default function App(){
                   {topVend&&          <KpiCard icon="⭐" label="Top Vendedor"  value={topVend.name}         sub={fmtM(topVend.ventas)} accent={CORAL}/>}
                   {topPcia&&          <KpiCard icon="📍" label="Top Provincia" value={topPcia.name}         sub={fmtM(topPcia.ventas)} accent={BLUE}/>}
                 </div>
-                <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.8,color:"#8A9AB5",marginBottom:12,fontWeight:500}}>Comparativa general</div>
+                <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.8,color:"rgba(255,255,255,0.45)",marginBottom:12,fontWeight:500}}>Comparativa general</div>
                 <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:12}}>
                   {cliData.length>0&&  <DualRanking title="Por Cliente"   data={cliData}   colorPesos={TEAL}   colorUnid={MINT}   totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={meta?.hasCantidad} compact/>}
                   {provData.length>0&& <DualRanking title="Por Proveedor" data={provData}  colorPesos={CYAN}   colorUnid={BLUE}   totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={meta?.hasCantidad} compact/>}
