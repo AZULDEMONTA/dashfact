@@ -3,7 +3,7 @@ import * as XLSX from "xlsx"
 import { dbGet, dbSet, dbDelete } from "./lib/supabase.js"
 
 const SK="cube",AK="arts",MK="meta"
-const CAT_FIELDS=["proveedor","rubro","vendedor","rentabilidad","provincia","cliente","empresa"]
+const CAT_FIELDS=["proveedor","rubro","vendedor","rentabilidad","provincia","cliente","empresa","localidad","zona"]
 
 function compressCube(cube){
   const tables={}
@@ -19,6 +19,8 @@ function compressCube(cube){
     r.provincia    !=null?(ix.provincia[r.provincia]       ??-1):-1,
     r.cliente      !=null?(ix.cliente[r.cliente]           ??-1):-1,
     r.empresa      !=null?(ix.empresa[r.empresa]           ??-1):-1,
+    r.localidad    !=null?(ix.localidad[r.localidad]       ??-1):-1,
+    r.zona         !=null?(ix.zona[r.zona]                 ??-1):-1,
   ])
   return{tables,rows}
 }
@@ -32,6 +34,8 @@ function decompressCube({tables,rows}){
     provincia:    r[10]>=0?tables.provincia[r[10]]   :null,
     cliente:      r[11]>=0?tables.cliente[r[11]]     :null,
     empresa:      r[12]>=0?tables.empresa[r[12]]     :null,
+    localidad:    r[13]>=0?tables.localidad[r[13]]   :null,
+    zona:         r[14]>=0?tables.zona[r[14]]         :null,
   }))
 }
 function compressArts(arts){return arts.map(a=>[a.name,Math.round(a.precio),a.cantidad,Math.round(a.costo),a.rows,a.rentabilidad??null])}
@@ -40,8 +44,8 @@ function decompressArts(rows){return rows.map(r=>({name:r[0],precio:r[1],cantida
 function buildCube(rawRecords){
   const cm={},am={}
   for(const r of rawRecords){
-    const ck=`${r.y}|${r.m}|${r.proveedor??''}|${r.rubro??''}|${r.vendedor??''}|${r.rentabilidad??''}|${r.provincia??''}|${r.cliente??''}|${r.empresa??''}`
-    if(!cm[ck]) cm[ck]={y:r.y,m:r.m,precio:0,cantidad:0,costo:0,rows:0,proveedor:r.proveedor,rubro:r.rubro,vendedor:r.vendedor,rentabilidad:r.rentabilidad,provincia:r.provincia,cliente:r.cliente,empresa:r.empresa}
+    const ck=`${r.y}|${r.m}|${r.proveedor??''}|${r.rubro??''}|${r.vendedor??''}|${r.rentabilidad??''}|${r.provincia??''}|${r.cliente??''}|${r.empresa??''}|${r.localidad??''}|${r.zona??''}`
+    if(!cm[ck]) cm[ck]={y:r.y,m:r.m,precio:0,cantidad:0,costo:0,rows:0,proveedor:r.proveedor,rubro:r.rubro,vendedor:r.vendedor,rentabilidad:r.rentabilidad,provincia:r.provincia,cliente:r.cliente,empresa:r.empresa,localidad:r.localidad,zona:r.zona}
     const c=cm[ck];c.precio+=r.precio;c.cantidad+=r.cantidad;c.costo+=r.costo;c.rows++
     if(r.articulo){
       if(!am[r.articulo]) am[r.articulo]={name:r.articulo,precio:0,cantidad:0,costo:0,rows:0,rentabilidad:r.rentabilidad}
@@ -53,7 +57,7 @@ function buildCube(rawRecords){
 function mergeCubes(a,b){
   const m={}
   const add=r=>{
-    const k=`${r.y}|${r.m}|${r.proveedor??''}|${r.rubro??''}|${r.vendedor??''}|${r.rentabilidad??''}|${r.provincia??''}|${r.cliente??''}|${r.empresa??''}`
+    const k=`${r.y}|${r.m}|${r.proveedor??''}|${r.rubro??''}|${r.vendedor??''}|${r.rentabilidad??''}|${r.provincia??''}|${r.cliente??''}|${r.empresa??''}|${r.localidad??''}|${r.zona??''}`
     if(!m[k]) m[k]={...r};else{m[k].precio+=r.precio;m[k].cantidad+=r.cantidad;m[k].costo+=r.costo;m[k].rows+=r.rows}
   }
   a.forEach(add);b.forEach(add);return Object.values(m)
@@ -84,14 +88,16 @@ const CAMPOS=[
   {key:"precio",      label:"Venta",        req:true,  syn:["venta","precio","price","importe","total","monto","pvta","pventa","ingreso","venta neta"]},
   {key:"cantidad",    label:"Cantidad",     req:false, syn:["cantidad","qty","cant","unidades","q","unid"]},
   {key:"costo",       label:"Costo",        req:false, syn:["costo","cost","cto","pcosto"]},
-  {key:"cliente",     label:"Cliente",      req:false, syn:["cliente","client","cte","razon_social","razon social","razonsocial"]},
+  {key:"cliente",     label:"Cliente",      req:false, syn:["cliente","client","cte"]},
   {key:"empresa",     label:"Empresa",      req:false, syn:["empresa","company","dempresa"]},
   {key:"proveedor",   label:"Proveedor",    req:false, syn:["proveedor","supplier","supp","prov","dgrupo"]},
   {key:"rubro",       label:"Rubro",        req:false, syn:["rubro","drubro","categoria","categoría","cat","linea","grupo"]},
   {key:"articulo",    label:"Artículo",     req:false, syn:["articulo","artículo","producto","item","descripcion","art"]},
   {key:"vendedor",    label:"Vendedor",     req:false, syn:["vendedor","seller","vend","comercial"]},
   {key:"rentabilidad",label:"Rentabilidad", req:false, syn:["rentabilidad","rent","rentab","nivel","tier","tipo rentabilidad","tiporentabilidad"]},
-  {key:"provincia",   label:"Provincia",    req:false, syn:["provincia","region","región","localidad","zona","sucursal"]},
+  {key:"provincia",   label:"Provincia",    req:false, syn:["provincia","region","región"]},
+  {key:"localidad",   label:"Localidad",    req:false, syn:["localidad","localidad","ciudad"]},
+  {key:"zona",        label:"Zona",         req:false, syn:["zona","sucursal","canal","area","área"]},
 ]
 function autoMap(headers){
   const map={}
@@ -775,6 +781,8 @@ export default function App(){
   const[fPcia,setFPcia]=useState("__ALL__")
   const[fCliente,setFCliente]=useState("__ALL__")
   const[fEmpresa,setFEmpresa]=useState("__ALL__")
+  const[fZona,setFZona]=useState("__ALL__")
+  const[fLocalidad,setFLocalidad]=useState("__ALL__")
 
   useEffect(()=>{
     const t0=Date.now()
@@ -819,6 +827,7 @@ export default function App(){
       hasVendedor:has("vendedor"),hasCantidad:has("cantidad"),hasProvincia:has("provincia"),
       hasRentabilidad:has("rentabilidad"),hasCosto:has("costo"),
       hasCliente:has("cliente"),hasEmpresa:has("empresa"),
+      hasLocalidad:has("localidad"),hasZona:has("zona"),
       precioEsTotal:pet,mappedCols:mapping
     }
     const parsed=rawRows.map(row=>{
@@ -840,6 +849,8 @@ export default function App(){
         provincia: has("provincia")?(String(get(row,"provincia")??"").trim()||"Sin provincia"):null,
         cliente:   has("cliente")  ?(String(get(row,"cliente")  ??"").trim()||"Sin cliente")  :null,
         empresa:   has("empresa")  ?(String(get(row,"empresa")  ??"").trim()||"Sin empresa")  :null,
+        localidad: has("localidad")?(String(get(row,"localidad")??"").trim()||"Sin localidad"):null,
+        zona:      has("zona")     ?(String(get(row,"zona")     ??"").trim()||"Sin zona")     :null,
       }
     }).filter(r=>r.y>0||r.precio>0)
     const{cube:nc,articulos:na}=buildCube(parsed)
@@ -897,6 +908,8 @@ export default function App(){
     if(fPcia!=="__ALL__"   &&r.provincia    !==fPcia)           return false
     if(fCliente!=="__ALL__"&&r.cliente      !==fCliente)        return false
     if(fEmpresa!=="__ALL__"&&r.empresa      !==fEmpresa)        return false
+    if(fZona!=="__ALL__"   &&r.zona         !==fZona)           return false
+    if(fLocalidad!=="__ALL__"&&r.localidad  !==fLocalidad)      return false
     return true
   })
 
@@ -920,6 +933,7 @@ export default function App(){
   const vendData=meta?.hasVendedor?groupBy(filtered,"vendedor"):[]
   const rentData=meta?.hasRentabilidad?groupBy(filtered,"rentabilidad"):[]
   const pciaData=meta?.hasProvincia?groupBy(filtered,"provincia"):[]
+  const zonaData=meta?.hasZona?groupBy(filtered,"zona"):[]
   const cliData=meta?.hasCliente?groupBy(filtered,"cliente"):[]
   const artData=meta?.hasArticulo?[...(articulos||[])].sort((a,b)=>b.precio-a.precio):[]
   const topProv=provData[0],topVend=vendData[0],topPcia=pciaData[0],topCli=cliData[0]
@@ -934,6 +948,7 @@ export default function App(){
     ...((meta?.hasProveedor||meta?.hasRubro||meta?.hasVendedor||meta?.hasCliente)?[{key:"evolucion",label:"📅 Mes a Mes"}]:[]),
     ...(meta?.hasArticulo?   [{key:"articulos",    label:"Artículos"}]      :[]),
     ...(meta?.hasRentabilidad?[{key:"rentabilidad",label:"Rentabilidad"}]   :[]),
+    ...(meta?.hasZona?       [{key:"zonas",        label:"Zonas"}]          :[]),
     ...(meta?.hasProvincia?  [{key:"provincias",   label:"Provincias"}]     :[]),
   ]
   const safeTab=tabs.find(t=>t.key===activeTab)?activeTab:"resumen"
@@ -947,13 +962,14 @@ export default function App(){
           </div>
           {yearsDisp.length>1&&<Dropdown label="AÑO" value={fYear} options={yearsDisp.map(y=>({val:String(y),label:String(y)}))} onChange={v=>{setFYear(v);setFMes("__ALL__")}}/>}
           <Dropdown label="MES" value={fMes} options={mesesDisp.map(m=>({val:String(m),label:MESES[m]??`Mes ${m}`}))} onChange={setFMes}/>
-          {meta?.hasEmpresa&&    <Dropdown label="EMPRESA"      value={fEmpresa} options={uniq("empresa")}      onChange={setFEmpresa}/>}
-          {meta?.hasCliente&&    <Dropdown label="CLIENTE"      value={fCliente} options={uniq("cliente")}      onChange={setFCliente}/>}
-          {meta?.hasProveedor&&  <Dropdown label="PROVEEDOR"    value={fProv}    options={uniq("proveedor")}    onChange={setFProv}/>}
-          {meta?.hasRubro&&      <Dropdown label="RUBRO"        value={fRubro}   options={uniq("rubro")}        onChange={setFRubro}/>}
-          {meta?.hasVendedor&&   <Dropdown label="VENDEDOR"     value={fVend}    options={uniq("vendedor")}     onChange={setFVend}/>}
-          {meta?.hasRentabilidad&&<Dropdown label="RENTABILIDAD" value={fRentab} options={["Alta","Media","Baja"]} onChange={setFRentab}/>}
-          {meta?.hasProvincia&&  <Dropdown label="PROVINCIA"    value={fPcia}    options={uniq("provincia")}    onChange={setFPcia}/>}
+          {meta?.hasEmpresa&&    <Dropdown label="EMPRESA"      value={fEmpresa}   options={uniq("empresa")}      onChange={setFEmpresa}/>}
+          {meta?.hasCliente&&    <Dropdown label="CLIENTE"      value={fCliente}   options={uniq("cliente")}      onChange={setFCliente}/>}
+          {meta?.hasProveedor&&  <Dropdown label="PROVEEDOR"    value={fProv}      options={uniq("proveedor")}    onChange={setFProv}/>}
+          {meta?.hasRubro&&      <Dropdown label="RUBRO"        value={fRubro}     options={uniq("rubro")}        onChange={setFRubro}/>}
+          {meta?.hasVendedor&&   <Dropdown label="VENDEDOR"     value={fVend}      options={uniq("vendedor")}     onChange={setFVend}/>}
+          {meta?.hasRentabilidad&&<Dropdown label="RENTABILIDAD" value={fRentab}   options={["Alta","Media","Baja"]} onChange={setFRentab}/>}
+          {meta?.hasZona&&       <Dropdown label="ZONA"         value={fZona}      options={uniq("zona")}         onChange={setFZona}/>}
+          {meta?.hasProvincia&&  <Dropdown label="PROVINCIA"    value={fPcia}      options={uniq("provincia")}    onChange={setFPcia}/>}
           <div style={{marginLeft:"auto",display:"flex",gap:10,alignItems:"flex-end",flexWrap:"wrap"}}>
             <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
             {hasData&&<button onClick={handleClear} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${BORDER}`,borderRadius:6,color:MUTED,cursor:"pointer",fontSize:11}}>Limpiar</button>}
@@ -1030,6 +1046,7 @@ export default function App(){
             {safeTab==="evolucion"&&   <EvolucionTab filteredRecords={filtered} meta={meta}/>}
             {safeTab==="articulos"&&   <ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas}/>}
             {safeTab==="rentabilidad"&&<RentabilidadSection data={rentData} artData={artData} hasCantidad={meta?.hasCantidad}/>}
+            {safeTab==="zonas"&&       <DetailTab data={zonaData}  hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Zona"       colorPesos={VIOLET} colorUnid={PURPLE}/>}
             {safeTab==="provincias"&&  <DetailTab data={pciaData}  hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia"  colorPesos={BLUE}   colorUnid={VIOLET}/>}
           </div>
         </>
