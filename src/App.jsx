@@ -85,12 +85,12 @@ const CAMPOS=[
   {key:"cantidad",    label:"Cantidad",     req:false, syn:["cantidad","qty","cant","unidades","q","unid"]},
   {key:"costo",       label:"Costo",        req:false, syn:["costo","cost","cto","pcosto"]},
   {key:"cliente",     label:"Cliente",      req:false, syn:["cliente","client","cte","razon_social","razon social","razonsocial"]},
-  {key:"empresa",     label:"Empresa",      req:false, syn:["empresa","company","sucursal","local"]},
-  {key:"proveedor",   label:"Proveedor",    req:false, syn:["proveedor","supplier","supp","prov"]},
-  {key:"rubro",       label:"Rubro",        req:false, syn:["rubro","categoria","categoría","cat","linea","grupo"]},
+  {key:"empresa",     label:"Empresa",      req:false, syn:["empresa","company","sucursal","local","dempresa"]},
+  {key:"proveedor",   label:"Proveedor",    req:false, syn:["proveedor","supplier","supp","prov","dgrupo","grupo"]},
+  {key:"rubro",       label:"Rubro",        req:false, syn:["rubro","drubro","categoria","categoría","cat","linea"]},
   {key:"articulo",    label:"Artículo",     req:false, syn:["articulo","artículo","producto","item","descripcion","art"]},
   {key:"vendedor",    label:"Vendedor",     req:false, syn:["vendedor","seller","vend","comercial"]},
-  {key:"rentabilidad",label:"Rentabilidad", req:false, syn:["rentabilidad","rent","rentab","nivel","tier"]},
+  {key:"rentabilidad",label:"Rentabilidad", req:false, syn:["rentabilidad","rent","rentab","nivel","tier","tipo rentabilidad","tiporentabilidad"]},
   {key:"provincia",   label:"Provincia",    req:false, syn:["provincia","region","región","localidad","zona","sucursal"]},
 ]
 function autoMap(headers){
