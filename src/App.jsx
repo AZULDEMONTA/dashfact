@@ -801,7 +801,7 @@ export default function App(){
       const wb=XLSX.read(ev.target.result,{type:"array"})
       const ws=wb.Sheets[wb.SheetNames[0]]
       const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:""})
-      setRawHeaders(json[0]?.map(String)??[])
+      setRawHeaders(json[0]?.map(s => String(s).trim()) ?? [])
       setRawRows(json.slice(1).filter(r=>r.some(c=>c!=="")))
     }
     reader.readAsArrayBuffer(file);e.target.value=""
