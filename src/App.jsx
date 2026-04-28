@@ -81,13 +81,13 @@ async function clearData(){await Promise.all([dbDelete(SK),dbDelete(AK),dbDelete
 const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 const CAMPOS=[
   {key:"fecha",       label:"Fecha",        req:true,  syn:["fecha","date","dia","día"]},
-  {key:"precio",      label:"Venta",        req:true,  syn:["venta","precio","price","importe","total","monto","pvta","pventa","ingreso"]},
+  {key:"precio",      label:"Venta",        req:true,  syn:["venta","precio","price","importe","total","monto","pvta","pventa","ingreso","venta neta"]},
   {key:"cantidad",    label:"Cantidad",     req:false, syn:["cantidad","qty","cant","unidades","q","unid"]},
   {key:"costo",       label:"Costo",        req:false, syn:["costo","cost","cto","pcosto"]},
   {key:"cliente",     label:"Cliente",      req:false, syn:["cliente","client","cte","razon_social","razon social","razonsocial"]},
-  {key:"empresa",     label:"Empresa",      req:false, syn:["empresa","company","sucursal","local","dempresa"]},
-  {key:"proveedor",   label:"Proveedor",    req:false, syn:["proveedor","supplier","supp","prov","dgrupo","grupo"]},
-  {key:"rubro",       label:"Rubro",        req:false, syn:["rubro","drubro","categoria","categoría","cat","linea"]},
+  {key:"empresa",     label:"Empresa",      req:false, syn:["empresa","company","dempresa"]},
+  {key:"proveedor",   label:"Proveedor",    req:false, syn:["proveedor","supplier","supp","prov","dgrupo"]},
+  {key:"rubro",       label:"Rubro",        req:false, syn:["rubro","drubro","categoria","categoría","cat","linea","grupo"]},
   {key:"articulo",    label:"Artículo",     req:false, syn:["articulo","artículo","producto","item","descripcion","art"]},
   {key:"vendedor",    label:"Vendedor",     req:false, syn:["vendedor","seller","vend","comercial"]},
   {key:"rentabilidad",label:"Rentabilidad", req:false, syn:["rentabilidad","rent","rentab","nivel","tier","tipo rentabilidad","tiporentabilidad"]},
