@@ -2,201 +2,171 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import * as XLSX from "xlsx"
 import { dbGet, dbSet, dbDelete } from "./lib/supabase.js"
 
-/* ─── Storage keys ─────────────────────────────────────────────────────────── */
-const SK = "cube", AK = "arts", MK = "meta"
+const SK="cube",AK="arts",MK="meta"
+const CAT_FIELDS=["proveedor","rubro","vendedor","rentabilidad","provincia","cliente","empresa"]
 
-/* ─── Cube compression ──────────────────────────────────────────────────────── */
-const CAT_FIELDS = ["proveedor","rubro","vendedor","rentabilidad","provincia"]
-function compressCube(cube) {
-  const tables = {}
-  CAT_FIELDS.forEach(f => { tables[f] = [...new Set(cube.map(r => r[f]).filter(v => v != null))] })
-  const ix = {}
-  CAT_FIELDS.forEach(f => { ix[f] = Object.fromEntries(tables[f].map((v,i) => [v,i])) })
-  const rows = cube.map(r => [
-    r.y, r.m, Math.round(r.precio), r.cantidad, Math.round(r.costo), r.rows,
-    r.proveedor    != null ? (ix.proveedor[r.proveedor]       ?? -1) : -1,
-    r.rubro        != null ? (ix.rubro[r.rubro]               ?? -1) : -1,
-    r.vendedor     != null ? (ix.vendedor[r.vendedor]         ?? -1) : -1,
-    r.rentabilidad != null ? (ix.rentabilidad[r.rentabilidad] ?? -1) : -1,
-    r.provincia    != null ? (ix.provincia[r.provincia]       ?? -1) : -1,
+function compressCube(cube){
+  const tables={}
+  CAT_FIELDS.forEach(f=>{tables[f]=[...new Set(cube.map(r=>r[f]).filter(v=>v!=null))]})
+  const ix={}
+  CAT_FIELDS.forEach(f=>{ix[f]=Object.fromEntries(tables[f].map((v,i)=>[v,i]))})
+  const rows=cube.map(r=>[
+    r.y,r.m,Math.round(r.precio),r.cantidad,Math.round(r.costo),r.rows,
+    r.proveedor    !=null?(ix.proveedor[r.proveedor]       ??-1):-1,
+    r.rubro        !=null?(ix.rubro[r.rubro]               ??-1):-1,
+    r.vendedor     !=null?(ix.vendedor[r.vendedor]         ??-1):-1,
+    r.rentabilidad !=null?(ix.rentabilidad[r.rentabilidad] ??-1):-1,
+    r.provincia    !=null?(ix.provincia[r.provincia]       ??-1):-1,
+    r.cliente      !=null?(ix.cliente[r.cliente]           ??-1):-1,
+    r.empresa      !=null?(ix.empresa[r.empresa]           ??-1):-1,
   ])
-  return { tables, rows }
+  return{tables,rows}
 }
-function decompressCube({ tables, rows }) {
-  return rows.map(r => ({
-    y:r[0], m:r[1], precio:r[2], cantidad:r[3], costo:r[4], rows:r[5],
-    proveedor:    r[6]  >= 0 ? tables.proveedor[r[6]]    : null,
-    rubro:        r[7]  >= 0 ? tables.rubro[r[7]]        : null,
-    vendedor:     r[8]  >= 0 ? tables.vendedor[r[8]]     : null,
-    rentabilidad: r[9]  >= 0 ? tables.rentabilidad[r[9]] : null,
-    provincia:    r[10] >= 0 ? tables.provincia[r[10]]   : null,
+function decompressCube({tables,rows}){
+  return rows.map(r=>({
+    y:r[0],m:r[1],precio:r[2],cantidad:r[3],costo:r[4],rows:r[5],
+    proveedor:    r[6] >=0?tables.proveedor[r[6]]    :null,
+    rubro:        r[7] >=0?tables.rubro[r[7]]        :null,
+    vendedor:     r[8] >=0?tables.vendedor[r[8]]     :null,
+    rentabilidad: r[9] >=0?tables.rentabilidad[r[9]] :null,
+    provincia:    r[10]>=0?tables.provincia[r[10]]   :null,
+    cliente:      r[11]>=0?tables.cliente[r[11]]     :null,
+    empresa:      r[12]>=0?tables.empresa[r[12]]     :null,
   }))
 }
-function compressArts(arts) {
-  return arts.map(a => [a.name, Math.round(a.precio), a.cantidad, Math.round(a.costo), a.rows, a.rentabilidad ?? null])
-}
-function decompressArts(rows) {
-  return rows.map(r => ({ name:r[0], precio:r[1], cantidad:r[2], costo:r[3], rows:r[4], rentabilidad:r[5] }))
-}
+function compressArts(arts){return arts.map(a=>[a.name,Math.round(a.precio),a.cantidad,Math.round(a.costo),a.rows,a.rentabilidad??null])}
+function decompressArts(rows){return rows.map(r=>({name:r[0],precio:r[1],cantidad:r[2],costo:r[3],rows:r[4],rentabilidad:r[5]}))}
 
-/* ─── Cube builder ──────────────────────────────────────────────────────────── */
-function buildCube(rawRecords) {
-  const cm = {}, am = {}
-  for (const r of rawRecords) {
-    const ck = `${r.y}|${r.m}|${r.proveedor??''}|${r.rubro??''}|${r.vendedor??''}|${r.rentabilidad??''}|${r.provincia??''}`
-    if (!cm[ck]) cm[ck] = { y:r.y, m:r.m, precio:0, cantidad:0, costo:0, rows:0,
-      proveedor:r.proveedor, rubro:r.rubro, vendedor:r.vendedor, rentabilidad:r.rentabilidad, provincia:r.provincia }
-    const c = cm[ck]; c.precio += r.precio; c.cantidad += r.cantidad; c.costo += r.costo; c.rows++
-    if (r.articulo) {
-      if (!am[r.articulo]) am[r.articulo] = { name:r.articulo, precio:0, cantidad:0, costo:0, rows:0, rentabilidad:r.rentabilidad }
-      const a = am[r.articulo]; a.precio += r.precio; a.cantidad += r.cantidad; a.costo += r.costo; a.rows++
+function buildCube(rawRecords){
+  const cm={},am={}
+  for(const r of rawRecords){
+    const ck=`${r.y}|${r.m}|${r.proveedor??''}|${r.rubro??''}|${r.vendedor??''}|${r.rentabilidad??''}|${r.provincia??''}|${r.cliente??''}|${r.empresa??''}`
+    if(!cm[ck]) cm[ck]={y:r.y,m:r.m,precio:0,cantidad:0,costo:0,rows:0,proveedor:r.proveedor,rubro:r.rubro,vendedor:r.vendedor,rentabilidad:r.rentabilidad,provincia:r.provincia,cliente:r.cliente,empresa:r.empresa}
+    const c=cm[ck];c.precio+=r.precio;c.cantidad+=r.cantidad;c.costo+=r.costo;c.rows++
+    if(r.articulo){
+      if(!am[r.articulo]) am[r.articulo]={name:r.articulo,precio:0,cantidad:0,costo:0,rows:0,rentabilidad:r.rentabilidad}
+      const a=am[r.articulo];a.precio+=r.precio;a.cantidad+=r.cantidad;a.costo+=r.costo;a.rows++
     }
   }
-  return { cube: Object.values(cm), articulos: Object.values(am) }
+  return{cube:Object.values(cm),articulos:Object.values(am)}
 }
-function mergeCubes(a, b) {
-  const m = {}
-  const add = r => {
-    const k = `${r.y}|${r.m}|${r.proveedor??''}|${r.rubro??''}|${r.vendedor??''}|${r.rentabilidad??''}|${r.provincia??''}`
-    if (!m[k]) m[k] = { ...r }
-    else { m[k].precio += r.precio; m[k].cantidad += r.cantidad; m[k].costo += r.costo; m[k].rows += r.rows }
+function mergeCubes(a,b){
+  const m={}
+  const add=r=>{
+    const k=`${r.y}|${r.m}|${r.proveedor??''}|${r.rubro??''}|${r.vendedor??''}|${r.rentabilidad??''}|${r.provincia??''}|${r.cliente??''}|${r.empresa??''}`
+    if(!m[k]) m[k]={...r};else{m[k].precio+=r.precio;m[k].cantidad+=r.cantidad;m[k].costo+=r.costo;m[k].rows+=r.rows}
   }
-  a.forEach(add); b.forEach(add); return Object.values(m)
+  a.forEach(add);b.forEach(add);return Object.values(m)
 }
-function mergeArts(a, b) {
-  const m = {}
-  const add = r => { if (!m[r.name]) m[r.name] = { ...r }; else { m[r.name].precio += r.precio; m[r.name].cantidad += r.cantidad; m[r.name].costo += r.costo; m[r.name].rows += r.rows } }
-  a.forEach(add); b.forEach(add); return Object.values(m)
+function mergeArts(a,b){
+  const m={}
+  const add=r=>{if(!m[r.name]) m[r.name]={...r};else{m[r.name].precio+=r.precio;m[r.name].cantidad+=r.cantidad;m[r.name].costo+=r.costo;m[r.name].rows+=r.rows}}
+  a.forEach(add);b.forEach(add);return Object.values(m)
 }
 
-/* ─── DB I/O ────────────────────────────────────────────────────────────────── */
-async function loadData() {
-  try {
-    const [cv, av, mv] = await Promise.all([dbGet(SK), dbGet(AK), dbGet(MK)])
-    return {
-      cube:      cv ? decompressCube(JSON.parse(cv)) : null,
-      articulos: av ? decompressArts(JSON.parse(av)) : null,
-      meta:      mv ? JSON.parse(mv) : null,
-    }
-  } catch(e) { return { cube:null, articulos:null, meta:null, error:String(e) } }
+async function loadData(){
+  try{
+    const[cv,av,mv]=await Promise.all([dbGet(SK),dbGet(AK),dbGet(MK)])
+    return{cube:cv?decompressCube(JSON.parse(cv)):null,articulos:av?decompressArts(JSON.parse(av)):null,meta:mv?JSON.parse(mv):null}
+  }catch(e){return{cube:null,articulos:null,meta:null,error:String(e)}}
 }
-async function saveData(cube, arts, meta) {
-  const cs = JSON.stringify(compressCube(cube))
-  const as = JSON.stringify(compressArts(arts))
-  const ms = JSON.stringify(meta)
-  const kb = Math.round((cs.length + as.length + ms.length) / 1024)
-  await Promise.all([dbSet(SK, cs), dbSet(AK, as), dbSet(MK, ms)])
+async function saveData(cube,arts,meta){
+  const cs=JSON.stringify(compressCube(cube)),as=JSON.stringify(compressArts(arts)),ms=JSON.stringify(meta)
+  const kb=Math.round((cs.length+as.length+ms.length)/1024)
+  await Promise.all([dbSet(SK,cs),dbSet(AK,as),dbSet(MK,ms)])
   return kb
 }
-async function clearData() {
-  await Promise.all([dbDelete(SK), dbDelete(AK), dbDelete(MK)])
-}
+async function clearData(){await Promise.all([dbDelete(SK),dbDelete(AK),dbDelete(MK)])}
 
-/* ─── Constants ─────────────────────────────────────────────────────────────── */
-const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
-const CAMPOS = [
-  { key:"fecha",        label:"Fecha",         req:true,  syn:["fecha","date","dia","día"] },
-  { key:"precio",       label:"Precio venta",  req:true,  syn:["precio","price","venta","importe","total","monto","pvta","pventa","ingreso"] },
-  { key:"cantidad",     label:"Cantidad",      req:false, syn:["cantidad","qty","cant","unidades","q","unid"] },
-  { key:"costo",        label:"Costo",         req:false, syn:["costo","cost","cto","pcosto"] },
-  { key:"proveedor",    label:"Proveedor",     req:false, syn:["proveedor","supplier","supp","prov"] },
-  { key:"rubro",        label:"Rubro",         req:false, syn:["rubro","categoria","categoría","cat","linea","grupo"] },
-  { key:"articulo",     label:"Artículo",      req:false, syn:["articulo","artículo","producto","item","descripcion","art"] },
-  { key:"vendedor",     label:"Vendedor",      req:false, syn:["vendedor","seller","vend","comercial"] },
-  { key:"rentabilidad", label:"Rentabilidad",  req:false, syn:["rentabilidad","rent","rentab","nivel","tier"] },
-  { key:"provincia",    label:"Provincia",     req:false, syn:["provincia","region","región","localidad","zona","sucursal"] },
+const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+const CAMPOS=[
+  {key:"fecha",       label:"Fecha",        req:true,  syn:["fecha","date","dia","día"]},
+  {key:"precio",      label:"Venta",        req:true,  syn:["venta","precio","price","importe","total","monto","pvta","pventa","ingreso"]},
+  {key:"cantidad",    label:"Cantidad",     req:false, syn:["cantidad","qty","cant","unidades","q","unid"]},
+  {key:"costo",       label:"Costo",        req:false, syn:["costo","cost","cto","pcosto"]},
+  {key:"cliente",     label:"Cliente",      req:false, syn:["cliente","client","cte","razon_social","razon social","razonsocial"]},
+  {key:"empresa",     label:"Empresa",      req:false, syn:["empresa","company","sucursal","local"]},
+  {key:"proveedor",   label:"Proveedor",    req:false, syn:["proveedor","supplier","supp","prov"]},
+  {key:"rubro",       label:"Rubro",        req:false, syn:["rubro","categoria","categoría","cat","linea","grupo"]},
+  {key:"articulo",    label:"Artículo",     req:false, syn:["articulo","artículo","producto","item","descripcion","art"]},
+  {key:"vendedor",    label:"Vendedor",     req:false, syn:["vendedor","seller","vend","comercial"]},
+  {key:"rentabilidad",label:"Rentabilidad", req:false, syn:["rentabilidad","rent","rentab","nivel","tier"]},
+  {key:"provincia",   label:"Provincia",    req:false, syn:["provincia","region","región","localidad","zona","sucursal"]},
 ]
-function autoMap(headers) {
-  const map = {}
-  const norm = s => s?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim()
-  CAMPOS.forEach(({ key, syn }) => { const h = headers.find(h => syn.some(x => norm(h)?.includes(x))); if (h) map[key] = h })
+function autoMap(headers){
+  const map={}
+  const norm=s=>s?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim()
+  CAMPOS.forEach(({key,syn})=>{const h=headers.find(h=>syn.some(x=>norm(h)?.includes(x)));if(h) map[key]=h})
   return map
 }
-function parseDate(v) {
-  if (!v) return null
-  if (typeof v === "number") { const d = XLSX.SSF.parse_date_code(v); if (d) return { y:d.y, m:d.m-1 } }
-  const s = String(v); let mm
-  if ((mm = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/))) return { y:+mm[3], m:+mm[2]-1 }
-  if ((mm = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/))) return { y:+mm[1], m:+mm[2]-1 }
-  const d = new Date(v); if (!isNaN(d)) return { y:d.getFullYear(), m:d.getMonth() }
+function parseDate(v){
+  if(!v) return null
+  if(typeof v==="number"){const d=XLSX.SSF.parse_date_code(v);if(d) return{y:d.y,m:d.m-1}}
+  const s=String(v);let mm
+  if((mm=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/))) return{y:+mm[3],m:+mm[2]-1}
+  if((mm=s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/))) return{y:+mm[1],m:+mm[2]-1}
+  const d=new Date(v);if(!isNaN(d)) return{y:d.getFullYear(),m:d.getMonth()}
   return null
 }
 
-/* ─── Formatters ────────────────────────────────────────────────────────────── */
-function fmtM(n) {
-  if (n == null) return "$0"
-  const abs = Math.abs(n)
-  if (abs >= 1e9) return `$${(n/1e9).toFixed(1)}B`
-  if (abs >= 1e6) return `$${(n/1e6).toFixed(1)}M`
-  if (abs >= 1e3) return `$${new Intl.NumberFormat("es-AR").format(Math.round(n/1e3))}K`
-  return `$${Math.round(n)}`
+function fmtM(n){
+  if(n==null) return"$0"
+  const abs=Math.abs(n)
+  if(abs>=1e9) return`$${(n/1e9).toFixed(1)}B`
+  if(abs>=1e6) return`$${(n/1e6).toFixed(1)}M`
+  if(abs>=1e3) return`$${new Intl.NumberFormat("es-AR").format(Math.round(n/1e3))}K`
+  return`$${Math.round(n)}`
 }
-function fmtU(n) {
-  if (n == null) return "0"
-  if (Math.abs(n) >= 1e3) return `${new Intl.NumberFormat("es-AR").format(Math.round(n/1e3))}K`
+function fmtU(n){
+  if(n==null) return"0"
+  if(Math.abs(n)>=1e3) return`${new Intl.NumberFormat("es-AR").format(Math.round(n/1e3))}K`
   return new Intl.NumberFormat("es-AR").format(Math.round(n))
 }
-const fmtN   = n => new Intl.NumberFormat("es-AR").format(n ?? 0)
-const fmtPct = n => `${(n ?? 0).toFixed(1)}%`
-const toPeriod    = (y,m) => y * 100 + m
-const periodLabel = (p, short=false) => { const y=Math.floor(p/100),m=p%100; return short?`${MESES[m]?.slice(0,3)} ${y}`:`${MESES[m]} ${y}` }
+const fmtN=n=>new Intl.NumberFormat("es-AR").format(n??0)
+const fmtPct=n=>`${(n??0).toFixed(1)}%`
+const toPeriod=(y,m)=>y*100+m
+const periodLabel=(p,short=false)=>{const y=Math.floor(p/100),m=p%100;return short?`${MESES[m]?.slice(0,3)} ${y}`:`${MESES[m]} ${y}`}
 
-/* ─── Colors ────────────────────────────────────────────────────────────────── */
 const BG="#0d1117",CARD="#161b22",CARD2="#1a2030",BORDER="#21262d",TEXT="#e6edf3",MUTED="#8b949e"
-const CYAN="#00e5ff",CORAL="#ff6b6b",MINT="#00ffb3",PURPLE="#bf5af2",GOLD="#ffd60a",ORANGE="#ff9f0a",BLUE="#3b82f6",VIOLET="#a78bfa"
+const CYAN="#00e5ff",CORAL="#ff6b6b",MINT="#00ffb3",PURPLE="#bf5af2",GOLD="#ffd60a",ORANGE="#ff9f0a",BLUE="#3b82f6",VIOLET="#a78bfa",TEAL="#14b8a6"
 const RENT_COLOR={Alta:"#22c55e",Media:ORANGE,Baja:CORAL,"Sin dato":MUTED}
 const RENT_BG={Alta:"#22c55e22",Media:`${ORANGE}22`,Baja:`${CORAL}22`,"Sin dato":`${MUTED}22`}
 const VENDOR_COLORS=[CYAN,CORAL,MINT,PURPLE,GOLD,ORANGE,BLUE,VIOLET,"#f43f5e","#84cc16","#06b6d4","#d946ef"]
 
-/* ─── Primitive UI ──────────────────────────────────────────────────────────── */
-function RentBadge({nivel}){
-  const n=nivel||"Sin dato"
-  return <span style={{color:RENT_COLOR[n],fontSize:10,padding:"2px 8px",background:RENT_BG[n],borderRadius:20,whiteSpace:"nowrap",fontWeight:600}}>{n}</span>
-}
-function KpiCard({icon,label,value,sub,accent}){
-  return(
-    <div style={{flex:1,minWidth:150,background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:accent}}/>
-      <div style={{fontSize:18,marginBottom:6}}>{icon}</div>
-      <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:4}}>{label}</div>
-      <div style={{fontSize:22,fontWeight:800,color:TEXT,lineHeight:1,wordBreak:"break-word"}}>{value}</div>
-      {sub&&<div style={{fontSize:11,color:accent,fontWeight:600,marginTop:4}}>{sub}</div>}
-    </div>
-  )
-}
+function RentBadge({nivel}){const n=nivel||"Sin dato";return<span style={{color:RENT_COLOR[n],fontSize:10,padding:"2px 8px",background:RENT_BG[n],borderRadius:20,whiteSpace:"nowrap",fontWeight:600}}>{n}</span>}
+function KpiCard({icon,label,value,sub,accent}){return(
+  <div style={{flex:1,minWidth:150,background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px",position:"relative",overflow:"hidden"}}>
+    <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:accent}}/>
+    <div style={{fontSize:18,marginBottom:6}}>{icon}</div>
+    <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:4}}>{label}</div>
+    <div style={{fontSize:22,fontWeight:800,color:TEXT,lineHeight:1,wordBreak:"break-word"}}>{value}</div>
+    {sub&&<div style={{fontSize:11,color:accent,fontWeight:600,marginTop:4}}>{sub}</div>}
+  </div>
+)}
 function Dropdown({label,value,options,onChange}){
   const norm=options.map(o=>typeof o==="string"?{val:o,label:o}:o)
   return(
     <div style={{display:"flex",flexDirection:"column",gap:3,minWidth:110}}>
       <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>{label}</span>
-      <select value={value} onChange={e=>onChange(e.target.value)}
-        style={{background:CARD2,border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,padding:"5px 8px",fontSize:12,outline:"none",cursor:"pointer"}}>
+      <select value={value} onChange={e=>onChange(e.target.value)} style={{background:CARD2,border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,padding:"5px 8px",fontSize:12,outline:"none",cursor:"pointer"}}>
         <option value="__ALL__">Todos</option>
         {norm.map(o=><option key={o.val} value={o.val}>{o.label}</option>)}
       </select>
     </div>
   )
 }
-function MetricToggle({value,onChange}){
-  return(
-    <div style={{display:"flex",background:CARD2,border:`1px solid ${BORDER}`,borderRadius:8,padding:3,gap:3}}>
-      {["pesos","unidades"].map(v=>(
-        <button key={v} onClick={()=>onChange(v)}
-          style={{padding:"5px 14px",background:value===v?CARD:"transparent",border:`1px solid ${value===v?BORDER:"transparent"}`,borderRadius:6,color:value===v?TEXT:MUTED,cursor:"pointer",fontSize:12,fontWeight:value===v?600:400}}>
-          {v==="pesos"?"$ Pesos":"📦 Unidades"}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-/* ─── Save progress bar ─────────────────────────────────────────────────────── */
+function MetricToggle({value,onChange}){return(
+  <div style={{display:"flex",background:CARD2,border:`1px solid ${BORDER}`,borderRadius:8,padding:3,gap:3}}>
+    {["pesos","unidades"].map(v=>(
+      <button key={v} onClick={()=>onChange(v)} style={{padding:"5px 14px",background:value===v?CARD:"transparent",border:`1px solid ${value===v?BORDER:"transparent"}`,borderRadius:6,color:value===v?TEXT:MUTED,cursor:"pointer",fontSize:12,fontWeight:value===v?600:400}}>
+        {v==="pesos"?"$ Pesos":"📦 Unidades"}
+      </button>
+    ))}
+  </div>
+)}
 function SaveBar({stage,progress,msg}){
   if(stage==="idle") return null
-  const label = stage==="merging"?"⚙️ Fusionando datos..."
-    :stage==="compressing"?"🗜️ Comprimiendo..."
-    :stage==="saving"?"☁️ Guardando en Supabase..."
-    :stage==="saved"?`✓ ${msg}`:`⚠️ ${msg}`
+  const label=stage==="merging"?"⚙️ Fusionando...":stage==="compressing"?"🗜️ Comprimiendo...":stage==="saving"?"☁️ Guardando en Supabase...":stage==="saved"?`✓ ${msg}`:`⚠️ ${msg}`
   const color=stage==="error"?CORAL:stage==="saved"?MINT:MUTED
   return(
     <div style={{display:"flex",flexDirection:"column",gap:4,minWidth:220,maxWidth:300}}>
@@ -204,24 +174,19 @@ function SaveBar({stage,progress,msg}){
         <span style={{fontSize:11,color}}>{label.slice(0,60)}</span>
         {stage!=="error"&&stage!=="saved"&&<span style={{fontSize:10,color:MUTED}}>{progress}%</span>}
       </div>
-      {stage!=="error"&&(
-        <div style={{height:4,background:BORDER,borderRadius:2,overflow:"hidden"}}>
-          <div style={{height:"100%",width:`${progress}%`,background:stage==="saved"?MINT:CYAN,borderRadius:2,transition:"width 0.35s ease"}}/>
-        </div>
-      )}
+      {stage!=="error"&&<div style={{height:4,background:BORDER,borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${progress}%`,background:stage==="saved"?MINT:CYAN,borderRadius:2,transition:"width 0.35s ease"}}/></div>}
     </div>
   )
 }
 
-/* ─── Modals ────────────────────────────────────────────────────────────────── */
 function MappingModal({headers,onConfirm,onCancel}){
-  const [mapping,setMapping]=useState(()=>autoMap(headers))
-  const [pet,setPet]=useState(true)
+  const[mapping,setMapping]=useState(()=>autoMap(headers))
+  const[pet,setPet]=useState(true)
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.9)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999}}>
-      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:28,width:500,maxWidth:"96vw",maxHeight:"90vh",overflowY:"auto"}}>
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:28,width:520,maxWidth:"96vw",maxHeight:"90vh",overflowY:"auto"}}>
         <div style={{fontSize:15,fontWeight:700,color:TEXT,marginBottom:4}}>Mapear columnas del Excel</div>
-        <div style={{fontSize:12,color:MUTED,marginBottom:20}}>El dashboard se construye con las columnas que mapees.</div>
+        <div style={{fontSize:12,color:MUTED,marginBottom:20}}>Columnas detectadas automáticamente. Ajustá si es necesario.</div>
         {CAMPOS.map(({key,label,req})=>(
           <div key={key} style={{display:"flex",alignItems:"center",gap:10,marginBottom:9}}>
             <span style={{color:req?CYAN:MUTED,width:130,fontSize:12,flexShrink:0}}>{label}{req?" *":""}</span>
@@ -236,8 +201,7 @@ function MappingModal({headers,onConfirm,onCancel}){
         <div style={{padding:"12px 14px",background:"#0d1117",border:`1px solid ${BORDER}`,borderRadius:8}}>
           <div style={{fontSize:11,color:MUTED,marginBottom:8,fontWeight:600,textTransform:"uppercase",letterSpacing:1}}>¿Cómo viene el precio?</div>
           {[{v:true,l:"Ya es el total de la fila",d:"El importe incluye la cantidad"},{v:false,l:"Es precio unitario",d:"Se multiplica precio × cantidad"}].map(opt=>(
-            <div key={String(opt.v)} onClick={()=>setPet(opt.v)}
-              style={{display:"flex",alignItems:"flex-start",gap:10,padding:"7px 10px",borderRadius:6,cursor:"pointer",background:pet===opt.v?CARD2:"transparent",border:`1px solid ${pet===opt.v?CYAN:"transparent"}`,marginBottom:5}}>
+            <div key={String(opt.v)} onClick={()=>setPet(opt.v)} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"7px 10px",borderRadius:6,cursor:"pointer",background:pet===opt.v?CARD2:"transparent",border:`1px solid ${pet===opt.v?CYAN:"transparent"}`,marginBottom:5}}>
               <div style={{width:13,height:13,borderRadius:"50%",border:`2px solid ${pet===opt.v?CYAN:MUTED}`,background:pet===opt.v?CYAN:"transparent",flexShrink:0,marginTop:2}}/>
               <div><div style={{fontSize:12,color:TEXT,fontWeight:600}}>{opt.l}</div><div style={{fontSize:11,color:MUTED,marginTop:1}}>{opt.d}</div></div>
             </div>
@@ -253,7 +217,7 @@ function MappingModal({headers,onConfirm,onCancel}){
 }
 
 function ConfirmImportModal({stats,onConfirm,onCancel}){
-  const {rows,ventas,unidades,hasCantidad,periods,existingRows,cubeKB}=stats
+  const{rows,ventas,unidades,hasCantidad,periods,existingRows,cubeKB}=stats
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.92)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
       <div style={{background:CARD,border:`2px solid ${CYAN}40`,borderRadius:14,padding:32,width:480,maxWidth:"96vw"}}>
@@ -279,7 +243,6 @@ function ConfirmImportModal({stats,onConfirm,onCancel}){
             <div style={{height:5,background:BORDER,borderRadius:3,overflow:"hidden"}}>
               <div style={{height:"100%",width:`${Math.min(cubeKB/500000*100,100)}%`,background:cubeKB>400000?CORAL:cubeKB>200000?ORANGE:MINT,borderRadius:3}}/>
             </div>
-            <div style={{fontSize:10,color:MUTED,marginTop:4}}>Límite Supabase free: ~500 MB</div>
           </div>
         )}
         {periods.length>0&&(
@@ -305,10 +268,9 @@ function ConfirmImportModal({stats,onConfirm,onCancel}){
   )
 }
 
-/* ─── Chart components ──────────────────────────────────────────────────────── */
 function DualRanking({title,data,colorPesos,colorUnid,totalVentas,totalUnidades,hasCantidad,compact=false}){
-  const [metric,setMetric]=useState("pesos")
-  const [expanded,setExpanded]=useState(false)
+  const[metric,setMetric]=useState("pesos")
+  const[expanded,setExpanded]=useState(false)
   const limit=compact?6:10
   const sorted=metric==="pesos"?[...data].sort((a,b)=>b.ventas-a.ventas):[...data].sort((a,b)=>b.cantidad-a.cantidad)
   const maxV=sorted[0]?.[metric==="pesos"?"ventas":"cantidad"]||1
@@ -342,8 +304,8 @@ function DualRanking({title,data,colorPesos,colorUnid,totalVentas,totalUnidades,
 }
 
 function DetailTab({data,hasCantidad,totalVentas,totalUnidades,dimLabel,colorPesos,colorUnid}){
-  const [metric,setMetric]=useState("pesos")
-  const [expanded,setExpanded]=useState(false)
+  const[metric,setMetric]=useState("pesos")
+  const[expanded,setExpanded]=useState(false)
   const sorted=metric==="pesos"?[...data].sort((a,b)=>b.ventas-a.ventas):[...data].sort((a,b)=>b.cantidad-a.cantidad)
   const maxV=sorted[0]?.[metric==="pesos"?"ventas":"cantidad"]||1
   const total=metric==="pesos"?totalVentas:totalUnidades
@@ -377,38 +339,31 @@ function DetailTab({data,hasCantidad,totalVentas,totalUnidades,dimLabel,colorPes
 }
 
 function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas}){
-  const [metric,setMetric]=useState("pesos")
-  const [expanded,setExpanded]=useState(false)
+  const[metric,setMetric]=useState("pesos")
+  const[expanded,setExpanded]=useState(false)
   const sorted=metric==="pesos"?[...data].sort((a,b)=>b.precio-a.precio):[...data].sort((a,b)=>b.cantidad-a.cantidad)
   const shown=expanded?sorted:sorted.slice(0,10)
   return(
     <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-        <div>
-          <span style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Por Artículo</span>
-          <span style={{fontSize:11,color:MUTED,marginLeft:8}}>{data.length} artículos</span>
-        </div>
+        <div><span style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Por Artículo</span><span style={{fontSize:11,color:MUTED,marginLeft:8}}>{data.length} artículos</span></div>
         {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
       </div>
       <div style={{overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-          <thead>
-            <tr>{["#","Artículo","$ Ventas",...(hasCantidad?["Unidades"]:[]),...(hasRentabilidad?["Rentabilidad"]:[]),"Part. %"].map(h=>(
-              <th key={h} style={{padding:"6px 8px",textAlign:h==="Artículo"?"left":"right",color:MUTED,fontSize:10,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap"}}>{h}</th>
-            ))}</tr>
-          </thead>
-          <tbody>
-            {shown.map((d,i)=>(
-              <tr key={d.name} onMouseEnter={e=>e.currentTarget.style.background=CARD2} onMouseLeave={e=>e.currentTarget.style.background="transparent"} style={{borderBottom:`1px solid #1a1f2a`}}>
-                <td style={{padding:"8px",color:MUTED,fontSize:11,textAlign:"right",width:24}}>{i+1}</td>
-                <td style={{padding:"8px",color:TEXT,maxWidth:180,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.name}</td>
-                <td style={{padding:"8px",color:CYAN,textAlign:"right",fontWeight:600}}>{fmtM(d.precio)}</td>
-                {hasCantidad&&<td style={{padding:"8px",color:MINT,textAlign:"right",fontWeight:600}}>{fmtU(d.cantidad)}</td>}
-                {hasRentabilidad&&<td style={{padding:"8px",textAlign:"right"}}><RentBadge nivel={d.rentabilidad||"Sin dato"}/></td>}
-                <td style={{padding:"8px",color:MUTED,textAlign:"right"}}>{fmtPct(totalVentas>0?d.precio/totalVentas*100:0)}</td>
-              </tr>
-            ))}
-          </tbody>
+          <thead><tr>{["#","Artículo","$ Ventas",...(hasCantidad?["Unidades"]:[]),...(hasRentabilidad?["Rentabilidad"]:[]),"Part. %"].map(h=>(
+            <th key={h} style={{padding:"6px 8px",textAlign:h==="Artículo"?"left":"right",color:MUTED,fontSize:10,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap"}}>{h}</th>
+          ))}</tr></thead>
+          <tbody>{shown.map((d,i)=>(
+            <tr key={d.name} onMouseEnter={e=>e.currentTarget.style.background=CARD2} onMouseLeave={e=>e.currentTarget.style.background="transparent"} style={{borderBottom:`1px solid #1a1f2a`}}>
+              <td style={{padding:"8px",color:MUTED,fontSize:11,textAlign:"right",width:24}}>{i+1}</td>
+              <td style={{padding:"8px",color:TEXT,maxWidth:180,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.name}</td>
+              <td style={{padding:"8px",color:CYAN,textAlign:"right",fontWeight:600}}>{fmtM(d.precio)}</td>
+              {hasCantidad&&<td style={{padding:"8px",color:MINT,textAlign:"right",fontWeight:600}}>{fmtU(d.cantidad)}</td>}
+              {hasRentabilidad&&<td style={{padding:"8px",textAlign:"right"}}><RentBadge nivel={d.rentabilidad||"Sin dato"}/></td>}
+              <td style={{padding:"8px",color:MUTED,textAlign:"right"}}>{fmtPct(totalVentas>0?d.precio/totalVentas*100:0)}</td>
+            </tr>
+          ))}</tbody>
         </table>
       </div>
       {!expanded&&data.length>10&&<button onClick={()=>setExpanded(true)} style={{fontSize:11,color:CYAN,background:"none",border:"none",cursor:"pointer",marginTop:8,padding:0}}>+ Ver {data.length-10} más</button>}
@@ -443,15 +398,190 @@ function RentabilidadSection({data,artData,hasCantidad}){
   )
 }
 
+/* ─── CLIENTES TAB ──────────────────────────────────────────────────────────── */
+function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
+  const[sel,setSel]=useState(null)
+  const[metric,setMetric]=useState("pesos")
+  const[search,setSearch]=useState("")
+  const cliMap={}
+  filteredRecords.forEach(r=>{
+    const k=r.cliente||"Sin cliente"
+    if(!cliMap[k]) cliMap[k]={name:k,ventas:0,cantidad:0,rows:0,periodos:new Set(),rubros:{},proveedores:{},vendedores:{},empresas:{},rentMix:{Alta:0,Media:0,Baja:0}}
+    const c=cliMap[k]
+    c.ventas+=r.precio;c.cantidad+=r.cantidad;c.rows+=(r.rows||1)
+    if(r.y&&r.m!==undefined) c.periodos.add(toPeriod(r.y,r.m))
+    if(r.rubro)     c.rubros[r.rubro]         =(c.rubros[r.rubro]         ||0)+r.precio
+    if(r.proveedor) c.proveedores[r.proveedor]=(c.proveedores[r.proveedor]||0)+r.precio
+    if(r.vendedor)  c.vendedores[r.vendedor]  =(c.vendedores[r.vendedor]  ||0)+r.precio
+    if(r.empresa)   c.empresas[r.empresa]     =(c.empresas[r.empresa]     ||0)+r.precio
+    if(["Alta","Media","Baja"].includes(r.rentabilidad)) c.rentMix[r.rentabilidad]+=r.precio
+  })
+  const cliList=Object.values(cliMap).sort((a,b)=>b.ventas-a.ventas)
+  cliList.forEach((c,i)=>{c.color=VENDOR_COLORS[i%VENDOR_COLORS.length];c.periodos=c.periodos.size})
+  const maxV=cliList[0]?.ventas||1
+  const filtered=search?cliList.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())):cliList
+  const topCliente=cliList[0]
+  const ticketProm=cliList.length>0?totalVentas/cliList.length:0
+
+  // Evolución mes a mes por cliente top
+  const perMap={}
+  filteredRecords.forEach(r=>{
+    if(r.y===undefined||r.m===undefined||!r.cliente) return
+    const p=toPeriod(r.y,r.m)
+    if(!perMap[p]) perMap[p]={p,total:0}
+    perMap[p][r.cliente]=(perMap[p][r.cliente]||0)+r.precio
+    perMap[p].total+=r.precio
+  })
+  const perData=Object.values(perMap).sort((a,b)=>a.p-b.p)
+  const perMax=Math.max(...perData.map(m=>m.total),1)
+  const topClientes=cliList.slice(0,6)
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      {/* KPIs */}
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+        <KpiCard icon="🏢" label="Clientes activos" value={fmtN(cliList.length)} sub="en el período" accent={TEAL}/>
+        <KpiCard icon="💰" label="Ventas totales" value={fmtM(totalVentas)} sub="período filtrado" accent={CYAN}/>
+        {meta?.hasCantidad&&<KpiCard icon="📦" label="Unidades" value={fmtU(totalUnidades)} sub="período" accent={MINT}/>}
+        {topCliente&&<KpiCard icon="🥇" label="Top cliente" value={topCliente.name} sub={`${fmtM(topCliente.ventas)} — ${fmtPct(totalVentas>0?topCliente.ventas/totalVentas*100:0)}`} accent={GOLD}/>}
+        <KpiCard icon="📊" label="Ticket promedio" value={fmtM(ticketProm)} sub="por cliente" accent={PURPLE}/>
+      </div>
+
+      {/* Ranking con búsqueda */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
+          <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,fontWeight:600}}>Ranking de clientes ({cliList.length})</div>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..." style={{background:CARD2,border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,padding:"5px 10px",fontSize:12,outline:"none",width:180}}/>
+            {meta?.hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
+          </div>
+        </div>
+        {filtered.map((c,i)=>(
+          <div key={c.name} onClick={()=>setSel(sel===c.name?null:c.name)}
+            style={{marginBottom:10,cursor:"pointer",padding:"10px 12px",borderRadius:8,border:`1px solid ${sel===c.name?TEAL:BORDER}`,background:sel===c.name?TEAL+"11":"transparent",transition:"all .15s"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
+              <span style={{fontSize:11,color:MUTED,width:24,textAlign:"right",flexShrink:0}}>{cliList.indexOf(c)+1}.</span>
+              <div style={{width:8,height:8,borderRadius:"50%",background:c.color,flexShrink:0}}/>
+              <span style={{fontSize:13,fontWeight:600,color:TEXT,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</span>
+              <span style={{fontSize:13,fontWeight:800,color:metric==="pesos"?TEAL:MINT,minWidth:70,textAlign:"right"}}>{metric==="pesos"?fmtM(c.ventas):fmtU(c.cantidad)}</span>
+              <span style={{fontSize:11,color:MUTED,width:44,textAlign:"right"}}>{fmtPct(totalVentas>0?c.ventas/totalVentas*100:0)}</span>
+              {meta?.hasCantidad&&<span style={{fontSize:11,color:MINT,minWidth:60,textAlign:"right"}}>{fmtU(c.cantidad)} u.</span>}
+              <span style={{fontSize:11,color:MUTED,minWidth:56,textAlign:"right"}}>{fmtN(c.rows)} ops.</span>
+              {c.periodos>0&&<span style={{fontSize:11,color:MUTED,minWidth:50,textAlign:"right"}}>{c.periodos} per.</span>}
+            </div>
+            <div style={{height:4,background:BORDER,borderRadius:2,marginLeft:42}}>
+              <div style={{height:"100%",width:`${(metric==="pesos"?c.ventas:c.cantidad)/maxV*100}%`,background:TEAL,borderRadius:2,opacity:.8}}/>
+            </div>
+
+            {/* Detalle expandido */}
+            {sel===c.name&&(
+              <div style={{marginTop:14,display:"flex",gap:10,flexWrap:"wrap"}}>
+                {Object.keys(c.rubros).length>0&&(
+                  <div style={{flex:1,minWidth:170}}>
+                    <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:8}}>Rubros que compra</div>
+                    {Object.entries(c.rubros).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([r,val])=>(
+                      <div key={r} style={{marginBottom:5}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{r}</span><span style={{fontSize:11,fontWeight:600,color:CORAL,flexShrink:0,marginLeft:4}}>{fmtM(val)}</span></div>
+                        <div style={{height:2,background:BORDER,borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:CORAL,borderRadius:1}}/></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {Object.keys(c.proveedores).length>0&&(
+                  <div style={{flex:1,minWidth:170}}>
+                    <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:8}}>Proveedores</div>
+                    {Object.entries(c.proveedores).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([p,val])=>(
+                      <div key={p} style={{marginBottom:5}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{p}</span><span style={{fontSize:11,fontWeight:600,color:CYAN,flexShrink:0,marginLeft:4}}>{fmtM(val)}</span></div>
+                        <div style={{height:2,background:BORDER,borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:CYAN,borderRadius:1}}/></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {Object.keys(c.vendedores).length>0&&(
+                  <div style={{flex:1,minWidth:150}}>
+                    <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:8}}>Atendido por</div>
+                    {Object.entries(c.vendedores).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([v,val])=>(
+                      <div key={v} style={{marginBottom:5}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{v}</span><span style={{fontSize:11,fontWeight:600,color:PURPLE,flexShrink:0,marginLeft:4}}>{fmtM(val)}</span></div>
+                        <div style={{height:2,background:BORDER,borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:PURPLE,borderRadius:1}}/></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(c.rentMix.Alta+c.rentMix.Media+c.rentMix.Baja)>0&&(
+                  <div style={{flex:1,minWidth:150}}>
+                    <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:8}}>Mix rentabilidad</div>
+                    {["Alta","Media","Baja"].map(n=>{const val=c.rentMix[n];if(!val) return null;return(
+                      <div key={n} style={{marginBottom:5}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><RentBadge nivel={n}/><span style={{fontSize:11,fontWeight:600,color:RENT_COLOR[n]}}>{fmtPct(c.ventas>0?val/c.ventas*100:0)}</span></div>
+                        <div style={{height:2,background:BORDER,borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:RENT_COLOR[n],borderRadius:1}}/></div>
+                      </div>
+                    )})}
+                  </div>
+                )}
+                {Object.keys(c.empresas).length>1&&(
+                  <div style={{flex:1,minWidth:150}}>
+                    <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:8}}>Empresas</div>
+                    {Object.entries(c.empresas).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([e,val])=>(
+                      <div key={e} style={{marginBottom:5}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{e}</span><span style={{fontSize:11,fontWeight:600,color:ORANGE,flexShrink:0,marginLeft:4}}>{fmtM(val)}</span></div>
+                        <div style={{height:2,background:BORDER,borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:ORANGE,borderRadius:1}}/></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+        <div style={{fontSize:11,color:MUTED,marginTop:4}}>💡 Hacé clic en un cliente para ver qué compra, quién lo atiende y su mix de rentabilidad.</div>
+      </div>
+
+      {/* Evolución mes a mes */}
+      {perData.length>0&&(
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px"}}>
+          <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14,fontWeight:600}}>Evolución de top clientes por período</div>
+          {perData.map(per=>(
+            <div key={per.p} style={{marginBottom:14}}>
+              <div style={{fontSize:12,color:TEXT,fontWeight:600,marginBottom:6}}>{periodLabel(per.p)}</div>
+              {topClientes.map(c=>{const val=per[c.name]||0;if(!val) return null;return(
+                <div key={c.name} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:c.color,flexShrink:0}}/>
+                  <span style={{fontSize:11,color:MUTED,width:160,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</span>
+                  <div style={{flex:1,height:6,background:BORDER,borderRadius:3}}><div style={{height:"100%",width:`${val/perMax*100}%`,background:c.color,borderRadius:3,opacity:.8}}/></div>
+                  <span style={{fontSize:11,fontWeight:600,color:c.color,minWidth:64,textAlign:"right"}}>{fmtM(val)}</span>
+                  <span style={{fontSize:10,color:MUTED,minWidth:40,textAlign:"right"}}>{fmtPct(per.total>0?val/per.total*100:0)}</span>
+                </div>
+              )})}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Barra de participación */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px"}}>
+        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14,fontWeight:600}}>Participación de clientes</div>
+        <div style={{display:"flex",height:28,borderRadius:6,overflow:"hidden",gap:1}}>
+          {cliList.map(c=><div key={c.name} title={`${c.name}: ${fmtM(c.ventas)} (${fmtPct(totalVentas>0?c.ventas/totalVentas*100:0)})`} style={{flex:c.ventas,background:c.color,minWidth:2,opacity:.85}}/>)}
+        </div>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:10}}>
+          {topClientes.map(c=><div key={c.name} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:8,height:8,borderRadius:"50%",background:c.color}}/><span style={{fontSize:11,color:MUTED,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</span><span style={{fontSize:11,fontWeight:700,color:c.color}}>{fmtPct(totalVentas>0?c.ventas/totalVentas*100:0)}</span></div>)}
+          {cliList.length>6&&<span style={{fontSize:11,color:MUTED}}>+ {cliList.length-6} más</span>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function VendedoresTab({filteredRecords,meta,totalVentas,totalUnidades}){
-  const [sel,setSel]=useState(null)
-  const [crossDim,setCrossDim]=useState("proveedor")
+  const[sel,setSel]=useState(null)
   const vendMap={}
   filteredRecords.forEach(r=>{
     const k=r.vendedor||"Sin vendedor"
     if(!vendMap[k]) vendMap[k]={name:k,ventas:0,cantidad:0,rows:0,periodos:new Set(),proveedores:{},rubros:{},provincias:{},rentMix:{Alta:0,Media:0,Baja:0}}
     const v=vendMap[k]
-    v.ventas+=r.precio; v.cantidad+=r.cantidad; v.rows+=(r.rows||1)
+    v.ventas+=r.precio;v.cantidad+=r.cantidad;v.rows+=(r.rows||1)
     if(r.y&&r.m!==undefined) v.periodos.add(toPeriod(r.y,r.m))
     if(r.proveedor) v.proveedores[r.proveedor]=(v.proveedores[r.proveedor]||0)+r.precio
     if(r.rubro) v.rubros[r.rubro]=(v.rubros[r.rubro]||0)+r.precio
@@ -460,28 +590,6 @@ function VendedoresTab({filteredRecords,meta,totalVentas,totalUnidades}){
   })
   const vendList=Object.values(vendMap).sort((a,b)=>b.ventas-a.ventas)
   vendList.forEach((v,i)=>{v.color=VENDOR_COLORS[i%VENDOR_COLORS.length];v.periodos=v.periodos.size})
-  const crossDims=[...(meta?.hasProveedor?[{key:"proveedor",label:"Proveedor"}]:[]),...(meta?.hasRubro?[{key:"rubro",label:"Rubro"}]:[]),...(meta?.hasProvincia?[{key:"provincia",label:"Provincia"}]:[])];
-  const dimValues=[...new Set(filteredRecords.map(r=>r[crossDim]).filter(Boolean))].sort()
-  const crossMatrix={}
-  filteredRecords.forEach(r=>{
-    const dim=r[crossDim],vnd=r.vendedor||"Sin vendedor"
-    if(!dim||!vnd) return
-    if(!crossMatrix[dim]) crossMatrix[dim]={}
-    if(!crossMatrix[dim][vnd]) crossMatrix[dim][vnd]={ventas:0}
-    crossMatrix[dim][vnd].ventas+=r.precio
-  })
-  const dimTotals=dimValues.map(d=>({name:d,total:Object.values(crossMatrix[d]||{}).reduce((s,x)=>s+x.ventas,0)})).sort((a,b)=>b.total-a.total)
-  const topV=vendList.slice(0,8)
-  const perMap={}
-  filteredRecords.forEach(r=>{
-    if(r.y===undefined||r.m===undefined||!r.vendedor) return
-    const p=toPeriod(r.y,r.m)
-    if(!perMap[p]) perMap[p]={p,total:0}
-    perMap[p][r.vendedor]=(perMap[p][r.vendedor]||0)+r.precio
-    perMap[p].total+=r.precio
-  })
-  const perData=Object.values(perMap).sort((a,b)=>a.p-b.p)
-  const perMax=Math.max(...perData.map(m=>m.total),1)
   const maxV2=vendList[0]?.ventas||1
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -544,85 +652,20 @@ function VendedoresTab({filteredRecords,meta,totalVentas,totalUnidades}){
                     )})}
                   </div>
                 )}
-                {meta?.hasProvincia&&Object.keys(v.provincias).length>0&&(
-                  <div style={{flex:1,minWidth:160}}>
-                    <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:8}}>Provincias</div>
-                    {Object.entries(v.provincias).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([pc,val])=>(
-                      <div key={pc} style={{marginBottom:5}}>
-                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:130}}>{pc}</span><span style={{fontSize:11,fontWeight:600,color:BLUE,flexShrink:0,marginLeft:4}}>{fmtM(val)}</span></div>
-                        <div style={{height:2,background:BORDER,borderRadius:1}}><div style={{height:"100%",width:`${val/v.ventas*100}%`,background:BLUE,borderRadius:1}}/></div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
           </div>
         ))}
         <div style={{fontSize:11,color:MUTED,marginTop:4}}>💡 Hacé clic en un vendedor para ver su desglose.</div>
       </div>
-      {perData.length>0&&(
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px"}}>
-          <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14,fontWeight:600}}>Evolución por período</div>
-          {perData.map(per=>(
-            <div key={per.p} style={{marginBottom:12}}>
-              <div style={{fontSize:12,color:TEXT,fontWeight:600,marginBottom:6}}>{periodLabel(per.p)}</div>
-              {topV.map(v=>{const val=per[v.name]||0;if(!val) return null;return(
-                <div key={v.name} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                  <div style={{width:8,height:8,borderRadius:"50%",background:v.color,flexShrink:0}}/>
-                  <span style={{fontSize:11,color:MUTED,width:120,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v.name}</span>
-                  <div style={{flex:1,height:6,background:BORDER,borderRadius:3}}><div style={{height:"100%",width:`${val/perMax*100}%`,background:v.color,borderRadius:3,opacity:.8}}/></div>
-                  <span style={{fontSize:11,fontWeight:600,color:v.color,minWidth:64,textAlign:"right"}}>{fmtM(val)}</span>
-                  <span style={{fontSize:10,color:MUTED,minWidth:40,textAlign:"right"}}>{fmtPct(per.total>0?val/per.total*100:0)}</span>
-                </div>
-              )})}
-            </div>
-          ))}
-        </div>
-      )}
-      {crossDims.length>0&&dimValues.length>0&&(
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
-            <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,fontWeight:600}}>Cruce vendedor × {crossDim}</div>
-            <div style={{display:"flex",gap:6}}>{crossDims.map(({key,label})=>(
-              <button key={key} onClick={()=>setCrossDim(key)} style={{padding:"4px 12px",background:crossDim===key?PURPLE+"33":"transparent",border:`1px solid ${crossDim===key?PURPLE:BORDER}`,borderRadius:6,color:crossDim===key?PURPLE:MUTED,cursor:"pointer",fontSize:11}}>{label}</button>
-            ))}</div>
-          </div>
-          <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-              <thead><tr>
-                <th style={{padding:"6px 10px",textAlign:"left",color:MUTED,fontSize:10,textTransform:"uppercase",borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap",minWidth:120}}>{crossDim.charAt(0).toUpperCase()+crossDim.slice(1)}</th>
-                {topV.map(v=><th key={v.name} style={{padding:"6px 8px",textAlign:"right",color:v.color,fontSize:10,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap"}}>{v.name.length>12?v.name.slice(0,11)+"…":v.name}</th>)}
-                <th style={{padding:"6px 8px",textAlign:"right",color:MUTED,fontSize:10,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap"}}>Total</th>
-              </tr></thead>
-              <tbody>{dimTotals.slice(0,20).map(({name:dim,total})=>(
-                <tr key={dim} onMouseEnter={e=>e.currentTarget.style.background=CARD2} onMouseLeave={e=>e.currentTarget.style.background="transparent"} style={{borderBottom:`1px solid #1a1f2a`}}>
-                  <td style={{padding:"7px 10px",color:TEXT,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:140}}>{dim}</td>
-                  {topV.map(v=>{const val=crossMatrix[dim]?.[v.name]?.ventas||0;return <td key={v.name} style={{padding:"7px 8px",textAlign:"right",color:val>0?v.color:BORDER,fontWeight:val>0?600:400}}>{val>0?fmtM(val):"—"}</td>})}
-                  <td style={{padding:"7px 8px",textAlign:"right",color:CYAN,fontWeight:700}}>{fmtM(total)}</td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-        </div>
-      )}
-      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px"}}>
-        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14,fontWeight:600}}>Participación interna</div>
-        <div style={{display:"flex",height:28,borderRadius:6,overflow:"hidden",gap:1}}>
-          {vendList.map(v=><div key={v.name} title={`${v.name}: ${fmtM(v.ventas)}`} style={{flex:v.ventas,background:v.color,minWidth:3,opacity:.85}}/>)}
-        </div>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:10}}>
-          {vendList.map(v=><div key={v.name} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:8,height:8,borderRadius:"50%",background:v.color}}/><span style={{fontSize:11,color:MUTED}}>{v.name}</span><span style={{fontSize:11,fontWeight:700,color:v.color}}>{fmtPct(totalVentas>0?v.ventas/totalVentas*100:0)}</span></div>)}
-        </div>
-      </div>
     </div>
   )
 }
 
 function EvolucionTab({filteredRecords,meta}){
-  const [dim,setDim]=useState(()=>meta?.hasProveedor?"proveedor":meta?.hasRubro?"rubro":"vendedor")
-  const [metric,setMetric]=useState("pesos")
-  const dims=[...(meta?.hasProveedor?[{key:"proveedor",label:"Proveedores",color:CYAN}]:[]),...(meta?.hasRubro?[{key:"rubro",label:"Rubros",color:CORAL}]:[]),...(meta?.hasVendedor?[{key:"vendedor",label:"Vendedores",color:PURPLE}]:[])]
+  const[dim,setDim]=useState(()=>meta?.hasProveedor?"proveedor":meta?.hasRubro?"rubro":"vendedor")
+  const[metric,setMetric]=useState("pesos")
+  const dims=[...(meta?.hasProveedor?[{key:"proveedor",label:"Proveedores",color:CYAN}]:[]),...(meta?.hasRubro?[{key:"rubro",label:"Rubros",color:CORAL}]:[]),...(meta?.hasVendedor?[{key:"vendedor",label:"Vendedores",color:PURPLE}]:[]),...(meta?.hasCliente?[{key:"cliente",label:"Clientes",color:TEAL}]:[])]
   const activeDim=dims.find(d=>d.key===dim)||dims[0]
   const periods=[...new Set(filteredRecords.map(r=>toPeriod(r.y,r.m)).filter(v=>!isNaN(v)&&v>0))].sort((a,b)=>a-b)
   const matrix={}
@@ -631,7 +674,7 @@ function EvolucionTab({filteredRecords,meta}){
     const p=toPeriod(r.y,r.m)
     if(!matrix[k]) matrix[k]={}
     if(!matrix[k][p]) matrix[k][p]={ventas:0,cantidad:0}
-    matrix[k][p].ventas+=r.precio; matrix[k][p].cantidad+=r.cantidad
+    matrix[k][p].ventas+=r.precio;matrix[k][p].cantidad+=r.cantidad
   })
   const entities=Object.keys(matrix).sort((a,b)=>Object.values(matrix[b]).reduce((s,x)=>s+x.ventas,0)-Object.values(matrix[a]).reduce((s,x)=>s+x.ventas,0))
   const valFn=(e,p)=>{const d=matrix[e]?.[p];return d?(metric==="pesos"?d.ventas:d.cantidad):0}
@@ -709,36 +752,35 @@ function EvolucionTab({filteredRecords,meta}){
   )
 }
 
-/* ─── Main App ───────────────────────────────────────────────────────────────── */
+/* ─── MAIN APP ───────────────────────────────────────────────────────────────── */
 export default function App(){
-  const [cube,setCube]=useState(null)
-  const [articulos,setArticulos]=useState(null)
-  const [meta,setMeta]=useState(null)
-  const [storageInfo,setStorageInfo]=useState(null)
-  const [rawHeaders,setRawHeaders]=useState(null)
-  const [rawRows,setRawRows]=useState(null)
-  const [pendingImport,setPendingImport]=useState(null)
-  const [saveStage,setSaveStage]=useState("idle")
-  const [saveProgress,setSaveProgress]=useState(0)
-  const [saveMsg,setSaveMsg]=useState("")
-  const [activeTab,setActiveTab]=useState("resumen")
+  const[cube,setCube]=useState(null)
+  const[articulos,setArticulos]=useState(null)
+  const[meta,setMeta]=useState(null)
+  const[storageInfo,setStorageInfo]=useState(null)
+  const[rawHeaders,setRawHeaders]=useState(null)
+  const[rawRows,setRawRows]=useState(null)
+  const[pendingImport,setPendingImport]=useState(null)
+  const[saveStage,setSaveStage]=useState("idle")
+  const[saveProgress,setSaveProgress]=useState(0)
+  const[saveMsg,setSaveMsg]=useState("")
+  const[activeTab,setActiveTab]=useState("resumen")
   const fileRef=useRef()
-  const [fYear,setFYear]=useState("__ALL__")
-  const [fMes,setFMes]=useState("__ALL__")
-  const [fProv,setFProv]=useState("__ALL__")
-  const [fRubro,setFRubro]=useState("__ALL__")
-  const [fVend,setFVend]=useState("__ALL__")
-  const [fRentab,setFRentab]=useState("__ALL__")
-  const [fPcia,setFPcia]=useState("__ALL__")
+  const[fYear,setFYear]=useState("__ALL__")
+  const[fMes,setFMes]=useState("__ALL__")
+  const[fProv,setFProv]=useState("__ALL__")
+  const[fRubro,setFRubro]=useState("__ALL__")
+  const[fVend,setFVend]=useState("__ALL__")
+  const[fRentab,setFRentab]=useState("__ALL__")
+  const[fPcia,setFPcia]=useState("__ALL__")
+  const[fCliente,setFCliente]=useState("__ALL__")
+  const[fEmpresa,setFEmpresa]=useState("__ALL__")
 
   useEffect(()=>{
     const t0=Date.now()
     loadData().then(({cube:c,articulos:a,meta:m,error})=>{
-      setCube(c||[]); setArticulos(a||[]); setMeta(m||{})
-      setStorageInfo(error
-        ?{ok:false,error}
-        :{ok:true,loaded:c!==null,rows:m?.totalRows||0,cells:c?.length||0,arts:a?.length||0,ms:Date.now()-t0}
-      )
+      setCube(c||[]);setArticulos(a||[]);setMeta(m||{})
+      setStorageInfo(error?{ok:false,error}:{ok:true,loaded:c!==null,rows:m?.totalRows||0,cells:c?.length||0,arts:a?.length||0,ms:Date.now()-t0})
     })
   },[])
 
@@ -754,7 +796,7 @@ export default function App(){
       setRawHeaders(json[0]?.map(String)??[])
       setRawRows(json.slice(1).filter(r=>r.some(c=>c!=="")))
     }
-    reader.readAsArrayBuffer(file); e.target.value=""
+    reader.readAsArrayBuffer(file);e.target.value=""
   },[])
 
   const handleMappingConfirm=useCallback((mapping,pet=true)=>{
@@ -775,7 +817,9 @@ export default function App(){
     const newMeta={
       hasProveedor:has("proveedor"),hasRubro:has("rubro"),hasArticulo:has("articulo"),
       hasVendedor:has("vendedor"),hasCantidad:has("cantidad"),hasProvincia:has("provincia"),
-      hasRentabilidad:has("rentabilidad"),hasCosto:has("costo"),precioEsTotal:pet,mappedCols:mapping
+      hasRentabilidad:has("rentabilidad"),hasCosto:has("costo"),
+      hasCliente:has("cliente"),hasEmpresa:has("empresa"),
+      precioEsTotal:pet,mappedCols:mapping
     }
     const parsed=rawRows.map(row=>{
       const dt=parseDate(get(row,"fecha"))
@@ -789,14 +833,16 @@ export default function App(){
       }
       return{
         y:dt?.y??0,m:dt?.m??0,precio,costo,cantidad,rentabilidad,
-        proveedor:has("proveedor")?(String(get(row,"proveedor")??"").trim()||"Sin proveedor"):null,
-        rubro:has("rubro")?(String(get(row,"rubro")??"").trim()||"Sin rubro"):null,
-        articulo:has("articulo")?(String(get(row,"articulo")??"").trim()||"Sin artículo"):null,
-        vendedor:has("vendedor")?(String(get(row,"vendedor")??"").trim()||"Sin vendedor"):null,
-        provincia:has("provincia")?(String(get(row,"provincia")??"").trim()||"Sin provincia"):null,
+        proveedor: has("proveedor")?(String(get(row,"proveedor")??"").trim()||"Sin proveedor"):null,
+        rubro:     has("rubro")    ?(String(get(row,"rubro")    ??"").trim()||"Sin rubro")    :null,
+        articulo:  has("articulo") ?(String(get(row,"articulo") ??"").trim()||"Sin artículo") :null,
+        vendedor:  has("vendedor") ?(String(get(row,"vendedor") ??"").trim()||"Sin vendedor") :null,
+        provincia: has("provincia")?(String(get(row,"provincia")??"").trim()||"Sin provincia"):null,
+        cliente:   has("cliente")  ?(String(get(row,"cliente")  ??"").trim()||"Sin cliente")  :null,
+        empresa:   has("empresa")  ?(String(get(row,"empresa")  ??"").trim()||"Sin empresa")  :null,
       }
     }).filter(r=>r.y>0||r.precio>0)
-    const {cube:nc,articulos:na}=buildCube(parsed)
+    const{cube:nc,articulos:na}=buildCube(parsed)
     const mc=mergeCubes(records,nc),ma=mergeArts(articulos||[],na)
     const cubeKB=Math.round(JSON.stringify(compressCube(mc)).length/1024)
     const ventas=parsed.reduce((s,r)=>s+r.precio,0)
@@ -823,40 +869,40 @@ export default function App(){
       const kb=await saveData(mc,ma,nm)
       setSaveStage("saved");setSaveProgress(100);setSaveMsg(`Guardado en Supabase · ${fmtN(kb)} KB`)
       setTimeout(()=>{setSaveStage("idle");setSaveProgress(0);setSaveMsg("")},5000)
-    }catch(e){
-      setSaveStage("error");setSaveProgress(0);setSaveMsg(`Error Supabase: ${String(e)}`)
-    }
+    }catch(e){setSaveStage("error");setSaveProgress(0);setSaveMsg(`Error: ${String(e)}`)}
   },[pendingImport,records,articulos,meta])
 
   const handleClear=async()=>{
-    if(!confirm("¿Eliminar todos los datos del dashboard?")) return
+    if(!confirm("¿Eliminar todos los datos?")) return
     await clearData();setCube([]);setArticulos([]);setMeta({})
   }
 
   if(cube===null) return(
     <div style={{background:BG,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:MUTED,fontFamily:"system-ui"}}>
-      <div style={{textAlign:"center"}}>
-        <div style={{fontSize:40,marginBottom:12,fontWeight:800,color:CYAN,letterSpacing:-1}}>DashFact</div>
-        <div style={{fontSize:14,color:MUTED}}>Cargando datos…</div>
-      </div>
+      <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:12,fontWeight:900,color:CYAN,letterSpacing:-1}}>DashFact</div><div style={{fontSize:14,color:MUTED}}>Cargando datos…</div></div>
     </div>
   )
 
   const yearsDisp=[...new Set(records.map(r=>r.y).filter(v=>v>0))].sort((a,b)=>a-b)
   const mesesDisp=[...new Set(records.filter(r=>fYear==="__ALL__"||r.y===parseInt(fYear)).map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
   const uniq=key=>[...new Set(records.map(r=>r[key]).filter(Boolean))].sort()
+
   const filtered=records.filter(r=>{
-    if(fYear!=="__ALL__"&&r.y!==parseInt(fYear)) return false
-    if(fMes!=="__ALL__"&&r.m!==parseInt(fMes)) return false
-    if(fProv!=="__ALL__"&&r.proveedor!==fProv) return false
-    if(fRubro!=="__ALL__"&&r.rubro!==fRubro) return false
-    if(fVend!=="__ALL__"&&r.vendedor!==fVend) return false
-    if(fRentab!=="__ALL__"&&r.rentabilidad!==fRentab) return false
-    if(fPcia!=="__ALL__"&&r.provincia!==fPcia) return false
+    if(fYear!=="__ALL__"   &&r.y            !==parseInt(fYear)) return false
+    if(fMes!=="__ALL__"    &&r.m            !==parseInt(fMes))  return false
+    if(fProv!=="__ALL__"   &&r.proveedor    !==fProv)           return false
+    if(fRubro!=="__ALL__"  &&r.rubro        !==fRubro)          return false
+    if(fVend!=="__ALL__"   &&r.vendedor     !==fVend)           return false
+    if(fRentab!=="__ALL__" &&r.rentabilidad !==fRentab)         return false
+    if(fPcia!=="__ALL__"   &&r.provincia    !==fPcia)           return false
+    if(fCliente!=="__ALL__"&&r.cliente      !==fCliente)        return false
+    if(fEmpresa!=="__ALL__"&&r.empresa      !==fEmpresa)        return false
     return true
   })
+
   const filteredRows=filtered.reduce((s,r)=>s+(r.rows||1),0)
   const totalRows=meta?.totalRows||records.reduce((s,r)=>s+(r.rows||1),0)
+
   function groupBy(arr,key){
     const map={}
     arr.forEach(r=>{
@@ -866,6 +912,7 @@ export default function App(){
     })
     return Object.values(map).sort((a,b)=>b.ventas-a.ventas)
   }
+
   const totalVentas=filtered.reduce((s,r)=>s+r.precio,0)
   const totalUnidades=filtered.reduce((s,r)=>s+r.cantidad,0)
   const provData=meta?.hasProveedor?groupBy(filtered,"proveedor"):[]
@@ -873,37 +920,40 @@ export default function App(){
   const vendData=meta?.hasVendedor?groupBy(filtered,"vendedor"):[]
   const rentData=meta?.hasRentabilidad?groupBy(filtered,"rentabilidad"):[]
   const pciaData=meta?.hasProvincia?groupBy(filtered,"provincia"):[]
+  const cliData=meta?.hasCliente?groupBy(filtered,"cliente"):[]
   const artData=meta?.hasArticulo?[...(articulos||[])].sort((a,b)=>b.precio-a.precio):[]
-  const topProv=provData[0],topVend=vendData[0],topPcia=pciaData[0]
+  const topProv=provData[0],topVend=vendData[0],topPcia=pciaData[0],topCli=cliData[0]
   const hasData=records.length>0
+
   const tabs=[
     {key:"resumen",label:"Resumen"},
-    ...(meta?.hasProveedor?[{key:"proveedores",label:"Proveedores"}]:[]),
-    ...(meta?.hasRubro?[{key:"rubros",label:"Rubros"}]:[]),
-    ...(meta?.hasVendedor?[{key:"vendedores",label:"Vendedores"}]:[]),
-    ...((meta?.hasProveedor||meta?.hasRubro||meta?.hasVendedor)?[{key:"evolucion",label:"📅 Mes a Mes"}]:[]),
-    ...(meta?.hasArticulo?[{key:"articulos",label:"Artículos"}]:[]),
-    ...(meta?.hasRentabilidad?[{key:"rentabilidad",label:"Rentabilidad"}]:[]),
-    ...(meta?.hasProvincia?[{key:"provincias",label:"Provincias"}]:[]),
+    ...(meta?.hasCliente?    [{key:"clientes",     label:"🏢 Clientes"}]    :[]),
+    ...(meta?.hasProveedor?  [{key:"proveedores",  label:"Proveedores"}]    :[]),
+    ...(meta?.hasRubro?      [{key:"rubros",       label:"Rubros"}]         :[]),
+    ...(meta?.hasVendedor?   [{key:"vendedores",   label:"Vendedores"}]     :[]),
+    ...((meta?.hasProveedor||meta?.hasRubro||meta?.hasVendedor||meta?.hasCliente)?[{key:"evolucion",label:"📅 Mes a Mes"}]:[]),
+    ...(meta?.hasArticulo?   [{key:"articulos",    label:"Artículos"}]      :[]),
+    ...(meta?.hasRentabilidad?[{key:"rentabilidad",label:"Rentabilidad"}]   :[]),
+    ...(meta?.hasProvincia?  [{key:"provincias",   label:"Provincias"}]     :[]),
   ]
   const safeTab=tabs.find(t=>t.key===activeTab)?activeTab:"resumen"
 
   return(
     <div style={{background:BG,minHeight:"100vh",color:TEXT,fontFamily:"system-ui,-apple-system,sans-serif"}}>
-      {/* Header */}
       <div style={{background:CARD,borderBottom:`1px solid ${BORDER}`,padding:"10px 16px"}}>
         <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
-          {/* Logo */}
           <div style={{display:"flex",alignItems:"center",gap:8,marginRight:8}}>
             <span style={{fontSize:18,fontWeight:900,color:CYAN,letterSpacing:-0.5}}>DashFact</span>
           </div>
           {yearsDisp.length>1&&<Dropdown label="AÑO" value={fYear} options={yearsDisp.map(y=>({val:String(y),label:String(y)}))} onChange={v=>{setFYear(v);setFMes("__ALL__")}}/>}
           <Dropdown label="MES" value={fMes} options={mesesDisp.map(m=>({val:String(m),label:MESES[m]??`Mes ${m}`}))} onChange={setFMes}/>
-          {meta?.hasProveedor&&<Dropdown label="PROVEEDOR" value={fProv} options={uniq("proveedor")} onChange={setFProv}/>}
-          {meta?.hasRubro&&<Dropdown label="RUBRO" value={fRubro} options={uniq("rubro")} onChange={setFRubro}/>}
-          {meta?.hasVendedor&&<Dropdown label="VENDEDOR" value={fVend} options={uniq("vendedor")} onChange={setFVend}/>}
+          {meta?.hasEmpresa&&    <Dropdown label="EMPRESA"      value={fEmpresa} options={uniq("empresa")}      onChange={setFEmpresa}/>}
+          {meta?.hasCliente&&    <Dropdown label="CLIENTE"      value={fCliente} options={uniq("cliente")}      onChange={setFCliente}/>}
+          {meta?.hasProveedor&&  <Dropdown label="PROVEEDOR"    value={fProv}    options={uniq("proveedor")}    onChange={setFProv}/>}
+          {meta?.hasRubro&&      <Dropdown label="RUBRO"        value={fRubro}   options={uniq("rubro")}        onChange={setFRubro}/>}
+          {meta?.hasVendedor&&   <Dropdown label="VENDEDOR"     value={fVend}    options={uniq("vendedor")}     onChange={setFVend}/>}
           {meta?.hasRentabilidad&&<Dropdown label="RENTABILIDAD" value={fRentab} options={["Alta","Media","Baja"]} onChange={setFRentab}/>}
-          {meta?.hasProvincia&&<Dropdown label="PROVINCIA" value={fPcia} options={uniq("provincia")} onChange={setFPcia}/>}
+          {meta?.hasProvincia&&  <Dropdown label="PROVINCIA"    value={fPcia}    options={uniq("provincia")}    onChange={setFPcia}/>}
           <div style={{marginLeft:"auto",display:"flex",gap:10,alignItems:"flex-end",flexWrap:"wrap"}}>
             <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
             {hasData&&<button onClick={handleClear} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${BORDER}`,borderRadius:6,color:MUTED,cursor:"pointer",fontSize:11}}>Limpiar</button>}
@@ -913,7 +963,7 @@ export default function App(){
         </div>
         {storageInfo&&(
           <div style={{marginTop:5,fontSize:10,color:!storageInfo.ok?CORAL:storageInfo.loaded&&storageInfo.rows>0?MINT:MUTED}}>
-            {!storageInfo.ok?`⚠️ Error Supabase: ${storageInfo.error}`:storageInfo.loaded&&storageInfo.rows>0?`✓ ${fmtN(storageInfo.rows)} filas · ${storageInfo.cells} celdas · ${storageInfo.arts} artículos · cargado en ${storageInfo.ms}ms`:"ℹ️ Supabase conectado · sin datos previos"}
+            {!storageInfo.ok?`⚠️ Error Supabase: ${storageInfo.error}`:storageInfo.loaded&&storageInfo.rows>0?`✓ ${fmtN(storageInfo.rows)} filas · ${storageInfo.cells} celdas · ${storageInfo.arts} artículos · ${storageInfo.ms}ms`:"ℹ️ Supabase conectado · sin datos previos"}
           </div>
         )}
         {hasData&&(
@@ -921,6 +971,7 @@ export default function App(){
             {fmtN(filteredRows)} / {fmtN(totalRows)} filas
             {fYear!=="__ALL__"&&<span style={{color:CYAN,marginLeft:8}}>· Año {fYear}</span>}
             {fMes!=="__ALL__"&&<span style={{color:CYAN,marginLeft:4}}>· {MESES[parseInt(fMes)]}</span>}
+            {fCliente!=="__ALL__"&&<span style={{color:TEAL,marginLeft:4}}>· {fCliente}</span>}
           </div>
         )}
       </div>
@@ -933,7 +984,7 @@ export default function App(){
           <div style={{fontSize:48,marginBottom:12,fontWeight:900,color:CYAN,letterSpacing:-2}}>DashFact</div>
           <div style={{fontSize:16,fontWeight:700,color:TEXT,marginBottom:8}}>Sin datos cargados</div>
           <div style={{fontSize:13,color:MUTED,lineHeight:1.9}}>
-            Importá un Excel (.xlsx, .xls, .csv).<br/>
+            Importá un Excel con columnas: FECHA, VENTA, CLIENTE, ARTICULO, CANTIDAD, RUBRO, PROVEEDOR, EMPRESA, RENTABILIDAD, VENDEDOR, PROVINCIA.<br/>
             Los datos se guardan en Supabase y quedan disponibles para todos.
           </div>
           <button onClick={()=>fileRef.current?.click()} style={{marginTop:24,padding:"10px 28px",background:CYAN,border:"none",borderRadius:8,color:"#000",cursor:"pointer",fontWeight:700,fontSize:14}}>↑ Importar Excel</button>
@@ -953,31 +1004,33 @@ export default function App(){
             {safeTab==="resumen"&&(
               <>
                 <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
-                  <KpiCard icon="🗂️" label="Registros" value={fmtN(filteredRows)} sub="filas" accent={CYAN}/>
-                  <KpiCard icon="💰" label="Total Ventas" value={fmtM(totalVentas)} sub="en pesos" accent={ORANGE}/>
-                  {meta?.hasCantidad&&<KpiCard icon="📦" label="Unidades" value={fmtU(totalUnidades)} sub="vendidas" accent={MINT}/>}
-                  {topProv&&<KpiCard icon="🏆" label="Top Proveedor" value={topProv.name} sub={fmtM(topProv.ventas)} accent={GOLD}/>}
-                  {topVend&&<KpiCard icon="⭐" label="Top Vendedor" value={topVend.name} sub={fmtM(topVend.ventas)} accent={CORAL}/>}
-                  {topPcia&&<KpiCard icon="📍" label="Top Provincia" value={topPcia.name} sub={fmtM(topPcia.ventas)} accent={BLUE}/>}
+                  <KpiCard icon="🗂️" label="Registros"     value={fmtN(filteredRows)}   sub="filas"                accent={CYAN}/>
+                  <KpiCard icon="💰" label="Total Ventas"   value={fmtM(totalVentas)}    sub="en pesos"             accent={ORANGE}/>
+                  {meta?.hasCantidad&&<KpiCard icon="📦" label="Unidades"      value={fmtU(totalUnidades)} sub="vendidas"             accent={MINT}/>}
+                  {topCli&&           <KpiCard icon="🏢" label="Top Cliente"   value={topCli.name}         sub={fmtM(topCli.ventas)}  accent={TEAL}/>}
+                  {topProv&&          <KpiCard icon="🏆" label="Top Proveedor" value={topProv.name}         sub={fmtM(topProv.ventas)} accent={GOLD}/>}
+                  {topVend&&          <KpiCard icon="⭐" label="Top Vendedor"  value={topVend.name}         sub={fmtM(topVend.ventas)} accent={CORAL}/>}
+                  {topPcia&&          <KpiCard icon="📍" label="Top Provincia" value={topPcia.name}         sub={fmtM(topPcia.ventas)} accent={BLUE}/>}
                 </div>
                 <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:2,color:MUTED,marginBottom:12}}>Comparativa general</div>
                 <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:12}}>
-                  {provData.length>0&&<DualRanking title="Por Proveedor" data={provData} colorPesos={CYAN} colorUnid={MINT} totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={meta?.hasCantidad} compact/>}
-                  {rubroData.length>0&&<DualRanking title="Por Rubro" data={rubroData} colorPesos={CORAL} colorUnid={ORANGE} totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={meta?.hasCantidad} compact/>}
+                  {cliData.length>0&&  <DualRanking title="Por Cliente"   data={cliData}   colorPesos={TEAL}   colorUnid={MINT}   totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={meta?.hasCantidad} compact/>}
+                  {provData.length>0&& <DualRanking title="Por Proveedor" data={provData}  colorPesos={CYAN}   colorUnid={BLUE}   totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={meta?.hasCantidad} compact/>}
                 </div>
                 <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                  {vendData.length>0&&<DualRanking title="Por Vendedor" data={vendData} colorPesos={PURPLE} colorUnid={GOLD} totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={meta?.hasCantidad} compact/>}
-                  {pciaData.length>0&&<DualRanking title="Por Provincia" data={pciaData} colorPesos={BLUE} colorUnid={VIOLET} totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={meta?.hasCantidad} compact/>}
+                  {rubroData.length>0&&<DualRanking title="Por Rubro"     data={rubroData} colorPesos={CORAL}  colorUnid={ORANGE} totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={meta?.hasCantidad} compact/>}
+                  {vendData.length>0&& <DualRanking title="Por Vendedor"  data={vendData}  colorPesos={PURPLE} colorUnid={GOLD}   totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={meta?.hasCantidad} compact/>}
                 </div>
               </>
             )}
-            {safeTab==="proveedores"&&<DetailTab data={provData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Proveedor" colorPesos={CYAN} colorUnid={MINT}/>}
-            {safeTab==="rubros"&&<DetailTab data={rubroData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Rubro" colorPesos={CORAL} colorUnid={ORANGE}/>}
-            {safeTab==="vendedores"&&<VendedoresTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
-            {safeTab==="evolucion"&&<EvolucionTab filteredRecords={filtered} meta={meta}/>}
-            {safeTab==="articulos"&&<ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas}/>}
+            {safeTab==="clientes"&&    <ClientesTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
+            {safeTab==="proveedores"&& <DetailTab data={provData}  hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Proveedor"  colorPesos={CYAN}   colorUnid={MINT}/>}
+            {safeTab==="rubros"&&      <DetailTab data={rubroData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Rubro"      colorPesos={CORAL}  colorUnid={ORANGE}/>}
+            {safeTab==="vendedores"&&  <VendedoresTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
+            {safeTab==="evolucion"&&   <EvolucionTab filteredRecords={filtered} meta={meta}/>}
+            {safeTab==="articulos"&&   <ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas}/>}
             {safeTab==="rentabilidad"&&<RentabilidadSection data={rentData} artData={artData} hasCantidad={meta?.hasCantidad}/>}
-            {safeTab==="provincias"&&<DetailTab data={pciaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia" colorPesos={BLUE} colorUnid={VIOLET}/>}
+            {safeTab==="provincias"&&  <DetailTab data={pciaData}  hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia"  colorPesos={BLUE}   colorUnid={VIOLET}/>}
           </div>
         </>
       )}
