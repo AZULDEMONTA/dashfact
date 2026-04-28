@@ -133,28 +133,29 @@ const fmtPct=n=>`${(n??0).toFixed(1)}%`
 const toPeriod=(y,m)=>y*100+m
 const periodLabel=(p,short=false)=>{const y=Math.floor(p/100),m=p%100;return short?`${MESES[m]?.slice(0,3)} ${y}`:`${MESES[m]} ${y}`}
 
-const BG="#0d1117",CARD="#161b22",CARD2="#1a2030",BORDER="#21262d",TEXT="#e6edf3",MUTED="#8b949e"
-const CYAN="#00e5ff",CORAL="#ff6b6b",MINT="#00ffb3",PURPLE="#bf5af2",GOLD="#ffd60a",ORANGE="#ff9f0a",BLUE="#3b82f6",VIOLET="#a78bfa",TEAL="#14b8a6"
-const RENT_COLOR={Alta:"#22c55e",Media:ORANGE,Baja:CORAL,"Sin dato":MUTED}
-const RENT_BG={Alta:"#22c55e22",Media:`${ORANGE}22`,Baja:`${CORAL}22`,"Sin dato":`${MUTED}22`}
-const VENDOR_COLORS=[CYAN,CORAL,MINT,PURPLE,GOLD,ORANGE,BLUE,VIOLET,"#f43f5e","#84cc16","#06b6d4","#d946ef"]
+const LOGO_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEF0lEQVR4nO1WXWhcRRT+zrl/m8ZEGmpJk6a2IbFQQUIjSA0VimAj2FqDK0bBR31RRBDNJo3TpU3NFhR9sBCVFqxI01CQKhIf7EMREooiQoNik5jSNO0mWJq/3ezeO3N8uEtd0+puuuqL+eA+3JnhnO/75pzDAKtYxcpBue9/h1MWAGyojz23saHr+fy1UsDFHx0RpRT7gYlns4ESEQJGpFQCRULZAFDbGGtbt6lb1tXtl5rNHXvz9+4UxTpglFLsZ0y3GG0EYnxj3oIIATD/MgFlA3Hz8Wd6n4HXRDAM0Szwmmu2xPYAcVNKLRTjQKg+G3QCjlg2Prcs+hJwxTfSVWotFOhnZQPxoLY+1pYJ7NMEEW+NfoBhe+mUfCcguI7/5NRY75nQhWf0SgkUKiCjlOKjx9OdwBohLAxO/py4AADrN3ecFbNml+9nY0Q4IzJCtxbk/QIMANiWc+iA5DTfdOxvHAjVV9fH2oLAPg0JjOfpliujR4YBodr6jl2ZwP2G4MBxUs9OjfX2r1R9IQKsFHD0ePq8oGI708JX05cSewDlAPEsAKzf9OYxtiq2M6eGAfpEB3IfM9UITCVDiC1OQfCb7fK0Y1vXIp6V3FClZ3bswI14PG6Av7yCUH3fiVibwGsmLCESsQ8DECCe3fpwomIxOdcSaIiRRVdn5TFifhQwSRH6AYwLwjQuLEmb3DkjfoYylq/LtclkkC3CgXz1lc3M8yenJxLttY3dDwW+eUEbaWcuX2v0wg3LorPMVkqMP3ttovflf+AK8u/eOS0SLLquxHSAnSJulNgDzMKP7PC7TY2z/T9N3rVlcZZGQC5bdvqJ5Hjka+C6BVT5Ybz48hb90//tCLBSwAfH0t8DXpMgkybAI17LkPmLjkPdV8d7+kX+OH9PXfoLocpWyPzQzOXEToKicEAVxrJBFE69vhPpfaBIk5iMD7HKQB4zLbx3d7Xz4NRYT78IKOz78Lzj8iFICiC3ZWN9Z+tKpuPySWgAxYFP3SLagNgm5pRrB+3JiZ7XRs/H53K9LuHQiQdA1Joa6x1i0oOAC1/rrpBgcdMxj0CopnrL0lMgt0lEE7M1VxbB7qnxt0/mElOY9FaUOe4hSNoYcVvqtnbtLtaFfAeMUoqNYL8Y0Uzke16w9/IvPd8CLzq5xLdRNaCBqHVp7OAQkx4keJJZ8mPhXmEXOF/9R59mnxZT1sSWa9m26Zy8mDgH9DnAh36hQADguNZBkTQJIo9U3/vG48W4wAAIOKBbW9/3tMbrIEpanDqS/DXxTkjspSKSD2hA8ZXRw8NEwSmQsxgIvRqNRq1CLtxsw23blDtPQZ1Xbs+ExbZiEAA0NLzi3shWVBmT5uuTlVeLbcdliJb82LxDKAak1Dc/hTFKjrOK/wa/A3rQ7dfNECyuAAAAAElFTkSuQmCC"
+const BG="#F4F5F7",CARD="#FFFFFF",CARD2="#F0F2F5",BORDER="#DDE1E7",TEXT="#1A2332",MUTED="#6B7A8D"
+const BRAND="#141d77",BRAND2="#1e2da0",BRANDBG="#EEF0FA"
+const CYAN="#2B5FA5",CORAL="#C0392B",MINT="#1A7A5E",PURPLE="#5B4A9E",GOLD="#B8860B",ORANGE="#B8721A",BLUE="#2B5FA5",VIOLET="#5B4A9E",TEAL="#1A6B7A"
+const RENT_COLOR={Alta:"#1A7A5E",Media:"#B8721A",Baja:"#C0392B","Sin dato":MUTED}
+const RENT_BG={Alta:"#E8F5F0",Media:"#FDF3E3",Baja:"#FBEAEA","Sin dato":"#F4F5F7"}
+const VENDOR_COLORS=["#2B5FA5","#1A7A5E","#5B4A9E","#B8721A","#C0392B","#1A6B7A","#7A5CA8","#2E8B6E","#8B4513","#2E4A7A","#6B4A1A","#1A4A6B"]
 
 function RentBadge({nivel}){const n=nivel||"Sin dato";return<span style={{color:RENT_COLOR[n],fontSize:10,padding:"2px 8px",background:RENT_BG[n],borderRadius:20,whiteSpace:"nowrap",fontWeight:600}}>{n}</span>}
 function KpiCard({icon,label,value,sub,accent}){return(
-  <div style={{flex:1,minWidth:150,background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px",position:"relative",overflow:"hidden"}}>
-    <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:accent}}/>
-    <div style={{fontSize:18,marginBottom:6}}>{icon}</div>
-    <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:4}}>{label}</div>
-    <div style={{fontSize:22,fontWeight:800,color:TEXT,lineHeight:1,wordBreak:"break-word"}}>{value}</div>
-    {sub&&<div style={{fontSize:11,color:accent,fontWeight:600,marginTop:4}}>{sub}</div>}
+  <div style={{flex:1,minWidth:150,background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"14px 16px",position:"relative",overflow:"hidden",borderTop:`3px solid ${accent}`}}>
+    <div style={{fontSize:16,marginBottom:5}}>{icon}</div>
+    <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:3}}>{label}</div>
+    <div style={{fontSize:20,fontWeight:500,color:TEXT,lineHeight:1,wordBreak:"break-word"}}>{value}</div>
+    {sub&&<div style={{fontSize:11,color:accent,fontWeight:500,marginTop:4}}>{sub}</div>}
   </div>
 )}
 function Dropdown({label,value,options,onChange}){
   const norm=options.map(o=>typeof o==="string"?{val:o,label:o}:o)
   return(
-    <div style={{display:"flex",flexDirection:"column",gap:3,minWidth:110}}>
-      <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>{label}</span>
-      <select value={value} onChange={e=>onChange(e.target.value)} style={{background:CARD2,border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,padding:"5px 8px",fontSize:12,outline:"none",cursor:"pointer"}}>
+    <div style={{display:"flex",flexDirection:"column",gap:2,minWidth:110}}>
+      <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:"#8A9AB5"}}>{label}</span>
+      <select value={value} onChange={e=>onChange(e.target.value)} style={{background:"#243B55",border:"0.5px solid #2F4D6B",borderRadius:6,color:"#C8D8E8",padding:"5px 8px",fontSize:12,outline:"none",cursor:"pointer"}}>
         <option value="__ALL__">Todos</option>
         {norm.map(o=><option key={o.val} value={o.val}>{o.label}</option>)}
       </select>
@@ -172,7 +173,7 @@ function MetricToggle({value,onChange}){return(
 )}
 function SaveBar({stage,progress,msg}){
   if(stage==="idle") return null
-  const label=stage==="merging"?"⚙️ Fusionando...":stage==="compressing"?"🗜️ Comprimiendo...":stage==="saving"?"☁️ Guardando en Supabase...":stage==="saved"?`✓ ${msg}`:`⚠️ ${msg}`
+  const label=stage==="merging"?"⚙️ Fusionando...":stage==="compressing"?"🗜️ Comprimiendo...":stage==="saving"?"Guardando en Supabase...":stage==="saved"?`✓ ${msg}`:`⚠️ ${msg}`
   const color=stage==="error"?CORAL:stage==="saved"?MINT:MUTED
   return(
     <div style={{display:"flex",flexDirection:"column",gap:4,minWidth:220,maxWidth:300}}>
@@ -890,8 +891,12 @@ export default function App(){
   }
 
   if(cube===null) return(
-    <div style={{background:BG,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:MUTED,fontFamily:"system-ui"}}>
-      <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:12,fontWeight:900,color:CYAN,letterSpacing:-1}}>DashFact</div><div style={{fontSize:14,color:MUTED}}>Cargando datos…</div></div>
+    <div style={{background:BRAND,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.7)",fontFamily:"system-ui"}}>
+      <div style={{textAlign:"center"}}>
+        <img src={LOGO_SRC} style={{height:48,width:48,objectFit:"contain",filter:"brightness(0) invert(1)",marginBottom:16}} alt="logo"/>
+        <div style={{fontSize:18,fontWeight:500,color:"#fff",marginBottom:4}}>Azul de Montaña</div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,0.5)"}}>Cargando datos…</div>
+      </div>
     </div>
   )
 
@@ -958,8 +963,12 @@ export default function App(){
     <div style={{background:BG,minHeight:"100vh",color:TEXT,fontFamily:"system-ui,-apple-system,sans-serif"}}>
       <div style={{background:CARD,borderBottom:`1px solid ${BORDER}`,padding:"10px 16px"}}>
         <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginRight:8}}>
-            <span style={{fontSize:18,fontWeight:900,color:CYAN,letterSpacing:-0.5}}>DashFact</span>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginRight:12}}>
+            <img src={LOGO_SRC} style={{height:28,width:28,objectFit:"contain",filter:"brightness(0) invert(1)"}} alt="Azul de Montaña"/>
+            <div>
+              <div style={{fontSize:11,fontWeight:500,color:"rgba(255,255,255,0.95)",letterSpacing:0.2}}>Azul de Montaña</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,0.5)",letterSpacing:1,textTransform:"uppercase"}}>Dashboard de ventas</div>
+            </div>
           </div>
           {yearsDisp.length>1&&<Dropdown label="AÑO" value={fYear} options={yearsDisp.map(y=>({val:String(y),label:String(y)}))} onChange={v=>{setFYear(v);setFMes("__ALL__")}}/>}
           <Dropdown label="MES" value={fMes} options={mesesDisp.map(m=>({val:String(m),label:MESES[m]??`Mes ${m}`}))} onChange={setFMes}/>
@@ -973,8 +982,8 @@ export default function App(){
           {meta?.hasProvincia&&  <Dropdown label="PROVINCIA"    value={fPcia}      options={uniq("provincia")}    onChange={setFPcia}/>}
           <div style={{marginLeft:"auto",display:"flex",gap:10,alignItems:"flex-end",flexWrap:"wrap"}}>
             <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
-            {hasData&&<button onClick={handleClear} style={{padding:"5px 10px",background:"transparent",border:`1px solid ${BORDER}`,borderRadius:6,color:MUTED,cursor:"pointer",fontSize:11}}>Limpiar</button>}
-            <button onClick={()=>fileRef.current?.click()} style={{padding:"6px 14px",background:CYAN,border:"none",borderRadius:6,color:"#000",cursor:"pointer",fontWeight:700,fontSize:12}}>↑ Importar Excel</button>
+            {hasData&&<button onClick={handleClear} style={{padding:"5px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6,color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:11}}>Limpiar</button>}
+            <button onClick={()=>fileRef.current?.click()} style={{padding:"6px 16px",background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:6,color:"#fff",cursor:"pointer",fontWeight:500,fontSize:12}}>↑ Importar Excel</button>
             <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
           </div>
         </div>
@@ -998,21 +1007,21 @@ export default function App(){
 
       {!hasData?(
         <div style={{textAlign:"center",padding:"100px 20px"}}>
-          <div style={{fontSize:48,marginBottom:12,fontWeight:900,color:CYAN,letterSpacing:-2}}>DashFact</div>
-          <div style={{fontSize:16,fontWeight:700,color:TEXT,marginBottom:8}}>Sin datos cargados</div>
+          <img src={LOGO_SRC} style={{height:52,width:52,objectFit:"contain",marginBottom:12,opacity:0.3}} alt="logo"/>
+          <div style={{fontSize:16,fontWeight:500,color:TEXT,marginBottom:8}}>Sin datos cargados</div>
           <div style={{fontSize:13,color:MUTED,lineHeight:1.9}}>
             Importá un Excel con columnas: FECHA, VENTA, CLIENTE, ARTICULO, CANTIDAD, RUBRO, PROVEEDOR, EMPRESA, RENTABILIDAD, VENDEDOR, PROVINCIA.<br/>
             Los datos se guardan en Supabase y quedan disponibles para todos.
           </div>
-          <button onClick={()=>fileRef.current?.click()} style={{marginTop:24,padding:"10px 28px",background:CYAN,border:"none",borderRadius:8,color:"#000",cursor:"pointer",fontWeight:700,fontSize:14}}>↑ Importar Excel</button>
+          <button onClick={()=>fileRef.current?.click()} style={{marginTop:24,padding:"10px 28px",background:BRAND,border:"none",borderRadius:8,color:"#fff",cursor:"pointer",fontWeight:500,fontSize:14}}>↑ Importar Excel</button>
           <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
         </div>
       ):(
         <>
-          <div style={{background:CARD,borderBottom:`1px solid ${BORDER}`,padding:"0 16px",display:"flex",gap:0,overflowX:"auto"}}>
+          <div style={{background:"#fff",borderBottom:"1px solid #DDE1E7",padding:"0 16px",display:"flex",gap:0,overflowX:"auto",boxShadow:"0 1px 3px rgba(0,0,0,0.06)"}}>
             {tabs.map(t=>(
               <button key={t.key} onClick={()=>setActiveTab(t.key)}
-                style={{padding:"12px 18px",background:"transparent",border:"none",borderBottom:`2px solid ${safeTab===t.key?CYAN:"transparent"}`,color:safeTab===t.key?CYAN:MUTED,cursor:"pointer",fontSize:13,fontWeight:safeTab===t.key?600:400,whiteSpace:"nowrap"}}>
+                style={{padding:"12px 18px",background:"transparent",border:"none",borderBottom:`2px solid ${safeTab===t.key?BRAND:"transparent"}`,color:safeTab===t.key?BRAND:MUTED,cursor:"pointer",fontSize:13,fontWeight:safeTab===t.key?600:400,whiteSpace:"nowrap"}}>
                 {t.label}
               </button>
             ))}
@@ -1029,7 +1038,7 @@ export default function App(){
                   {topVend&&          <KpiCard icon="⭐" label="Top Vendedor"  value={topVend.name}         sub={fmtM(topVend.ventas)} accent={CORAL}/>}
                   {topPcia&&          <KpiCard icon="📍" label="Top Provincia" value={topPcia.name}         sub={fmtM(topPcia.ventas)} accent={BLUE}/>}
                 </div>
-                <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:2,color:MUTED,marginBottom:12}}>Comparativa general</div>
+                <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.8,color:"#8A9AB5",marginBottom:12,fontWeight:500}}>Comparativa general</div>
                 <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:12}}>
                   {cliData.length>0&&  <DualRanking title="Por Cliente"   data={cliData}   colorPesos={TEAL}   colorUnid={MINT}   totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={meta?.hasCantidad} compact/>}
                   {provData.length>0&& <DualRanking title="Por Proveedor" data={provData}  colorPesos={CYAN}   colorUnid={BLUE}   totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={meta?.hasCantidad} compact/>}
