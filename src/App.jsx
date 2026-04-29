@@ -6,7 +6,7 @@ const SK="cube",AK="arts",MK="meta"
 const CAT_FIELDS=["proveedor","rubro","vendedor","rentabilidad","provincia","cliente","empresa","localidad","zona"]
 const LOGO_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEF0lEQVR4nO1WXWhcRRT+zrl/m8ZEGmpJk6a2IbFQQUIjSA0VimAj2FqDK0bBR31RRBDNJo3TpU3NFhR9sBCVFqxI01CQKhIf7EMREooiQoNik5jSNO0mWJq/3ezeO3N8uEtd0+puuuqL+eA+3JnhnO/75pzDAKtYxcpBue9/h1MWAGyojz23saHr+fy1UsDFHx0RpRT7gYlns4ESEQJGpFQCRULZAFDbGGtbt6lb1tXtl5rNHXvz9+4UxTpglFLsZ0y3GG0EYnxj3oIIATD/MgFlA3Hz8Wd6n4HXRDAM0Szwmmu2xPYAcVNKLRTjQKg+G3QCjlg2Prcs+hJwxTfSVWotFOhnZQPxoLY+1pYJ7NMEEW+NfoBhe+mUfCcguI7/5NRY75nQhWf0SgkUKiCjlOKjx9OdwBohLAxO/py4AADrN3ecFbNml+9nY0Q4IzJCtxbk/QIMANiWc+iA5DTfdOxvHAjVV9fH2oLAPg0JjOfpliujR4YBodr6jl2ZwP2G4MBxUs9OjfX2r1R9IQKsFHD0ePq8oGI708JX05cSewDlAPEsAKzf9OYxtiq2M6eGAfpEB3IfM9UITCVDiC1OQfCb7fK0Y1vXIp6V3FClZ3bswI14PG6Av7yCUH3fiVibwGsmLCESsQ8DECCe3fpwomIxOdcSaIiRRVdn5TFifhQwSRH6AYwLwjQuLEmb3DkjfoYylq/LtclkkC3CgXz1lc3M8yenJxLttY3dDwW+eUEbaWcuX2v0wg3LorPMVkqMP3ttovflf+AK8u/eOS0SLLquxHSAnSJulNgDzMKP7PC7TY2z/T9N3rVlcZZGQC5bdvqJ5Hjka+C6BVT5Ybz48hb90//tCLBSwAfH0t8DXpMgkybAI17LkPmLjkPdV8d7+kX+OH9PXfoLocpWyPzQzOXEToKicEAVxrJBFE69vhPpfaBIk5iMD7HKQB4zLbx3d7Xz4NRYT78IKOz78Lzj8iFICiC3ZWN9Z+tKpuPySWgAxYFP3SLagNgm5pRrB+3JiZ7XRs/H53K9LuHQiQdA1Joa6x1i0oOAC1/rrpBgcdMxj0CopnrL0lMgt0lEE7M1VxbB7qnxt0/mElOY9FaUOe4hSNoYcVvqtnbtLtaFfAeMUoqNYL8Y0Uzke16w9/IvPd8CLzq5xLdRNaCBqHVp7OAQkx4keJJZ8mPhXmEXOF/9R59mnxZT1sSWa9m26Zy8mDgH9DnAh36hQADguNZBkTQJIo9U3/vG48W4wAAIOKBbW9/3tMbrIEpanDqS/DXxTkjspSKSD2hA8ZXRw8NEwSmQsxgIvRqNRq1CLtxsw23blDtPQZ1Xbs+ExbZiEAA0NLzi3shWVBmT5uuTlVeLbcdliJb82LxDKAak1Dc/hTFKjrOK/wa/A3rQ7dfNECyuAAAAAElFTkSuQmCC"
 
-const BG="#f5f6fa",CARD="#ffffff",CARD2="#f0f2f5",BORDER="#e0e3ea",TEXT="#1a2332",MUTED="#8a97a8"
+const BG="#eef0f8",CARD="#ffffff",CARD2="#e8eaf4",BORDER="#dde0ee",TEXT="#0d1330",MUTED="#7a88a0"
 const BRAND="#1a237e",BRAND_DARK="#0d1660",BRAND_LIGHT="#eef0fa"
 const ACCENT1="#1565c0",ACCENT2="#00897b",ACCENT3="#6a1b9a",ACCENT4="#b8721a",ACCENT5="#c62828",ACCENT6="#1a6b7a",ACCENT7="#4a148c",ACCENT8="#2e7d32"
 const RENT_COLOR={Alta:"#2e7d32",Media:"#b8721a",Baja:"#c62828","Sin dato":"#8a97a8"}
@@ -114,11 +114,12 @@ const toPeriod=(y,m)=>y*100+m
 const periodLabel=(p,short=false)=>{const y=Math.floor(p/100),m=p%100;return short?`${MESES[m]?.slice(0,3)} ${y}`:`${MESES[m]} ${y}`}
 
 function RentBadge({nivel}){const n=nivel||"Sin dato";return<span style={{color:RENT_COLOR[n],fontSize:10,padding:"2px 8px",background:RENT_BG[n],borderRadius:20,whiteSpace:"nowrap",fontWeight:500}}>{n}</span>}
-function KpiCard({label,value,sub,accent}){return(
-  <div style={{flex:1,minWidth:140,background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"14px 16px",borderLeft:`3px solid ${accent}`}}>
-    <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED,marginBottom:3}}>{label}</div>
-    <div style={{fontSize:19,fontWeight:500,color:TEXT,lineHeight:1.1,wordBreak:"break-word"}}>{value}</div>
-    {sub&&<div style={{fontSize:11,color:accent,fontWeight:500,marginTop:4}}>{sub}</div>}
+function KpiCard({icon,label,value,sub,accent}){return(
+  <div style={{flex:1,minWidth:140,background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"14px 16px",boxShadow:"0 1px 6px rgba(26,35,126,0.07)"}}>
+    {icon&&<div style={{fontSize:18,marginBottom:6}}>{icon}</div>}
+    <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:4}}>{label}</div>
+    <div style={{fontSize:20,fontWeight:500,color:accent,lineHeight:1.1,wordBreak:"break-word"}}>{value}</div>
+    {sub&&<div style={{fontSize:11,color:MUTED,marginTop:4}}>{sub}</div>}
   </div>
 )}
 function Dropdown({label,value,options,onChange}){
@@ -134,7 +135,7 @@ function Dropdown({label,value,options,onChange}){
   )
 }
 function MetricToggle({value,onChange}){return(
-  <div style={{display:"flex",background:CARD2,border:`1px solid ${BORDER}`,borderRadius:8,padding:2,gap:2}}>
+  <div style={{display:"flex",background:CARD,border:`1px solid ${BORDER}`,boxShadow:"0 1px 4px rgba(26,35,126,0.06)",borderRadius:8,padding:2,gap:2}}>
     {["pesos","unidades"].map(v=>(
       <button key={v} onClick={()=>onChange(v)} style={{padding:"4px 12px",background:value===v?CARD:"transparent",border:`1px solid ${value===v?BORDER:"transparent"}`,borderRadius:6,color:value===v?TEXT:MUTED,cursor:"pointer",fontSize:11,fontWeight:value===v?500:400}}>
         {v==="pesos"?"$ Pesos":"Unidades"}
@@ -173,11 +174,11 @@ function BarList({data,colorFn,totalVentas,totalUnidades,hasCantidad,limit=10}){
         <div key={d.name} style={{marginBottom:9}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
             <span style={{fontSize:11,color:MUTED,width:16,textAlign:"right",flexShrink:0}}>{i+1}.</span>
-            <span style={{fontSize:12,color:TEXT,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.name}</span>
-            <span style={{fontSize:12,fontWeight:500,color,whiteSpace:"nowrap"}}>{valFn(d)}</span>
+            <span style={{fontSize:13,color:TEXT,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.name}</span>
+            <span style={{fontSize:13,fontWeight:500,color,whiteSpace:"nowrap"}}>{valFn(d)}</span>
             <span style={{fontSize:11,color:MUTED,width:38,textAlign:"right"}}>{fmtPct(total>0?(metric==="pesos"?d.ventas:d.cantidad)/total*100:0)}</span>
           </div>
-          <div style={{height:3,background:CARD2,borderRadius:2,marginLeft:24}}>
+          <div style={{height:3,background:"#e0e4f0",borderRadius:2,marginLeft:24}}>
             <div style={{height:"100%",width:`${(metric==="pesos"?d.ventas:d.cantidad)/maxV*100}%`,background:color,borderRadius:2,opacity:0.75}}/>
           </div>
         </div>
@@ -190,7 +191,7 @@ function BarList({data,colorFn,totalVentas,totalUnidades,hasCantidad,limit=10}){
 
 function ChartCard({title,count,children}){
   return(
-    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"16px 18px",flex:1,minWidth:280}}>
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px",flex:1,minWidth:280,boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
         <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>{title}</span>
         {count&&<span style={{fontSize:11,color:MUTED}}>{count} cat.</span>}
@@ -214,7 +215,7 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas}){
   const sorted=metric==="pesos"?[...data].sort((a,b)=>b.precio-a.precio):[...data].sort((a,b)=>b.cantidad-a.cantidad)
   const shown=expanded?sorted:sorted.slice(0,10)
   return(
-    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"16px 18px"}}>
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px",boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <div><span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Por Artículo</span><span style={{fontSize:11,color:MUTED,marginLeft:8}}>{data.length} artículos</span></div>
         {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
@@ -225,7 +226,7 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas}){
             <th key={h} style={{padding:"6px 8px",textAlign:h==="Artículo"?"left":"right",color:MUTED,fontSize:9,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap"}}>{h}</th>
           ))}</tr></thead>
           <tbody>{shown.map((d,i)=>(
-            <tr key={d.name} onMouseEnter={e=>e.currentTarget.style.background=CARD2} onMouseLeave={e=>e.currentTarget.style.background="transparent"} style={{borderBottom:`1px solid ${BORDER}`}}>
+            <tr key={d.name} onMouseEnter={e=>e.currentTarget.style.background='#eef0f8'} onMouseLeave={e=>e.currentTarget.style.background="transparent"} style={{borderBottom:`1px solid ${BORDER}`}}>
               <td style={{padding:"7px 8px",color:MUTED,fontSize:11,textAlign:"right",width:24}}>{i+1}</td>
               <td style={{padding:"7px 8px",color:TEXT,maxWidth:200,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.name}</td>
               <td style={{padding:"7px 8px",color:BRAND,textAlign:"right",fontWeight:500}}>{fmtM(d.precio)}</td>
@@ -281,12 +282,12 @@ function VendedoresTab({filteredRecords,meta,totalVentas,totalUnidades}){
   return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Vendedores" value={vl.length} sub="en el período" accent={ACCENT3}/>
-        <KpiCard label="Total Ventas" value={fmtM(totalVentas)} sub="período" accent={BRAND}/>
-        {meta?.hasCantidad&&<KpiCard label="Unidades" value={fmtU(totalUnidades)} sub="período" accent={ACCENT2}/>}
-        {vl[0]&&<KpiCard label="Líder" value={vl[0].name} sub={`${fmtM(vl[0].ventas)} · ${fmtPct(totalVentas>0?vl[0].ventas/totalVentas*100:0)}`} accent={ACCENT4}/>}
+        <KpiCard icon="👥" label="Vendedores" value={vl.length} sub="en el período" accent={ACCENT3}/>
+        <KpiCard icon="💰" label="Total Ventas" value={fmtM(totalVentas)} sub="período" accent={BRAND}/>
+        {meta?.hasCantidad&&<KpiCard icon="📦" label="Unidades" value={fmtU(totalUnidades)} sub="período" accent={ACCENT2}/>}
+        {vl[0]&&<KpiCard icon="🏆" label="Líder" value={vl[0].name} sub={`${fmtM(vl[0].ventas)} · ${fmtPct(totalVentas>0?vl[0].ventas/totalVentas*100:0)}`} accent={ACCENT4}/>}
       </div>
-      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"18px 20px"}}>
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px",boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
         <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14}}>Ranking de vendedores</div>
         {vl.map((v,i)=>(
           <div key={v.name} onClick={()=>setSel(sel===v.name?null:v.name)}
@@ -295,19 +296,19 @@ function VendedoresTab({filteredRecords,meta,totalVentas,totalUnidades}){
               <span style={{fontSize:12,color:MUTED,width:22,textAlign:"right",flexShrink:0}}>{i+1}.</span>
               <div style={{width:8,height:8,borderRadius:"50%",background:v.color,flexShrink:0}}/>
               <span style={{fontSize:13,fontWeight:500,color:TEXT,flex:1}}>{v.name}</span>
-              <span style={{fontSize:13,fontWeight:500,color:v.color,minWidth:70,textAlign:"right"}}>{fmtM(v.ventas)}</span>
+              <span style={{fontSize:14,fontWeight:500,color:v.color,minWidth:70,textAlign:"right"}}>{fmtM(v.ventas)}</span>
               <span style={{fontSize:11,color:MUTED,width:44,textAlign:"right"}}>{fmtPct(totalVentas>0?v.ventas/totalVentas*100:0)}</span>
               {meta?.hasCantidad&&<span style={{fontSize:11,color:ACCENT2,minWidth:60,textAlign:"right"}}>{fmtU(v.cantidad)} u.</span>}
               <span style={{fontSize:11,color:MUTED,minWidth:64,textAlign:"right"}}>{fmtN(v.rows)} ops.</span>
             </div>
-            <div style={{height:4,background:CARD2,borderRadius:2,marginLeft:40}}>
+            <div style={{height:4,background:"#e0e4f0",borderRadius:2,marginLeft:40}}>
               <div style={{height:"100%",width:`${v.ventas/maxV*100}%`,background:v.color,borderRadius:2,opacity:0.65}}/>
             </div>
             {sel===v.name&&(
               <div style={{marginTop:12,display:"flex",gap:10,flexWrap:"wrap"}}>
-                {Object.keys(v.proveedores).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Proveedores</div>{Object.entries(v.proveedores).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([p,val])=><div key={p} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{p}</span><span style={{fontSize:11,fontWeight:500,color:BRAND}}>{fmtM(val)}</span></div><div style={{height:2,background:CARD2,borderRadius:1}}><div style={{height:"100%",width:`${val/v.ventas*100}%`,background:BRAND,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
-                {Object.keys(v.rubros).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Rubros</div>{Object.entries(v.rubros).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([r,val])=><div key={r} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{r}</span><span style={{fontSize:11,fontWeight:500,color:ACCENT1}}>{fmtM(val)}</span></div><div style={{height:2,background:CARD2,borderRadius:1}}><div style={{height:"100%",width:`${val/v.ventas*100}%`,background:ACCENT1,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
-                {(v.rentMix.Alta+v.rentMix.Media+v.rentMix.Baja)>0&&<div style={{flex:1,minWidth:150}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Mix rentabilidad</div>{["Alta","Media","Baja"].map(n=>{const val=v.rentMix[n];if(!val) return null;return<div key={n} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><RentBadge nivel={n}/><span style={{fontSize:11,fontWeight:500,color:RENT_COLOR[n]}}>{fmtPct(v.ventas>0?val/v.ventas*100:0)}</span></div><div style={{height:2,background:CARD2,borderRadius:1}}><div style={{height:"100%",width:`${val/v.ventas*100}%`,background:RENT_COLOR[n],borderRadius:1,opacity:0.7}}/></div></div>})}</div>}
+                {Object.keys(v.proveedores).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Proveedores</div>{Object.entries(v.proveedores).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([p,val])=><div key={p} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{p}</span><span style={{fontSize:11,fontWeight:500,color:BRAND}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/v.ventas*100}%`,background:BRAND,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
+                {Object.keys(v.rubros).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Rubros</div>{Object.entries(v.rubros).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([r,val])=><div key={r} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{r}</span><span style={{fontSize:11,fontWeight:500,color:ACCENT1}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/v.ventas*100}%`,background:ACCENT1,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
+                {(v.rentMix.Alta+v.rentMix.Media+v.rentMix.Baja)>0&&<div style={{flex:1,minWidth:150}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Mix rentabilidad</div>{["Alta","Media","Baja"].map(n=>{const val=v.rentMix[n];if(!val) return null;return<div key={n} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><RentBadge nivel={n}/><span style={{fontSize:11,fontWeight:500,color:RENT_COLOR[n]}}>{fmtPct(v.ventas>0?val/v.ventas*100:0)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/v.ventas*100}%`,background:RENT_COLOR[n],borderRadius:1,opacity:0.7}}/></div></div>})}</div>}
               </div>
             )}
           </div>
@@ -340,17 +341,17 @@ function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
   return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-        <KpiCard label="Clientes" value={fmtN(cl.length)} sub="en el período" accent={ACCENT2}/>
-        <KpiCard label="Total Ventas" value={fmtM(totalVentas)} sub="período" accent={BRAND}/>
-        {meta?.hasCantidad&&<KpiCard label="Unidades" value={fmtU(totalUnidades)} sub="período" accent={ACCENT1}/>}
-        {cl[0]&&<KpiCard label="Top cliente" value={cl[0].name} sub={`${fmtM(cl[0].ventas)} · ${fmtPct(totalVentas>0?cl[0].ventas/totalVentas*100:0)}`} accent={ACCENT4}/>}
-        <KpiCard label="Ticket promedio" value={fmtM(ticketProm)} sub="por cliente" accent={ACCENT3}/>
+        <KpiCard icon="🏢" label="Clientes" value={fmtN(cl.length)} sub="en el período" accent={ACCENT2}/>
+        <KpiCard icon="💰" label="Total Ventas" value={fmtM(totalVentas)} sub="período" accent={BRAND}/>
+        {meta?.hasCantidad&&<KpiCard icon="📦" label="Unidades" value={fmtU(totalUnidades)} sub="período" accent={ACCENT1}/>}
+        {cl[0]&&<KpiCard icon="⭐" label="Top cliente" value={cl[0].name} sub={`${fmtM(cl[0].ventas)} · ${fmtPct(totalVentas>0?cl[0].ventas/totalVentas*100:0)}`} accent={ACCENT4}/>}
+        <KpiCard icon="📊" label="Ticket promedio" value={fmtM(ticketProm)} sub="por cliente" accent={ACCENT3}/>
       </div>
-      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"18px 20px"}}>
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px",boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
           <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Ranking de clientes ({cl.length})</div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..." style={{background:CARD2,border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,padding:"5px 10px",fontSize:12,outline:"none",width:180}}/>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..." style={{background:CARD,border:`1px solid ${BORDER}`,boxShadow:"0 1px 4px rgba(26,35,126,0.06)",borderRadius:6,color:TEXT,padding:"5px 10px",fontSize:12,outline:"none",width:180}}/>
             {meta?.hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
           </div>
         </div>
@@ -360,19 +361,19 @@ function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
               <span style={{fontSize:11,color:MUTED,width:24,textAlign:"right",flexShrink:0}}>{cl.indexOf(c)+1}.</span>
               <div style={{width:8,height:8,borderRadius:"50%",background:c.color,flexShrink:0}}/>
-              <span style={{fontSize:13,fontWeight:500,color:TEXT,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</span>
-              <span style={{fontSize:13,fontWeight:500,color:metric==="pesos"?BRAND:ACCENT2,minWidth:70,textAlign:"right"}}>{metric==="pesos"?fmtM(c.ventas):fmtU(c.cantidad)}</span>
+              <span style={{fontSize:14,fontWeight:500,color:TEXT,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</span>
+              <span style={{fontSize:14,fontWeight:500,color:metric==="pesos"?BRAND:ACCENT2,minWidth:70,textAlign:"right"}}>{metric==="pesos"?fmtM(c.ventas):fmtU(c.cantidad)}</span>
               <span style={{fontSize:11,color:MUTED,width:44,textAlign:"right"}}>{fmtPct(totalVentas>0?c.ventas/totalVentas*100:0)}</span>
               <span style={{fontSize:11,color:MUTED,minWidth:56,textAlign:"right"}}>{fmtN(c.rows)} ops.</span>
             </div>
-            <div style={{height:4,background:CARD2,borderRadius:2,marginLeft:42}}>
+            <div style={{height:4,background:"#e0e4f0",borderRadius:2,marginLeft:42}}>
               <div style={{height:"100%",width:`${(metric==="pesos"?c.ventas:c.cantidad)/maxV*100}%`,background:BRAND,borderRadius:2,opacity:0.55}}/>
             </div>
             {sel===c.name&&(
               <div style={{marginTop:12,display:"flex",gap:10,flexWrap:"wrap"}}>
-                {Object.keys(c.rubros).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Rubros</div>{Object.entries(c.rubros).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([r,val])=><div key={r} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{r}</span><span style={{fontSize:11,fontWeight:500,color:ACCENT1}}>{fmtM(val)}</span></div><div style={{height:2,background:CARD2,borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:ACCENT1,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
-                {Object.keys(c.proveedores).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Proveedores</div>{Object.entries(c.proveedores).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([p,val])=><div key={p} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{p}</span><span style={{fontSize:11,fontWeight:500,color:BRAND}}>{fmtM(val)}</span></div><div style={{height:2,background:CARD2,borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:BRAND,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
-                {Object.keys(c.vendedores).length>0&&<div style={{flex:1,minWidth:150}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Atendido por</div>{Object.entries(c.vendedores).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([v,val])=><div key={v} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{v}</span><span style={{fontSize:11,fontWeight:500,color:ACCENT3}}>{fmtM(val)}</span></div><div style={{height:2,background:CARD2,borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:ACCENT3,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
+                {Object.keys(c.rubros).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Rubros</div>{Object.entries(c.rubros).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([r,val])=><div key={r} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{r}</span><span style={{fontSize:11,fontWeight:500,color:ACCENT1}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:ACCENT1,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
+                {Object.keys(c.proveedores).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Proveedores</div>{Object.entries(c.proveedores).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([p,val])=><div key={p} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{p}</span><span style={{fontSize:11,fontWeight:500,color:BRAND}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:BRAND,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
+                {Object.keys(c.vendedores).length>0&&<div style={{flex:1,minWidth:150}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Atendido por</div>{Object.entries(c.vendedores).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([v,val])=><div key={v} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{v}</span><span style={{fontSize:11,fontWeight:500,color:ACCENT3}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:ACCENT3,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
               </div>
             )}
           </div>
@@ -403,7 +404,7 @@ function EvolucionTab({filteredRecords,meta}){
         {meta?.hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
       </div>
       {periods.length>0&&(
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"18px 20px"}}>
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px",boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
           <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14}}>Evolución total por período</div>
           <div style={{display:"flex",gap:6,alignItems:"flex-end",height:110,overflowX:"auto"}}>
             {periodTotals.map((pt,i)=>{
@@ -421,7 +422,7 @@ function EvolucionTab({filteredRecords,meta}){
         </div>
       )}
       {periods.length>0&&entities.length>0&&(
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"18px 20px",overflowX:"auto"}}>
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px",boxShadow:"0 1px 4px rgba(26,35,126,0.06)",overflowX:"auto"}}>
           <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14}}>Tabla período a período — {activeDim?.label}</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:520}}>
             <thead><tr>
@@ -433,7 +434,7 @@ function EvolucionTab({filteredRecords,meta}){
               {entities.slice(0,20).map(entity=>{
                 const tot=Object.values(matrix[entity]).reduce((s,x)=>s+(metric==="pesos"?x.ventas:x.cantidad),0)
                 return(
-                  <tr key={entity} onMouseEnter={e=>e.currentTarget.style.background=CARD2} onMouseLeave={e=>e.currentTarget.style.background="transparent"} style={{borderBottom:`1px solid ${BORDER}`}}>
+                  <tr key={entity} onMouseEnter={e=>e.currentTarget.style.background='#eef0f8'} onMouseLeave={e=>e.currentTarget.style.background="transparent"} style={{borderBottom:`1px solid ${BORDER}`}}>
                     <td style={{padding:"7px 10px",color:TEXT,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:130}}>{entity}</td>
                     {periods.map((p,pi)=>{const val=valFn(entity,p),pct=momPct(entity,pi);return(
                       <td key={p} style={{padding:"7px 8px",textAlign:"right",verticalAlign:"top"}}>
@@ -483,7 +484,7 @@ function MappingModal({headers,onConfirm,onCancel}){
             {mapping[key]&&<span style={{color:ACCENT2,fontSize:13}}>✓</span>}
           </div>
         ))}
-        <div style={{padding:"12px 14px",background:CARD2,border:`1px solid ${BORDER}`,borderRadius:8}}>
+        <div style={{padding:"12px 14px",background:CARD,border:`1px solid ${BORDER}`,boxShadow:"0 1px 4px rgba(26,35,126,0.06)",borderRadius:8}}>
           <div style={{fontSize:11,color:MUTED,marginBottom:8,fontWeight:500,textTransform:"uppercase",letterSpacing:1}}>¿Cómo viene el precio?</div>
           {[{v:true,l:"Ya es el total de la fila",d:"El importe incluye la cantidad"},{v:false,l:"Es precio unitario",d:"Se multiplica precio × cantidad"}].map(opt=>(
             <div key={String(opt.v)} onClick={()=>setPet(opt.v)} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"7px 10px",borderRadius:6,cursor:"pointer",background:pet===opt.v?BRAND_LIGHT:CARD,border:`1px solid ${pet===opt.v?BRAND:BORDER}`,marginBottom:5}}>
@@ -510,14 +511,14 @@ function ConfirmImportModal({stats,onConfirm,onCancel}){
         <div style={{fontSize:12,color:MUTED,marginBottom:16}}>Revisá los datos antes de agregar</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
           {[["Filas",fmtN(rows),BRAND],["Importe",fmtM(ventas),ACCENT1],...(hasCantidad?[["Unidades",fmtU(unidades),ACCENT2]]:[]),["Períodos",String(periods.length),ACCENT3]].map(([l,v,c])=>(
-            <div key={l} style={{background:CARD2,border:`1px solid ${BORDER}`,borderRadius:8,padding:"10px 14px",borderLeft:`3px solid ${c}`}}>
+            <div key={l} style={{background:CARD,border:`1px solid ${BORDER}`,boxShadow:"0 1px 4px rgba(26,35,126,0.06)",borderRadius:8,padding:"10px 14px",borderLeft:`3px solid ${c}`}}>
               <div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:3}}>{l}</div>
               <div style={{fontSize:20,fontWeight:500,color:c}}>{v}</div>
             </div>
           ))}
         </div>
-        {cubeKB!=null&&<div style={{background:CARD2,border:`1px solid ${BORDER}`,borderRadius:8,padding:"10px 14px",marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:11,color:MUTED}}>Tamaño del cubo</span><span style={{fontSize:11,fontWeight:500,color:cubeKB>400000?ACCENT5:ACCENT2}}>{fmtN(cubeKB)} KB</span></div><div style={{height:4,background:BORDER,borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(cubeKB/500000*100,100)}%`,background:cubeKB>400000?ACCENT5:ACCENT2,borderRadius:2}}/></div></div>}
-        {periods.length>0&&<div style={{background:CARD2,border:`1px solid ${BORDER}`,borderRadius:8,padding:"10px 14px",marginBottom:16}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Períodos</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{periods.map(p=><span key={p} style={{fontSize:11,color:BRAND,background:BRAND_LIGHT,border:`1px solid ${BRAND}30`,borderRadius:6,padding:"3px 10px"}}>{periodLabel(p)}</span>)}</div></div>}
+        {cubeKB!=null&&<div style={{background:CARD,border:`1px solid ${BORDER}`,boxShadow:"0 1px 4px rgba(26,35,126,0.06)",borderRadius:8,padding:"10px 14px",marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:11,color:MUTED}}>Tamaño del cubo</span><span style={{fontSize:11,fontWeight:500,color:cubeKB>400000?ACCENT5:ACCENT2}}>{fmtN(cubeKB)} KB</span></div><div style={{height:4,background:BORDER,borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(cubeKB/500000*100,100)}%`,background:cubeKB>400000?ACCENT5:ACCENT2,borderRadius:2}}/></div></div>}
+        {periods.length>0&&<div style={{background:CARD,border:`1px solid ${BORDER}`,boxShadow:"0 1px 4px rgba(26,35,126,0.06)",borderRadius:8,padding:"10px 14px",marginBottom:16}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Períodos</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{periods.map(p=><span key={p} style={{fontSize:11,color:BRAND,background:BRAND_LIGHT,border:`1px solid ${BRAND}30`,borderRadius:6,padding:"3px 10px"}}>{periodLabel(p)}</span>)}</div></div>}
         {existingRows>0&&<div style={{background:"#fff8e1",border:`1px solid ${ACCENT4}40`,borderRadius:8,padding:"10px 14px",marginBottom:16,display:"flex",gap:8}}><span>⚠</span><div style={{fontSize:12,color:ACCENT4}}>Ya hay <strong>{fmtN(existingRows)}</strong> registros. Los nuevos se agregarán.</div></div>}
         <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
           <button onClick={onCancel} style={{padding:"7px 18px",background:CARD,border:`1px solid ${BORDER}`,borderRadius:6,color:MUTED,cursor:"pointer",fontSize:12}}>← Volver</button>
@@ -684,29 +685,32 @@ export default function App(){
   return(
     <div style={{background:BG,minHeight:"100vh",color:TEXT,fontFamily:"system-ui,-apple-system,sans-serif",display:"flex",flexDirection:"column"}}>
       <style>{`select option{background:${BRAND};color:#fff}input::placeholder{color:${MUTED}}`}</style>
-      <div style={{background:BRAND_DARK,padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:54,flexShrink:0,flexWrap:"wrap"}}>
+      {/* ── Header row 1: logo + actions ── */}
+      <div style={{background:BRAND_DARK,padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:50,flexShrink:0}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginRight:8,flexShrink:0}}>
           <img src={LOGO_SRC} style={{height:26,width:26,objectFit:"contain",filter:"brightness(0) invert(1)"}} alt="logo"/>
           <div><div style={{fontSize:13,fontWeight:500,color:"#fff",lineHeight:1.1}}>Azul de Montaña</div><div style={{fontSize:9,color:"rgba(255,255,255,0.4)",letterSpacing:1,textTransform:"uppercase"}}>Dashboard de ventas</div></div>
         </div>
-        <div style={{flex:1,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-          {yearsDisp.length>1&&<Dropdown label="Año" value={fYear} options={yearsDisp.map(y=>({val:String(y),label:String(y)}))} onChange={v=>{setFYear(v);setFMes("__ALL__")}}/>}
-          <Dropdown label="Mes" value={fMes} options={mesesDisp.map(m=>({val:String(m),label:MESES[m]??`Mes ${m}`}))} onChange={setFMes}/>
-          {meta?.hasEmpresa&&<Dropdown label="Empresa" value={fEmpresa} options={uniq("empresa")} onChange={setFEmpresa}/>}
-          {meta?.hasCliente&&<Dropdown label="Cliente" value={fCliente} options={uniq("cliente")} onChange={setFCliente}/>}
-          {meta?.hasProveedor&&<Dropdown label="Proveedor" value={fProv} options={uniq("proveedor")} onChange={setFProv}/>}
-          {meta?.hasRubro&&<Dropdown label="Rubro" value={fRubro} options={uniq("rubro")} onChange={setFRubro}/>}
-          {meta?.hasVendedor&&<Dropdown label="Vendedor" value={fVend} options={uniq("vendedor")} onChange={setFVend}/>}
-          {meta?.hasRentabilidad&&<Dropdown label="Rentabilidad" value={fRentab} options={["Alta","Media","Baja"]} onChange={setFRentab}/>}
-          {meta?.hasZona&&<Dropdown label="Zona" value={fZona} options={uniq("zona")} onChange={setFZona}/>}
-          {meta?.hasProvincia&&<Dropdown label="Provincia" value={fPcia} options={uniq("provincia")} onChange={setFPcia}/>}
-        </div>
+        <div style={{flex:1}}/>
         <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
           <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
           {hasData&&<button onClick={handleClear} style={{padding:"5px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6,color:"rgba(255,255,255,0.45)",cursor:"pointer",fontSize:11}}>Limpiar</button>}
           <button onClick={()=>fileRef.current?.click()} style={{padding:"6px 16px",background:"#fff",border:"none",borderRadius:6,color:BRAND,cursor:"pointer",fontWeight:500,fontSize:12}}>↑ Importar Excel</button>
           <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
         </div>
+      </div>
+      {/* ── Header row 2: filters ── */}
+      <div style={{background:BRAND,padding:"8px 20px",display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",flexShrink:0,borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+        {yearsDisp.length>1&&<Dropdown label="Año" value={fYear} options={yearsDisp.map(y=>({val:String(y),label:String(y)}))} onChange={v=>{setFYear(v);setFMes("__ALL__")}}/>}
+        <Dropdown label="Mes" value={fMes} options={mesesDisp.map(m=>({val:String(m),label:MESES[m]??`Mes ${m}`}))} onChange={setFMes}/>
+        {meta?.hasEmpresa&&<Dropdown label="Empresa" value={fEmpresa} options={uniq("empresa")} onChange={setFEmpresa}/>}
+        {meta?.hasCliente&&<Dropdown label="Cliente" value={fCliente} options={uniq("cliente")} onChange={setFCliente}/>}
+        {meta?.hasProveedor&&<Dropdown label="Proveedor" value={fProv} options={uniq("proveedor")} onChange={setFProv}/>}
+        {meta?.hasRubro&&<Dropdown label="Rubro" value={fRubro} options={uniq("rubro")} onChange={setFRubro}/>}
+        {meta?.hasVendedor&&<Dropdown label="Vendedor" value={fVend} options={uniq("vendedor")} onChange={setFVend}/>}
+        {meta?.hasRentabilidad&&<Dropdown label="Rentabilidad" value={fRentab} options={["Alta","Media","Baja"]} onChange={setFRentab}/>}
+        {meta?.hasZona&&<Dropdown label="Zona" value={fZona} options={uniq("zona")} onChange={setFZona}/>}
+        {meta?.hasProvincia&&<Dropdown label="Provincia" value={fPcia} options={uniq("provincia")} onChange={setFPcia}/>}
       </div>
       <div style={{background:BRAND,padding:"3px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:10,flexShrink:0}}>
         <span style={{color:!storageInfo?.ok?"#ffaaaa":storageInfo?.loaded&&storageInfo?.rows>0?"rgba(255,255,255,0.5)":"rgba(255,255,255,0.3)"}}>
@@ -738,13 +742,13 @@ export default function App(){
             {safeTab==="resumen"&&(
               <>
                 <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
-                  <KpiCard label="Registros"     value={fmtN(filteredRows)}    sub="filas"                       accent={BRAND}/>
-                  <KpiCard label="Total Ventas"   value={fmtM(totalVentas)}     sub="en pesos"                    accent={ACCENT1}/>
-                  {meta?.hasCantidad&&<KpiCard label="Unidades" value={fmtU(totalUnidades)} sub="vendidas"        accent={ACCENT2}/>}
-                  {cliData[0]&&  <KpiCard label="Top Cliente"   value={cliData[0].name}   sub={fmtM(cliData[0].ventas)}   accent={ACCENT4}/>}
-                  {provData[0]&& <KpiCard label="Top Proveedor" value={provData[0].name}   sub={fmtM(provData[0].ventas)}  accent={ACCENT6}/>}
-                  {vendData[0]&& <KpiCard label="Top Vendedor"  value={vendData[0].name}   sub={fmtM(vendData[0].ventas)}  accent={ACCENT3}/>}
-                  {pciaData[0]&& <KpiCard label="Top Provincia" value={pciaData[0].name}   sub={fmtM(pciaData[0].ventas)}  accent={ACCENT7}/>}
+                  <KpiCard icon="📋" label="Registros"     value={fmtN(filteredRows)}    sub="filas"                       accent={BRAND}/>
+                  <KpiCard icon="💰" label="Total Ventas"   value={fmtM(totalVentas)}     sub="en pesos"                    accent={ACCENT1}/>
+                  {meta?.hasCantidad&&<KpiCard icon="📦" label="Unidades" value={fmtU(totalUnidades)} sub="vendidas"        accent={ACCENT2}/>}
+                  {cliData[0]&&  <KpiCard icon="🏢" label="Top Cliente"   value={cliData[0].name}   sub={fmtM(cliData[0].ventas)}   accent={ACCENT4}/>}
+                  {provData[0]&& <KpiCard icon="🏆" label="Top Proveedor" value={provData[0].name}   sub={fmtM(provData[0].ventas)}  accent={ACCENT6}/>}
+                  {vendData[0]&& <KpiCard icon="⭐" label="Top Vendedor"  value={vendData[0].name}   sub={fmtM(vendData[0].ventas)}  accent={ACCENT3}/>}
+                  {pciaData[0]&& <KpiCard icon="📍" label="Top Provincia" value={pciaData[0].name}   sub={fmtM(pciaData[0].ventas)}  accent={ACCENT7}/>}
                 </div>
                 <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:2,color:MUTED,marginBottom:12,fontWeight:500}}>Comparativa general</div>
                 <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:12}}>
