@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import * as XLSX from "xlsx"
 import { dbGet, dbSet, dbDelete } from "./lib/supabase.js"
 
-const SK="cube",AK="arts",MK="meta"
+const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1"
 const CAT_FIELDS=["proveedor","rubro","vendedor","rentabilidad","provincia","cliente","empresa","localidad","zona"]
 const LOGO_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEF0lEQVR4nO1WXWhcRRT+zrl/m8ZEGmpJk6a2IbFQQUIjSA0VimAj2FqDK0bBR31RRBDNJo3TpU3NFhR9sBCVFqxI01CQKhIf7EMREooiQoNik5jSNO0mWJq/3ezeO3N8uEtd0+puuuqL+eA+3JnhnO/75pzDAKtYxcpBue9/h1MWAGyojz23saHr+fy1UsDFHx0RpRT7gYlns4ESEQJGpFQCRULZAFDbGGtbt6lb1tXtl5rNHXvz9+4UxTpglFLsZ0y3GG0EYnxj3oIIATD/MgFlA3Hz8Wd6n4HXRDAM0Szwmmu2xPYAcVNKLRTjQKg+G3QCjlg2Prcs+hJwxTfSVWotFOhnZQPxoLY+1pYJ7NMEEW+NfoBhe+mUfCcguI7/5NRY75nQhWf0SgkUKiCjlOKjx9OdwBohLAxO/py4AADrN3ecFbNml+9nY0Q4IzJCtxbk/QIMANiWc+iA5DTfdOxvHAjVV9fH2oLAPg0JjOfpliujR4YBodr6jl2ZwP2G4MBxUs9OjfX2r1R9IQKsFHD0ePq8oGI708JX05cSewDlAPEsAKzf9OYxtiq2M6eGAfpEB3IfM9UITCVDiC1OQfCb7fK0Y1vXIp6V3FClZ3bswI14PG6Av7yCUH3fiVibwGsmLCESsQ8DECCe3fpwomIxOdcSaIiRRVdn5TFifhQwSRH6AYwLwjQuLEmb3DkjfoYylq/LtclkkC3CgXz1lc3M8yenJxLttY3dDwW+eUEbaWcuX2v0wg3LorPMVkqMP3ttovflf+AK8u/eOS0SLLquxHSAnSJulNgDzMKP7PC7TY2z/T9N3rVlcZZGQC5bdvqJ5Hjka+C6BVT5Ybz48hb90//tCLBSwAfH0t8DXpMgkybAI17LkPmLjkPdV8d7+kX+OH9PXfoLocpWyPzQzOXEToKicEAVxrJBFE69vhPpfaBIk5iMD7HKQB4zLbx3d7Xz4NRYT78IKOz78Lzj8iFICiC3ZWN9Z+tKpuPySWgAxYFP3SLagNgm5pRrB+3JiZ7XRs/H53K9LuHQiQdA1Joa6x1i0oOAC1/rrpBgcdMxj0CopnrL0lMgt0lEE7M1VxbB7qnxt0/mElOY9FaUOe4hSNoYcVvqtnbtLtaFfAeMUoqNYL8Y0Uzke16w9/IvPd8CLzq5xLdRNaCBqHVp7OAQkx4keJJZ8mPhXmEXOF/9R59mnxZT1sSWa9m26Zy8mDgH9DnAh36hQADguNZBkTQJIo9U3/vG48W4wAAIOKBbW9/3tMbrIEpanDqS/DXxTkjspSKSD2hA8ZXRw8NEwSmQsxgIvRqNRq1CLtxsw23blDtPQZ1Xbs+ExbZiEAA0NLzi3shWVBmT5uuTlVeLbcdliJb82LxDKAak1Dc/hTFKjrOK/wa/A3rQ7dfNECyuAAAAAElFTkSuQmCC"
 
@@ -38,7 +38,7 @@ function compressArts(arts){return arts.map(a=>[a.name,Math.round(a.precio),a.ca
 function decompressArts(rows){return rows.map(r=>({name:r[0],precio:r[1],cantidad:r[2],costo:r[3],rows:r[4],rentabilidad:r[5]}))}
 
 function buildCube(rawRecords){
-  const cm={},am={}
+  const cm={},am={},pm={},rm={}
   for(const r of rawRecords){
     const ck=`${r.y}|${r.m}|${r.proveedor??''} |${r.rubro??''} |${r.vendedor??''} |${r.rentabilidad??''} |${r.provincia??''} |${r.cliente??''} |${r.empresa??''} |${r.localidad??''} |${r.zona??''} `
     if(!cm[ck]) cm[ck]={y:r.y,m:r.m,precio:0,cantidad:0,costo:0,rows:0,proveedor:r.proveedor,rubro:r.rubro,vendedor:r.vendedor,rentabilidad:r.rentabilidad,provincia:r.provincia,cliente:r.cliente,empresa:r.empresa,localidad:r.localidad,zona:r.zona}
@@ -46,9 +46,23 @@ function buildCube(rawRecords){
     if(r.articulo){
       if(!am[r.articulo]) am[r.articulo]={name:r.articulo,precio:0,cantidad:0,costo:0,rows:0,rentabilidad:r.rentabilidad}
       const a=am[r.articulo];a.precio+=r.precio;a.cantidad+=r.cantidad;a.costo+=r.costo;a.rows++
+      // Cross-reference: proveedor -> articulos
+      if(r.proveedor){
+        if(!pm[r.proveedor]) pm[r.proveedor]={}
+        if(!pm[r.proveedor][r.articulo]) pm[r.proveedor][r.articulo]={precio:0,cantidad:0}
+        pm[r.proveedor][r.articulo].precio+=r.precio;pm[r.proveedor][r.articulo].cantidad+=r.cantidad
+      }
+      // Cross-reference: rubro -> articulos
+      if(r.rubro){
+        if(!rm[r.rubro]) rm[r.rubro]={}
+        if(!rm[r.rubro][r.articulo]) rm[r.rubro][r.articulo]={precio:0,cantidad:0}
+        rm[r.rubro][r.articulo].precio+=r.precio;rm[r.rubro][r.articulo].cantidad+=r.cantidad
+      }
     }
   }
-  return{cube:Object.values(cm),articulos:Object.values(am)}
+  // Compress cross-refs: keep top 20 per key
+  const compressXRef=m=>Object.fromEntries(Object.entries(m).map(([k,arts])=>[k,Object.entries(arts).sort((a,b)=>b[1].precio-a[1].precio).slice(0,20).map(([name,v])=>[name,Math.round(v.precio),v.cantidad])]))
+  return{cube:Object.values(cm),articulos:Object.values(am),provArts:compressXRef(pm),ruboArts:compressXRef(rm)}
 }
 function mergeCubes(a,b){
   const m={}
@@ -63,14 +77,35 @@ function mergeArts(a,b){
   const add=r=>{if(!m[r.name]) m[r.name]={...r};else{m[r.name].precio+=r.precio;m[r.name].cantidad+=r.cantidad;m[r.name].costo+=r.costo;m[r.name].rows+=r.rows}}
   a.forEach(add);b.forEach(add);return Object.values(m)
 }
-async function loadData(){
-  try{const[cv,av,mv]=await Promise.all([dbGet(SK),dbGet(AK),dbGet(MK)]);return{cube:cv?decompressCube(JSON.parse(cv.value??cv)):null,articulos:av?decompressArts(JSON.parse(av.value??av)):null,meta:mv?JSON.parse(mv.value??mv):null}}
-  catch(e){return{cube:null,articulos:null,meta:null,error:String(e)}}
+function mergeXRef(a,b){
+  const m={...a}
+  Object.entries(b).forEach(([key,arts])=>{
+    if(!m[key]){m[key]=arts;return}
+    const map={}
+    m[key].forEach(([n,p,q])=>{map[n]=[n,p,q]})
+    arts.forEach(([n,p,q])=>{if(map[n]){map[n][1]+=p;map[n][2]+=q}else map[n]=[n,p,q]})
+    m[key]=Object.values(map).sort((a,b)=>b[1]-a[1]).slice(0,20)
+  })
+  return m
 }
-async function saveData(cube,arts,meta){
+
+async function loadData(){
+  try{
+    const[cv,av,mv,pv,rv]=await Promise.all([dbGet(SK),dbGet(AK),dbGet(MK),dbGet(PAK),dbGet(RAK)])
+    return{
+      cube:cv?decompressCube(JSON.parse(cv.value??cv)):null,
+      articulos:av?decompressArts(JSON.parse(av.value??av)):null,
+      meta:mv?JSON.parse(mv.value??mv):null,
+      provArts:pv?JSON.parse(pv.value??pv):null,
+      ruboArts:rv?JSON.parse(rv.value??rv):null,
+    }
+  }catch(e){return{cube:null,articulos:null,meta:null,provArts:null,ruboArts:null,error:String(e)}}
+}
+async function saveData(cube,arts,meta,provArts,ruboArts){
   const cs=JSON.stringify(compressCube(cube)),as=JSON.stringify(compressArts(arts)),ms=JSON.stringify(meta)
-  const kb=Math.round((cs.length+as.length+ms.length)/1024)
-  await Promise.all([dbSet(SK,cs),dbSet(AK,as),dbSet(MK,ms)])
+  const ps=JSON.stringify(provArts||{}),rs=JSON.stringify(ruboArts||{})
+  const kb=Math.round((cs.length+as.length+ms.length+ps.length+rs.length)/1024)
+  await Promise.all([dbSet(SK,cs),dbSet(AK,as),dbSet(MK,ms),dbSet(PAK,ps,true),dbSet(RAK,rs,true)])
   return kb
 }
 async function clearData(){await Promise.all([dbDelete(SK),dbDelete(AK),dbDelete(MK)])}
@@ -529,9 +564,164 @@ function ConfirmImportModal({stats,onConfirm,onCancel}){
   )
 }
 
+
+/* ─── PROVEEDORES TAB ─────────────────────────────────────────────────────── */
+function ProveedoresTab({data,filteredRecords,provArts,hasCantidad,totalVentas,totalUnidades}){
+  const[sel,setSel]=useState(null)
+  const[metric,setMetric]=useState("pesos")
+  const sorted=metric==="pesos"?[...data].sort((a,b)=>b.ventas-a.ventas):[...data].sort((a,b)=>b.cantidad-a.cantidad)
+  const maxV=sorted[0]?.[metric==="pesos"?"ventas":"cantidad"]||1
+  const total=metric==="pesos"?totalVentas:totalUnidades
+
+  // For each proveedor: get rubros from filteredRecords
+  function getRubros(provName){
+    const map={}
+    filteredRecords.filter(r=>r.proveedor===provName&&r.rubro).forEach(r=>{
+      if(!map[r.rubro]) map[r.rubro]={name:r.rubro,precio:0,cantidad:0}
+      map[r.rubro].precio+=r.precio;map[r.rubro].cantidad+=r.cantidad
+    })
+    return Object.values(map).sort((a,b)=>b.precio-a.precio).slice(0,8)
+  }
+
+  return(
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px",boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <div><span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Ranking por Proveedor</span><span style={{fontSize:11,color:MUTED,marginLeft:8}}>{data.length} proveedores</span></div>
+        {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
+      </div>
+      {sorted.map((d,i)=>{
+        const rubros=sel===d.name?getRubros(d.name):[]
+        const arts=(provArts[d.name]||[]).slice(0,8)
+        return(
+          <div key={d.name}>
+            <div onClick={()=>setSel(sel===d.name?null:d.name)}
+              style={{marginBottom:sel===d.name?0:10,cursor:"pointer",padding:"10px 12px",borderRadius:8,border:`1px solid ${sel===d.name?ACCENT1:BORDER}`,background:sel===d.name?"#eef3ff":CARD,transition:"all .15s"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+                <span style={{fontSize:11,color:MUTED,width:18,textAlign:"right",flexShrink:0}}>{i+1}.</span>
+                <span style={{fontSize:14,fontWeight:500,color:TEXT,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.name}</span>
+                <span style={{fontSize:14,fontWeight:500,color:ACCENT1,whiteSpace:"nowrap",minWidth:70,textAlign:"right"}}>{metric==="pesos"?fmtM(d.ventas):fmtU(d.cantidad)}</span>
+                <span style={{fontSize:11,color:MUTED,width:38,textAlign:"right"}}>{fmtPct(total>0?(metric==="pesos"?d.ventas:d.cantidad)/total*100:0)}</span>
+                {hasCantidad&&<span style={{fontSize:11,color:MUTED,minWidth:60,textAlign:"right",whiteSpace:"nowrap"}}>{metric==="pesos"?`${fmtU(d.cantidad)} u.`:fmtM(d.ventas)}</span>}
+                <span style={{fontSize:11,color:MUTED,minWidth:50,textAlign:"right"}}>{fmtN(d.rows)} ops.</span>
+              </div>
+              <div style={{height:3,background:"#e0e4f0",borderRadius:2,marginLeft:26}}>
+                <div style={{height:"100%",width:`${(metric==="pesos"?d.ventas:d.cantidad)/maxV*100}%`,background:ACCENT1,borderRadius:2,opacity:0.7}}/>
+              </div>
+            </div>
+            {sel===d.name&&(
+              <div style={{margin:"0 0 12px 0",padding:"14px 16px",background:"#f5f7ff",border:`1px solid ${ACCENT1}30`,borderTop:"none",borderRadius:"0 0 8px 8px",display:"flex",gap:16,flexWrap:"wrap"}}>
+                {/* Rubros */}
+                {rubros.length>0&&(
+                  <div style={{flex:1,minWidth:200}}>
+                    <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:10,fontWeight:600}}>Rubros</div>
+                    {rubros.map(r=>(
+                      <div key={r.name} style={{marginBottom:7}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2,gap:8}}>
+                          <span style={{fontSize:12,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{r.name}</span>
+                          <span style={{fontSize:12,fontWeight:500,color:ACCENT2,flexShrink:0}}>{fmtM(r.precio)}</span>
+                          <span style={{fontSize:11,color:MUTED,width:36,textAlign:"right",flexShrink:0}}>{fmtPct(d.ventas>0?r.precio/d.ventas*100:0)}</span>
+                        </div>
+                        <div style={{height:3,background:"#dde1f0",borderRadius:2}}><div style={{height:"100%",width:`${d.ventas>0?r.precio/d.ventas*100:0}%`,background:ACCENT2,borderRadius:2,opacity:0.75}}/></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Artículos más vendidos */}
+                {arts.length>0&&(
+                  <div style={{flex:1,minWidth:220}}>
+                    <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:10,fontWeight:600}}>Artículos más vendidos</div>
+                    {arts.map(([name,precio,cant])=>(
+                      <div key={name} style={{marginBottom:7}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2,gap:8}}>
+                          <span style={{fontSize:12,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{name}</span>
+                          <span style={{fontSize:12,fontWeight:500,color:BRAND,flexShrink:0}}>{fmtM(precio)}</span>
+                          {hasCantidad&&<span style={{fontSize:11,color:MUTED,flexShrink:0}}>{fmtU(cant)} u.</span>}
+                        </div>
+                        <div style={{height:3,background:"#dde1f0",borderRadius:2}}><div style={{height:"100%",width:`${arts[0]?precio/arts[0][1]*100:0}%`,background:BRAND,borderRadius:2,opacity:0.6}}/></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {rubros.length===0&&arts.length===0&&(
+                  <div style={{fontSize:12,color:MUTED,fontStyle:"italic"}}>Sin detalle disponible. Reimportá el Excel para generar el desglose.</div>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+      <div style={{fontSize:11,color:MUTED,marginTop:4}}>Hacé clic en un proveedor para ver rubros y artículos más vendidos.</div>
+    </div>
+  )
+}
+
+/* ─── RUBROS TAB ──────────────────────────────────────────────────────────── */
+function RubrosTab({data,filteredRecords,ruboArts,hasCantidad,totalVentas,totalUnidades}){
+  const[sel,setSel]=useState(null)
+  const[metric,setMetric]=useState("pesos")
+  const sorted=metric==="pesos"?[...data].sort((a,b)=>b.ventas-a.ventas):[...data].sort((a,b)=>b.cantidad-a.cantidad)
+  const maxV=sorted[0]?.[metric==="pesos"?"ventas":"cantidad"]||1
+  const total=metric==="pesos"?totalVentas:totalUnidades
+
+  return(
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px",boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <div><span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Ranking por Rubro</span><span style={{fontSize:11,color:MUTED,marginLeft:8}}>{data.length} rubros</span></div>
+        {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
+      </div>
+      {sorted.map((d,i)=>{
+        const arts=(ruboArts[d.name]||[]).slice(0,10)
+        return(
+          <div key={d.name}>
+            <div onClick={()=>setSel(sel===d.name?null:d.name)}
+              style={{marginBottom:sel===d.name?0:10,cursor:"pointer",padding:"10px 12px",borderRadius:8,border:`1px solid ${sel===d.name?ACCENT2:BORDER}`,background:sel===d.name?"#edf7f5":CARD,transition:"all .15s"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+                <span style={{fontSize:11,color:MUTED,width:18,textAlign:"right",flexShrink:0}}>{i+1}.</span>
+                <span style={{fontSize:14,fontWeight:500,color:TEXT,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.name}</span>
+                <span style={{fontSize:14,fontWeight:500,color:ACCENT2,whiteSpace:"nowrap",minWidth:70,textAlign:"right"}}>{metric==="pesos"?fmtM(d.ventas):fmtU(d.cantidad)}</span>
+                <span style={{fontSize:11,color:MUTED,width:38,textAlign:"right"}}>{fmtPct(total>0?(metric==="pesos"?d.ventas:d.cantidad)/total*100:0)}</span>
+                {hasCantidad&&<span style={{fontSize:11,color:MUTED,minWidth:60,textAlign:"right",whiteSpace:"nowrap"}}>{metric==="pesos"?`${fmtU(d.cantidad)} u.`:fmtM(d.ventas)}</span>}
+                <span style={{fontSize:11,color:MUTED,minWidth:50,textAlign:"right"}}>{fmtN(d.rows)} ops.</span>
+              </div>
+              <div style={{height:3,background:"#e0e4f0",borderRadius:2,marginLeft:26}}>
+                <div style={{height:"100%",width:`${(metric==="pesos"?d.ventas:d.cantidad)/maxV*100}%`,background:ACCENT2,borderRadius:2,opacity:0.7}}/>
+              </div>
+            </div>
+            {sel===d.name&&(
+              <div style={{margin:"0 0 12px 0",padding:"14px 16px",background:"#f0faf7",border:`1px solid ${ACCENT2}30`,borderTop:"none",borderRadius:"0 0 8px 8px"}}>
+                <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:10,fontWeight:600}}>Artículos más vendidos del rubro</div>
+                {arts.length>0?(
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 24px"}}>
+                    {arts.map(([name,precio,cant],idx)=>(
+                      <div key={name} style={{marginBottom:7}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:2,gap:8}}>
+                          <span style={{fontSize:11,color:MUTED,width:16,textAlign:"right",flexShrink:0}}>{idx+1}.</span>
+                          <span style={{fontSize:12,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{name}</span>
+                          <span style={{fontSize:12,fontWeight:500,color:BRAND,flexShrink:0}}>{fmtM(precio)}</span>
+                          {hasCantidad&&<span style={{fontSize:11,color:MUTED,flexShrink:0}}>{fmtU(cant)} u.</span>}
+                        </div>
+                        <div style={{height:2,background:"#dde1f0",borderRadius:2,marginLeft:24}}><div style={{height:"100%",width:`${arts[0]?precio/arts[0][1]*100:0}%`,background:ACCENT2,borderRadius:2,opacity:0.6}}/></div>
+                      </div>
+                    ))}
+                  </div>
+                ):(
+                  <div style={{fontSize:12,color:MUTED,fontStyle:"italic"}}>Sin detalle disponible. Reimportá el Excel para generar el desglose.</div>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+      <div style={{fontSize:11,color:MUTED,marginTop:4}}>Hacé clic en un rubro para ver sus artículos más vendidos.</div>
+    </div>
+  )
+}
+
 export default function App(){
   const[cube,setCube]=useState(null)
   const[articulos,setArticulos]=useState(null)
+  const[provArts,setProvArts]=useState({})
+  const[ruboArts,setRuboArts]=useState({})
   const[meta,setMeta]=useState(null)
   const[storageInfo,setStorageInfo]=useState(null)
   const[rawHeaders,setRawHeaders]=useState(null)
@@ -556,8 +746,8 @@ export default function App(){
 
   useEffect(()=>{
     const t0=Date.now()
-    loadData().then(({cube:c,articulos:a,meta:m,error})=>{
-      setCube(c||[]);setArticulos(a||[]);setMeta(m||{})
+    loadData().then(({cube:c,articulos:a,meta:m,provArts:pa,ruboArts:ra,error})=>{
+      setCube(c||[]);setArticulos(a||[]);setMeta(m||{});setProvArts(pa||{});setRuboArts(ra||{})
       setStorageInfo(error?{ok:false,error}:{ok:true,loaded:c!==null,rows:m?.totalRows||0,cells:c?.length||0,ms:Date.now()-t0})
     })
   },[])
@@ -601,13 +791,14 @@ export default function App(){
         localidad:has("localidad")?(String(get(row,"localidad")??"").trim()||"Sin localidad"):null,
         zona:has("zona")?(String(get(row,"zona")??"").trim()||"Sin zona"):null}
     }).filter(r=>r.y>0||r.precio>0)
-    const{cube:nc,articulos:na}=buildCube(parsed)
+    const{cube:nc,articulos:na,provArts:npa,ruboArts:nra}=buildCube(parsed)
     const mc=mergeCubes(records,nc),ma=mergeArts(articulos||[],na)
+    const mpa=mergeXRef(provArts||{},npa),mra=mergeXRef(ruboArts||{},nra)
     const cubeKB=Math.round(JSON.stringify(compressCube(mc)).length/1024)
     const ventas=parsed.reduce((s,r)=>s+r.precio,0),unidades=parsed.reduce((s,r)=>s+r.cantidad,0)
     const periods=[...new Set(parsed.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
     setRawHeaders(null);setRawRows(null)
-    setPendingImport({newCube:nc,newArts:na,meta:newMeta,stats:{rows:parsed.length,ventas,unidades,hasCantidad:has("cantidad"),periods,existingRows:meta?.totalRows||0,cubeKB}})
+    setPendingImport({newCube:nc,newArts:na,newProvArts:npa,newRuboArts:nra,newMProvArts:mpa,newMRuboArts:mra,meta:newMeta,stats:{rows:parsed.length,ventas,unidades,hasCantidad:has("cantidad"),periods,existingRows:meta?.totalRows||0,cubeKB}})
   },[rawHeaders,rawRows,records,articulos,meta])
 
   const handleImportConfirm=useCallback(async()=>{
@@ -615,12 +806,13 @@ export default function App(){
     setPendingImport(null);setActiveTab("resumen")
     setSaveStage("merging");setSaveProgress(15);await new Promise(r=>setTimeout(r,0))
     const mc=mergeCubes(records,pendingImport.newCube),ma=mergeArts(articulos||[],pendingImport.newArts)
+    const mpa=pendingImport.newMProvArts||{},mra=pendingImport.newMRuboArts||{}
     const nm={...pendingImport.meta,totalRows:(meta?.totalRows||0)+pendingImport.stats.rows}
     setSaveStage("compressing");setSaveProgress(40);await new Promise(r=>setTimeout(r,0))
-    setCube(mc);setArticulos(ma);setMeta(nm)
+    setCube(mc);setArticulos(ma);setMeta(nm);setProvArts(mpa);setRuboArts(mra)
     setSaveStage("saving");setSaveProgress(70);await new Promise(r=>setTimeout(r,0))
     try{
-      const kb=await saveData(mc,ma,nm)
+      const kb=await saveData(mc,ma,nm,mpa,mra)
       setSaveStage("saved");setSaveProgress(100);setSaveMsg(`Guardado · ${fmtN(kb)} KB`)
       setTimeout(()=>{setSaveStage("idle");setSaveProgress(0);setSaveMsg("")},5000)
     }catch(e){setSaveStage("error");setSaveProgress(0);setSaveMsg(String(e))}
@@ -762,8 +954,8 @@ export default function App(){
               </>
             )}
             {safeTab==="clientes"&&    <ClientesTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
-            {safeTab==="proveedores"&& <DetailTab data={provData}  hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Proveedor"  color={ACCENT1}/>}
-            {safeTab==="rubros"&&      <DetailTab data={rubroData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Rubro"      color={ACCENT2}/>}
+            {safeTab==="proveedores"&& <ProveedoresTab data={provData} filteredRecords={filtered} provArts={provArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
+            {safeTab==="rubros"&&      <RubrosTab data={rubroData} filteredRecords={filtered} ruboArts={ruboArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/> }
             {safeTab==="vendedores"&&  <VendedoresTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
             {safeTab==="evolucion"&&   <EvolucionTab filteredRecords={filtered} meta={meta}/>}
             {safeTab==="articulos"&&   <ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas}/>}
