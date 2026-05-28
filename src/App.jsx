@@ -30,8 +30,8 @@
 const { useState, useEffect, useCallback, useRef } = React
 
 /* ─── Supabase ──────────────────────────────────────────────────────────────── */
-const SUPABASE_URL  = "REEMPLAZAR_CON_TU_URL"
-const SUPABASE_KEY  = "REEMPLAZAR_CON_TU_KEY"
+const SUPABASE_URL  = "https://fjgstefynjcjiwxtfxeo.supabase.co"
+const SUPABASE_KEY  = "sb_publishable_tahhaA3A2ZrQh2TquMpTZA_gJ2NqSNT"
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 async function dbGet(key){
   const{data,error}=await _sb.from("dashfact_data").select("value").eq("key",key).maybeSingle()
