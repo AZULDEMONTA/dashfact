@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import * as XLSX from "xlsx"
 import { dbGet, dbSet, dbDelete } from "./lib/supabase.js"
+import html2canvas from "html2canvas"
+import jsPDF from "jspdf"
 
 const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1"
 const CAT_FIELDS=["proveedor","rubro","vendedor","rentabilidad","provincia","cliente","empresa","localidad","zona"]
@@ -820,6 +822,36 @@ export default function App(){
 
   const handleClear=async()=>{if(!confirm("¿Eliminar todos los datos?")) return;await clearData();setCube([]);setArticulos([]);setMeta({})}
 
+  const exportarPDF=useCallback(async()=>{
+    const btn=document.getElementById("btnExportPDF")
+    if(btn){btn.disabled=true;btn.textContent="Generando..."}
+    try{
+      const el=document.getElementById("dashfact-root")
+      const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#eef0f8",logging:false,ignoreElements:e=>e.id==="btnExportPDF"})
+      const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"})
+      const pageW=pdf.internal.pageSize.getWidth()
+      const pageH=pdf.internal.pageSize.getHeight()
+      const margin=8
+      const imgW=pageW-margin*2
+      const imgH=(canvas.height*imgW)/canvas.width
+      const imgData=canvas.toDataURL("image/png")
+      if(imgH<=pageH-margin*2){
+        pdf.addImage(imgData,"PNG",margin,margin,imgW,imgH)
+      }else{
+        let yOffset=0
+        const sliceH=pageH-margin*2
+        const pages=Math.ceil(imgH/sliceH)
+        for(let i=0;i<pages;i++){
+          if(i>0) pdf.addPage()
+          pdf.addImage(imgData,"PNG",margin,margin-yOffset,imgW,imgH)
+          yOffset+=sliceH
+        }
+      }
+      pdf.save("dashfact-reporte.pdf")
+    }catch(e){alert("Error al generar PDF: "+e.message)}
+    if(btn){btn.disabled=false;btn.textContent="⬇ Exportar PDF"}
+  },[])
+
   if(cube===null) return(
     <div style={{background:BRAND,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"system-ui"}}>
       <div style={{textAlign:"center"}}>
@@ -875,7 +907,7 @@ export default function App(){
   const safeTab=TABS.find(t=>t.key===activeTab)?activeTab:"resumen"
 
   return(
-    <div style={{background:BG,minHeight:"100vh",color:TEXT,fontFamily:"system-ui,-apple-system,sans-serif",display:"flex",flexDirection:"column"}}>
+    <div id="dashfact-root" style={{background:BG,minHeight:"100vh",color:TEXT,fontFamily:"system-ui,-apple-system,sans-serif",display:"flex",flexDirection:"column"}}>
       <style>{`select option{background:${BRAND};color:#fff}input::placeholder{color:${MUTED}}`}</style>
       {/* ── Header row 1: logo + actions ── */}
       <div style={{background:BRAND_DARK,padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:50,flexShrink:0}}>
@@ -887,6 +919,7 @@ export default function App(){
         <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
           <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
           {hasData&&<button onClick={handleClear} style={{padding:"5px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6,color:"rgba(255,255,255,0.45)",cursor:"pointer",fontSize:11}}>Limpiar</button>}
+          {hasData&&<button id="btnExportPDF" onClick={exportarPDF} style={{padding:"6px 16px",background:"transparent",border:"1px solid rgba(255,255,255,0.35)",borderRadius:6,color:"rgba(255,255,255,0.85)",cursor:"pointer",fontWeight:500,fontSize:12}}>⬇ Exportar PDF</button>}
           <button onClick={()=>fileRef.current?.click()} style={{padding:"6px 16px",background:"#fff",border:"none",borderRadius:6,color:BRAND,cursor:"pointer",fontWeight:500,fontSize:12}}>↑ Importar Excel</button>
           <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
         </div>
