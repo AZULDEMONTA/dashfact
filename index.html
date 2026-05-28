@@ -429,7 +429,7 @@ function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
           <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Ranking de clientes ({cl.length})</div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..." style={{background:CARD,border:`1px solid ${BORDER}`,,borderRadius:6,color:TEXT,padding:"5px 10px",fontSize:12,outline:"none",width:180}}/>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..." style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,padding:"5px 10px",fontSize:12,outline:"none",width:180}}/>
             {meta?.hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
           </div>
         </div>
@@ -499,7 +499,7 @@ function EvolucionTab({filteredRecords,meta}){
         </div>
       )}
       {periods.length>0&&entities.length>0&&(
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px",,overflowX:"auto"}}>
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px",overflowX:"auto"}}>
           <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14}}>Tabla período a período — {activeDim?.label}</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:520}}>
             <thead><tr>
@@ -560,7 +560,7 @@ function MappingModal({headers,onConfirm,onCancel}){
             {mapping[key]&&<span style={{color:ACCENT2,fontSize:13}}>✓</span>}
           </div>
         ))}
-        <div style={{padding:"12px 14px",background:CARD,border:`1px solid ${BORDER}`,,borderRadius:8}}>
+        <div style={{padding:"12px 14px",background:CARD,border:`1px solid ${BORDER}`,borderRadius:8}}>
           <div style={{fontSize:11,color:MUTED,marginBottom:8,fontWeight:500,textTransform:"uppercase",letterSpacing:1}}>¿Cómo viene el precio?</div>
           {[{v:true,l:"Ya es el total de la fila",d:"El importe incluye la cantidad"},{v:false,l:"Es precio unitario",d:"Se multiplica precio × cantidad"}].map(opt=>(
             <div key={String(opt.v)} onClick={()=>setPet(opt.v)} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"7px 10px",borderRadius:6,cursor:"pointer",background:pet===opt.v?BRAND_LIGHT:CARD,border:`1px solid ${pet===opt.v?BRAND:BORDER}`,marginBottom:5}}>
@@ -586,14 +586,14 @@ function ConfirmImportModal({stats,onConfirm,onCancel}){
         <div style={{fontSize:12,color:MUTED,marginBottom:16}}>Revisá los datos antes de agregar</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
           {[["Filas",fmtN(rows),BRAND],["Importe",fmtM(ventas),ACCENT1],...(hasCantidad?[["Unidades",fmtU(unidades),ACCENT2]]:[]),["Períodos",String(periods.length),ACCENT3]].map(([l,v,c])=>(
-            <div key={l} style={{background:CARD,border:`1px solid ${BORDER}`,,borderRadius:8,padding:"10px 14px",borderLeft:`3px solid ${c}`}}>
+            <div key={l} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"10px 14px",borderLeft:`3px solid ${c}`}}>
               <div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:3}}>{l}</div>
               <div style={{fontSize:20,fontWeight:500,color:c}}>{v}</div>
             </div>
           ))}
         </div>
-        {cubeKB!=null&&<div style={{background:CARD,border:`1px solid ${BORDER}`,,borderRadius:8,padding:"10px 14px",marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:11,color:MUTED}}>Tamaño del cubo</span><span style={{fontSize:11,fontWeight:500,color:cubeKB>400000?ACCENT5:ACCENT2}}>{fmtN(cubeKB)} KB</span></div><div style={{height:4,background:BORDER,borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(cubeKB/500000*100,100)}%`,background:cubeKB>400000?ACCENT5:ACCENT2,borderRadius:2}}/></div></div>}
-        {periods.length>0&&<div style={{background:CARD,border:`1px solid ${BORDER}`,,borderRadius:8,padding:"10px 14px",marginBottom:16}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Períodos</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{periods.map(p=><span key={p} style={{fontSize:11,color:BRAND,background:BRAND_LIGHT,border:`1px solid ${BRAND}30`,borderRadius:6,padding:"3px 10px"}}>{periodLabel(p)}</span>)}</div></div>}
+        {cubeKB!=null&&<div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"10px 14px",marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:11,color:MUTED}}>Tamaño del cubo</span><span style={{fontSize:11,fontWeight:500,color:cubeKB>400000?ACCENT5:ACCENT2}}>{fmtN(cubeKB)} KB</span></div><div style={{height:4,background:BORDER,borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(cubeKB/500000*100,100)}%`,background:cubeKB>400000?ACCENT5:ACCENT2,borderRadius:2}}/></div></div>}
+        {periods.length>0&&<div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"10px 14px",marginBottom:16}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Períodos</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{periods.map(p=><span key={p} style={{fontSize:11,color:BRAND,background:BRAND_LIGHT,border:`1px solid ${BRAND}30`,borderRadius:6,padding:"3px 10px"}}>{periodLabel(p)}</span>)}</div></div>}
         {existingRows>0&&<div style={{background:"#fff8e1",border:`1px solid ${ACCENT4}40`,borderRadius:8,padding:"10px 14px",marginBottom:16,display:"flex",gap:8}}><span>⚠</span><div style={{fontSize:12,color:ACCENT4}}>Ya hay <strong>{fmtN(existingRows)}</strong> registros. Los nuevos se agregarán.</div></div>}
         <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
           <button onClick={onCancel} style={{padding:"7px 18px",background:CARD,border:`1px solid ${BORDER}`,borderRadius:6,color:MUTED,cursor:"pointer",fontSize:12}}>← Volver</button>
@@ -835,7 +835,7 @@ function ClientesPeriodoTab({filteredRecords,meta}){
       </div>
 
       {periods.length>0&&sortedZonas.length>0?(
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,,overflowX:"auto"}}>
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:500}}>
             <thead>
               <tr style={{background:BRAND_LIGHT}}>
