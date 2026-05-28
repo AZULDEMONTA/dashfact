@@ -795,7 +795,7 @@ function ClientesPeriodoTab({filteredRecords,meta}){
                 <MetricToggle value={metric} onChange={setMetric}/>
               </div>
             )}
-            <div style={{display:"flex",gap:16}}}>
+            <div style={{display:"flex",gap:16}}>
               <div style={{textAlign:"right"}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1}}>Clientes</div><div style={{fontSize:16,fontWeight:500,color:BRAND}}>{totalClients}</div></div>
               <div style={{textAlign:"right"}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1}}>Total</div><div style={{fontSize:16,fontWeight:500,color:ACCENT1}}>{metric==="pesos"?fmtM(grandTotal):fmtU(grandTotal)}</div></div>
             </div>
