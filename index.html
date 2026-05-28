@@ -623,7 +623,7 @@ function ProveedoresTab({data,filteredRecords,provArts,hasCantidad,totalVentas,t
     return Object.values(map).sort((a,b)=>b.precio-a.precio).slice(0,8)
   }
   return(
-    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14px,padding:"16px 18px"}}>
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:"16px 18px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <div><span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Ranking por Proveedor</span><span style={{fontSize:11,color:MUTED,marginLeft:8}}>{data.length} proveedores</span></div>
         {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
@@ -698,7 +698,7 @@ function RubrosTab({data,filteredRecords,ruboArts,hasCantidad,totalVentas,totalU
   const maxV=sorted[0]?.[metric==="pesos"?"ventas":"cantidad"]||1
   const total=metric==="pesos"?totalVentas:totalUnidades
   return(
-    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14px,padding:"16px 18px"}}>
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:"16px 18px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <div><span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Ranking por Rubro</span><span style={{fontSize:11,color:MUTED,marginLeft:8}}>{data.length} rubros</span></div>
         {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
