@@ -17,7 +17,7 @@
     body{background:#0F172A;font-family:'Segoe UI',Inter,system-ui,sans-serif;color:#F8FAFC;min-height:100vh}
     ::-webkit-scrollbar{width:3px;height:3px}
     ::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
-    input,select{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#F8FAFC;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;outline:none;width:100%;transition:border-color .15s}
+    input,select{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#F1F5F9;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;outline:none;width:100%;transition:border-color .15s}
     input:focus,select:focus{border-color:#3B82F6}
     button{cursor:pointer;font-family:inherit;transition:all .15s}
     .dash-sidebar{width:56px;transition:width .2s ease;overflow:hidden;flex-shrink:0}
@@ -27,11 +27,11 @@
     .dash-sidebar .nav-dot{width:5px;height:5px;border-radius:50%;background:#3B82F6;margin-left:auto;flex-shrink:0;transition:opacity .15s}
     .dash-sidebar:hover .nav-dot{opacity:0;width:0}
     .nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;color:#475569;transition:all .15s;min-height:38px;border-left:2px solid transparent}
-    .nav-item:hover{background:rgba(255,255,255,0.04);color:#94A3B8}
-    .nav-item.active{background:rgba(59,130,246,0.1);color:#3B82F6;border-left-color:#3B82F6}
+    .nav-item:hover{background:rgba(255,255,255,0.05);color:#CBD5E1}
+    .nav-item.active{background:rgba(59,130,246,0.12);color:#60A5FA;border-left-color:#3B82F6}
     .nav-item i{font-size:18px;flex-shrink:0;width:20px;text-align:center}
     .filter-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;color:#94A3B8;font-size:11px;transition:all .15s;white-space:nowrap}
-    .filter-pill:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.2);color:#F8FAFC}
+    .filter-pill:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.22);color:#F1F5F9}
     .kpi-card{background:#1E293B;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;transition:border-color .2s}
     .kpi-card:hover{border-color:rgba(255,255,255,0.18)}
     .panel-card{background:#1E293B;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px 18px}
@@ -46,7 +46,7 @@
 </head>
 <body>
 <div id="root"></div>
-<div id="err" style="display:none;position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:16px;font-family:monospace;font-size:12px;z-index:9999;white-space:pre-wrap;max-height:200px;overflow:auto"></div>
+
 <script>
 window.addEventListener('error',function(e){
   var el=document.getElementById('err');
@@ -756,6 +756,176 @@ function ClientesPeriodoTab({filteredRecords,meta}){
   const[selVends,setSelVends]=useState([])
   const[selZonas,setSelZonas]=useState([])
   const[metric,setMetric]=useState("pesos")
+  const[searchV,setSearchV]=useState("")
+  const[searchZ,setSearchZ]=useState("")
+
+  const vendedores=[...new Set(filteredRecords.map(r=>r.vendedor).filter(Boolean))].sort()
+  const zonas=[...new Set(filteredRecords.map(r=>r.zona).filter(Boolean))].sort()
+
+  const toggleVend=v=>setSelVends(p=>p.includes(v)?p.filter(x=>x!==v):[...p,v])
+  const toggleZona=z=>setSelZonas(p=>p.includes(z)?p.filter(x=>x!==z):[...p,z])
+
+  const base=filteredRecords.filter(r=>{
+    if(selVends.length>0&&!selVends.includes(r.vendedor)) return false
+    if(selZonas.length>0&&!selZonas.includes(r.zona)) return false
+    return true
+  })
+
+  const periods=[...new Set(base.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
+
+  const zoneData={}
+  base.forEach(r=>{
+    const zona=r.zona||"Sin zona"
+    const cl=r.cliente||"Sin cliente"
+    const p=toPeriod(r.y,r.m)
+    if(!zoneData[zona]) zoneData[zona]={}
+    if(!zoneData[zona][cl]) zoneData[zona][cl]={}
+    if(!zoneData[zona][cl][p]) zoneData[zona][cl][p]={ventas:0,cantidad:0}
+    zoneData[zona][cl][p].ventas+=r.precio
+    zoneData[zona][cl][p].cantidad+=r.cantidad
+  })
+
+  const sortedZonas=Object.keys(zoneData).sort()
+  const valFn=(zona,cl,p)=>{const d=zoneData[zona]?.[cl]?.[p];return d?(metric==="pesos"?d.ventas:d.cantidad):0}
+  const clientTotal=(zona,cl)=>periods.reduce((s,p)=>s+valFn(zona,cl,p),0)
+  const zoneTotal=zona=>Object.keys(zoneData[zona]||{}).reduce((s,cl)=>s+clientTotal(zona,cl),0)
+  const grandTotal=sortedZonas.reduce((s,z)=>s+zoneTotal(z),0)
+  const periodGrandTotal=p=>base.filter(r=>toPeriod(r.y,r.m)===p).reduce((s,r)=>s+(metric==="pesos"?r.precio:r.cantidad),0)
+  const totalClients=sortedZonas.reduce((s,z)=>s+Object.keys(zoneData[z]).length,0)
+
+  const T1="#F1F5F9",T2="#94A3B8",T3="#64748B"
+  const inputS={width:"100%",background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:T2,fontSize:11,outline:"none",marginBottom:6,fontFamily:"inherit"}
+  const listS={display:"flex",flexDirection:"column",gap:2,maxHeight:140,overflowY:"auto"}
+  const itemBase={display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:6,cursor:"pointer"}
+
+  if(!meta?.hasCliente) return(
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:32,textAlign:"center"}}>
+      <div style={{fontSize:14,color:T2}}>No hay datos de clientes en este período.</div>
+    </div>
+  )
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"14px 16px",display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:16,alignItems:"start"}}>
+
+        {vendedores.length>0&&(
+          <div>
+            <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:T3,marginBottom:8,fontWeight:500}}>
+              Vendedor {selVends.length>0&&<span style={{color:BRAND}}>· {selVends.length} sel.</span>}
+            </div>
+            <input value={searchV} onChange={e=>setSearchV(e.target.value)} placeholder="Buscar..." style={inputS}/>
+            <div style={listS}>
+              {vendedores.filter(v=>v.toLowerCase().includes(searchV.toLowerCase())).map(v=>(
+                <div key={v} onClick={()=>toggleVend(v)} style={{...itemBase,background:selVends.includes(v)?"rgba(59,130,246,0.1)":"transparent"}}>
+                  <div style={{width:14,height:14,borderRadius:4,border:`1px solid ${selVends.includes(v)?BRAND:BORDER}`,background:selVends.includes(v)?BRAND:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:9,color:"#fff"}}>
+                    {selVends.includes(v)&&"✓"}
+                  </div>
+                  <span style={{fontSize:12,color:selVends.includes(v)?T1:T2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {zonas.length>0&&(
+          <div>
+            <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:T3,marginBottom:8,fontWeight:500}}>
+              Zona / Gira {selZonas.length>0&&<span style={{color:ACCENT1}}>· {selZonas.length} sel.</span>}
+            </div>
+            <input value={searchZ} onChange={e=>setSearchZ(e.target.value)} placeholder="Buscar..." style={inputS}/>
+            <div style={listS}>
+              {zonas.filter(z=>z.toLowerCase().includes(searchZ.toLowerCase())).map(z=>(
+                <div key={z} onClick={()=>toggleZona(z)} style={{...itemBase,background:selZonas.includes(z)?"rgba(6,182,212,0.08)":"transparent"}}>
+                  <div style={{width:14,height:14,borderRadius:4,border:`1px solid ${selZonas.includes(z)?ACCENT1:BORDER}`,background:selZonas.includes(z)?ACCENT1:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:9,color:"#fff"}}>
+                    {selZonas.includes(z)&&"✓"}
+                  </div>
+                  <span style={{fontSize:12,color:selZonas.includes(z)?T1:T2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{z}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {meta?.hasCantidad&&(
+            <div>
+              <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:T3,marginBottom:6,fontWeight:500}}>Métrica</div>
+              <MetricToggle value={metric} onChange={setMetric}/>
+            </div>
+          )}
+          <div style={{display:"flex",gap:14}}>
+            <div><div style={{fontSize:9,color:T3,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Clientes</div><div style={{fontSize:16,fontWeight:500,color:BRAND}}>{totalClients}</div></div>
+            <div><div style={{fontSize:9,color:T3,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Total</div><div style={{fontSize:16,fontWeight:500,color:ACCENT1}}>{metric==="pesos"?fmtM(grandTotal):fmtU(grandTotal)}</div></div>
+          </div>
+          {(selVends.length>0||selZonas.length>0)&&(
+            <div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:6}}>
+                {selVends.map(v=><span key={v} style={{fontSize:10,color:"#60A5FA",background:"rgba(59,130,246,0.12)",borderRadius:20,padding:"2px 8px",display:"flex",alignItems:"center",gap:3}}>
+                  {v}<span onClick={()=>toggleVend(v)} style={{cursor:"pointer"}}>×</span>
+                </span>)}
+                {selZonas.map(z=><span key={z} style={{fontSize:10,color:"#22D3EE",background:"rgba(6,182,212,0.12)",borderRadius:20,padding:"2px 8px",display:"flex",alignItems:"center",gap:3}}>
+                  {z}<span onClick={()=>toggleZona(z)} style={{cursor:"pointer"}}>×</span>
+                </span>)}
+              </div>
+              <button onClick={()=>{setSelVends([]);setSelZonas([]);setSearchV("");setSearchZ("")}} style={{fontSize:11,color:T3,background:"none",border:"none",cursor:"pointer",textDecoration:"underline",fontFamily:"inherit",padding:0}}>Limpiar todo</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {periods.length>0&&sortedZonas.length>0?(
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:500}}>
+            <thead>
+              <tr style={{background:"rgba(255,255,255,0.02)"}}>
+                <th style={{padding:"8px 12px",textAlign:"left",color:T3,fontSize:9,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,position:"sticky",left:0,background:"rgba(30,41,59,0.98)",minWidth:180}}>Cliente</th>
+                {periods.map(p=><th key={p} style={{padding:"8px 10px",textAlign:"right",color:T3,fontSize:9,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap",minWidth:88}}>{periodLabel(p,true)}</th>)}
+                <th style={{padding:"8px 10px",textAlign:"right",color:BRAND,fontSize:9,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap",fontWeight:600}}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedZonas.map(zona=>{
+                const clients=Object.keys(zoneData[zona]).sort((a,b)=>clientTotal(zona,b)-clientTotal(zona,a))
+                const ztot=zoneTotal(zona)
+                return(
+                  <React.Fragment key={zona}>
+                    <tr style={{background:"rgba(59,130,246,0.06)"}}>
+                      <td colSpan={periods.length+2} style={{padding:"6px 12px",fontWeight:500,fontSize:11,color:"#60A5FA",letterSpacing:0.5,borderBottom:`1px solid ${BORDER}`,position:"sticky",left:0,background:"rgba(59,130,246,0.06)"}}>📍 {zona}</td>
+                    </tr>
+                    {clients.map((cl,idx)=>(
+                      <tr key={cl} style={{borderBottom:`1px solid rgba(255,255,255,0.04)`,background:idx%2===0?"transparent":"rgba(255,255,255,0.01)"}}>
+                        <td style={{padding:"7px 12px 7px 20px",color:T1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:200,position:"sticky",left:0,background:idx%2===0?"#1E293B":"#202d3e"}}>{cl}</td>
+                        {periods.map(p=>{const v=valFn(zona,cl,p);return<td key={p} style={{padding:"7px 10px",textAlign:"right",color:v>0?"#60A5FA":T3,fontWeight:v>0?500:400}}>{v>0?(metric==="pesos"?fmtM(v):fmtU(v)):"—"}</td>})}
+                        <td style={{padding:"7px 10px",textAlign:"right",color:BRAND,fontWeight:500}}>{metric==="pesos"?fmtM(clientTotal(zona,cl)):fmtU(clientTotal(zona,cl))}</td>
+                      </tr>
+                    ))}
+                    <tr style={{background:"rgba(16,185,129,0.06)",borderBottom:`1px solid ${BORDER}`}}>
+                      <td style={{padding:"6px 12px 6px 20px",color:"#34D399",fontWeight:500,fontSize:10,textTransform:"uppercase",letterSpacing:0.5,position:"sticky",left:0,background:"rgba(16,185,129,0.06)"}}>Subtotal {zona}</td>
+                      {periods.map(p=>{const v=base.filter(r=>(r.zona||"Sin zona")===zona&&toPeriod(r.y,r.m)===p).reduce((s,r)=>s+(metric==="pesos"?r.precio:r.cantidad),0);return<td key={p} style={{padding:"6px 10px",textAlign:"right",color:"#34D399",fontWeight:500}}>{v>0?(metric==="pesos"?fmtM(v):fmtU(v)):"—"}</td>})}
+                      <td style={{padding:"6px 10px",textAlign:"right",color:"#34D399",fontWeight:500}}>{metric==="pesos"?fmtM(ztot):fmtU(ztot)}</td>
+                    </tr>
+                  </React.Fragment>
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{background:"rgba(255,255,255,0.03)",borderTop:`2px solid ${BORDER2}`}}>
+                <td style={{padding:"8px 12px",color:T1,fontWeight:500,fontSize:12,position:"sticky",left:0,background:"#253047"}}>Total general</td>
+                {periods.map(p=><td key={p} style={{padding:"8px 10px",textAlign:"right",color:T1,fontWeight:500}}>{metric==="pesos"?fmtM(periodGrandTotal(p)):fmtU(periodGrandTotal(p))}</td>)}
+                <td style={{padding:"8px 10px",textAlign:"right",color:BRAND,fontWeight:600}}>{metric==="pesos"?fmtM(grandTotal):fmtU(grandTotal)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      ):(
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:32,textAlign:"center"}}>
+          <div style={{fontSize:14,color:T2}}>No hay datos para los filtros seleccionados.</div>
+        </div>
+      )}
+    </div>
+  )
+}
 
   const vendedores=[...new Set(filteredRecords.map(r=>r.vendedor).filter(Boolean))].sort()
   const zonas=[...new Set(filteredRecords.map(r=>r.zona).filter(Boolean))].sort()
