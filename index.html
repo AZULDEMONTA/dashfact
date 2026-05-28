@@ -22,6 +22,8 @@
     .btn-g{background:none;border:1px solid #3a424f;color:#d8dfe8;padding:7px 12px;border-radius:8px;font-size:13px}
     .btn-g:hover{border-color:#58a6ff;color:#58a6ff}
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -963,6 +965,28 @@ function App(){
 
   const handleClear=async()=>{if(!confirm("¿Eliminar todos los datos?")) return;await clearData();setCube([]);setArticulos([]);setMeta({})}
 
+  const exportarPDF=useCallback(async()=>{
+    const btn=document.getElementById("btnExportPDF")
+    if(btn){btn.disabled=true;btn.textContent="Generando..."}
+    try{
+      const el=document.getElementById("dashfact-root")
+      const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#eef0f8",logging:false,ignoreElements:e=>e.id==="btnExportPDF"})
+      const{jsPDF}=window.jspdf
+      const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"})
+      const pageW=pdf.internal.pageSize.getWidth(),pageH=pdf.internal.pageSize.getHeight()
+      const margin=8,imgW=pageW-margin*2,imgH=(canvas.height*imgW)/canvas.width
+      const imgData=canvas.toDataURL("image/png")
+      if(imgH<=pageH-margin*2){
+        pdf.addImage(imgData,"PNG",margin,margin,imgW,imgH)
+      }else{
+        let yOffset=0;const sliceH=pageH-margin*2;const pages=Math.ceil(imgH/sliceH)
+        for(let i=0;i<pages;i++){if(i>0) pdf.addPage();pdf.addImage(imgData,"PNG",margin,margin-yOffset,imgW,imgH);yOffset+=sliceH}
+      }
+      pdf.save("dashfact-reporte.pdf")
+    }catch(e){alert("Error al generar PDF: "+e.message)}
+    if(btn){btn.disabled=false;btn.textContent="⬇ Exportar PDF"}
+  },[])
+
   if(cube===null) return(
     <div style={{background:BRAND,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"system-ui"}}>
       <div style={{textAlign:"center"}}>
@@ -1031,6 +1055,7 @@ function App(){
         <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
           <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
           {hasData&&<button onClick={handleClear} style={{padding:"5px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6,color:"rgba(255,255,255,0.45)",cursor:"pointer",fontSize:11}}>Limpiar</button>}
+          {hasData&&<button id="btnExportPDF" onClick={exportarPDF} style={{padding:"6px 16px",background:"transparent",border:"1px solid rgba(255,255,255,0.35)",borderRadius:6,color:"rgba(255,255,255,0.85)",cursor:"pointer",fontWeight:500,fontSize:12}}>⬇ Exportar PDF</button>}
           <button onClick={()=>fileRef.current&&fileRef.current.click()} style={{padding:"6px 16px",background:"#fff",border:"none",borderRadius:6,color:BRAND,cursor:"pointer",fontWeight:500,fontSize:12}}>↑ Importar Excel</button>
           <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
         </div>
