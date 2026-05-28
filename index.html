@@ -10,6 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.2/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/tabler-icons.min.css"/>
 
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -1045,11 +1046,13 @@ function App(){
   },[])
 
   if(cube===null) return(
-    <div style={{background:BRAND,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"system-ui"}}>
+    <div style={{background:BG,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Segoe UI',Inter,sans-serif"}}>
       <div style={{textAlign:"center"}}>
-        <img src={LOGO_SRC} style={{height:52,objectFit:"contain",filter:"brightness(0) invert(1)",marginBottom:16}} alt="logo"/>
-        <div style={{fontSize:17,fontWeight:500,color:"#fff",marginBottom:4}}>Azul de Montaña</div>
-        <div style={{fontSize:13,color:"rgba(255,255,255,0.5)"}}>Cargando datos…</div>
+        <div style={{width:48,height:48,background:BRAND,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
+          <i className="ti ti-chart-line" style={{fontSize:24,color:"#fff"}} aria-hidden="true"/>
+        </div>
+        <div style={{fontSize:17,fontWeight:500,color:TEXT,marginBottom:4}}>Azul de Montaña</div>
+        <div style={{fontSize:13,color:MUTED}}>Cargando datos…</div>
       </div>
     </div>
   )
@@ -1099,18 +1102,6 @@ function App(){
     ...((meta?.hasCliente)?[{key:"clientes-periodo",label:"Clientes × Período",icon:"ti-table"}]:[]),
   ]
   const safeTab=TABS.find(t=>t.key===activeTab)?activeTab:"resumen"
-
-  if(cube===null) return(
-    <div style={{background:BG,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Segoe UI',Inter,sans-serif"}}>
-      <div style={{textAlign:"center"}}>
-        <div style={{width:48,height:48,background:BRAND,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
-          <i className="ti ti-chart-line" style={{fontSize:24,color:"#fff"}} aria-hidden="true"/>
-        </div>
-        <div style={{fontSize:17,fontWeight:500,color:TEXT,marginBottom:4}}>Azul de Montaña</div>
-        <div style={{fontSize:13,color:MUTED}}>Cargando datos…</div>
-      </div>
-    </div>
-  )
 
   return(
     <div id="dashfact-root" style={{background:BG,minHeight:"100vh",color:TEXT,display:"flex",flexDirection:"column"}}>
