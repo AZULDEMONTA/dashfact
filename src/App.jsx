@@ -919,7 +919,7 @@ function App(){
         <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
           <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
           {hasData&&<button onClick={handleClear} style={{padding:"5px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6,color:"rgba(255,255,255,0.45)",cursor:"pointer",fontSize:11}}>Limpiar</button>}
-          {hasData&&<button id="btnExportPDF" onClick={exportarPDF} style={{padding:"6px 16px",background:"transparent",border:"1px solid rgba(255,255,255,0.35)",borderRadius:6,color:"rgba(255,255,255,0.85)",cursor:"pointer",fontWeight:500,fontSize:12}}>⬇ Exportar PDF</button>}
+          <button id="btnExportPDF" onClick={exportarPDF} style={{padding:"6px 16px",background:"transparent",border:"1px solid rgba(255,255,255,0.35)",borderRadius:6,color:"rgba(255,255,255,0.85)",cursor:"pointer",fontWeight:500,fontSize:12}}>⬇ Exportar PDF</button>
           <button onClick={()=>fileRef.current&&fileRef.current.click()} style={{padding:"6px 16px",background:"#fff",border:"none",borderRadius:6,color:BRAND,cursor:"pointer",fontWeight:500,fontSize:12}}>↑ Importar Excel</button>
           <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
         </div>
