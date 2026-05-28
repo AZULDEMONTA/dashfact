@@ -10,8 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.2/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{background:#eef0f8;font-family:'Segoe UI',sans-serif;color:#e8edf5;min-height:100vh}
@@ -719,6 +718,141 @@ function RubrosTab({data,filteredRecords,ruboArts,hasCantidad,totalVentas,totalU
   )
 }
 
+/* ─── CLIENTES POR PERÍODO TAB ──────────────────────────────────────────────── */
+function ClientesPeriodoTab({filteredRecords,meta}){
+  const[fVend,setFVend]=useState("__ALL__")
+  const[fZona,setFZona]=useState("__ALL__")
+  const[metric,setMetric]=useState("pesos")
+
+  const vendedores=[...new Set(filteredRecords.map(r=>r.vendedor).filter(Boolean))].sort()
+  const zonas=[...new Set(filteredRecords.map(r=>r.zona).filter(Boolean))].sort()
+
+  const base=filteredRecords.filter(r=>{
+    if(fVend!=="__ALL__"&&r.vendedor!==fVend) return false
+    if(fZona!=="__ALL__"&&r.zona!==fZona) return false
+    return true
+  })
+
+  const periods=[...new Set(base.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
+  const clientes=[...new Set(base.map(r=>r.cliente).filter(Boolean))].sort()
+
+  const matrix={}
+  base.forEach(r=>{
+    const cl=r.cliente||"Sin cliente"
+    const p=toPeriod(r.y,r.m)
+    if(!matrix[cl]) matrix[cl]={}
+    if(!matrix[cl][p]) matrix[cl][p]={ventas:0,cantidad:0}
+    matrix[cl][p].ventas+=r.precio
+    matrix[cl][p].cantidad+=r.cantidad
+  })
+
+  const clienteTotals=Object.entries(matrix).map(([name,ps])=>({
+    name,
+    total:Object.values(ps).reduce((s,x)=>s+(metric==="pesos"?x.ventas:x.cantidad),0)
+  })).sort((a,b)=>b.total-a.total)
+
+  const valFn=(cl,p)=>{const d=matrix[cl]?.[p];return d?(metric==="pesos"?d.ventas:d.cantidad):0}
+
+  const grandTotal=clienteTotals.reduce((s,c)=>s+c.total,0)
+
+  if(!meta?.hasCliente) return(
+    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:32,textAlign:"center"}}>
+      <div style={{fontSize:14,color:MUTED}}>No hay datos de clientes en este período.</div>
+    </div>
+  )
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {/* Filtros */}
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"14px 18px",display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end",boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
+        {vendedores.length>0&&(
+          <div style={{display:"flex",flexDirection:"column",gap:4,minWidth:160}}>
+            <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED}}>Vendedor</span>
+            <select value={fVend} onChange={e=>setFVend(e.target.value)} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,padding:"5px 9px",fontSize:12,outline:"none"}}>
+              <option value="__ALL__">Todos</option>
+              {vendedores.map(v=><option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+        )}
+        {zonas.length>0&&(
+          <div style={{display:"flex",flexDirection:"column",gap:4,minWidth:160}}>
+            <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED}}>Zona</span>
+            <select value={fZona} onChange={e=>setFZona(e.target.value)} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,padding:"5px 9px",fontSize:12,outline:"none"}}>
+              <option value="__ALL__">Todas</option>
+              {zonas.map(z=><option key={z} value={z}>{z}</option>)}
+            </select>
+          </div>
+        )}
+        {meta?.hasCantidad&&(
+          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED}}>Métrica</span>
+            <MetricToggle value={metric} onChange={setMetric}/>
+          </div>
+        )}
+        <div style={{marginLeft:"auto",display:"flex",gap:16,alignItems:"center"}}>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1}}>Clientes</div>
+            <div style={{fontSize:16,fontWeight:500,color:BRAND}}>{clienteTotals.length}</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1}}>Total</div>
+            <div style={{fontSize:16,fontWeight:500,color:ACCENT1}}>{metric==="pesos"?fmtM(grandTotal):fmtU(grandTotal)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla */}
+      {periods.length>0&&clienteTotals.length>0?(
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,boxShadow:"0 1px 4px rgba(26,35,126,0.06)",overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:500}}>
+            <thead>
+              <tr style={{background:BRAND_LIGHT}}>
+                <th style={{padding:"8px 12px",textAlign:"left",color:MUTED,fontSize:9,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,position:"sticky",left:0,background:BRAND_LIGHT,minWidth:160}}>Cliente</th>
+                {periods.map(p=>(
+                  <th key={p} style={{padding:"8px 10px",textAlign:"right",color:MUTED,fontSize:9,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap",minWidth:90}}>{periodLabel(p,true)}</th>
+                ))}
+                <th style={{padding:"8px 10px",textAlign:"right",color:BRAND,fontSize:9,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap",fontWeight:600}}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clienteTotals.map((c,idx)=>(
+                <tr key={c.name}
+                  onMouseEnter={e=>e.currentTarget.style.background='#eef0f8'}
+                  onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#f8f9fc"}
+                  style={{borderBottom:`1px solid ${BORDER}`,background:idx%2===0?"#fff":"#f8f9fc"}}>
+                  <td style={{padding:"7px 12px",color:TEXT,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:200,position:"sticky",left:0,background:"inherit"}}>{c.name}</td>
+                  {periods.map(p=>{
+                    const val=valFn(c.name,p)
+                    return(
+                      <td key={p} style={{padding:"7px 10px",textAlign:"right",color:val>0?ACCENT1:MUTED,fontWeight:val>0?500:400}}>
+                        {val>0?(metric==="pesos"?fmtM(val):fmtU(val)):"—"}
+                      </td>
+                    )
+                  })}
+                  <td style={{padding:"7px 10px",textAlign:"right",color:BRAND,fontWeight:600}}>{metric==="pesos"?fmtM(c.total):fmtU(c.total)}</td>
+                </tr>
+              ))}
+              {/* Fila totales */}
+              <tr style={{borderTop:`2px solid ${BORDER}`,background:CARD2}}>
+                <td style={{padding:"8px 12px",color:TEXT,fontWeight:600,fontSize:12,position:"sticky",left:0,background:CARD2}}>TOTAL</td>
+                {periods.map(p=>{
+                  const tot=base.filter(r=>toPeriod(r.y,r.m)===p).reduce((s,r)=>s+(metric==="pesos"?r.precio:r.cantidad),0)
+                  return <td key={p} style={{padding:"8px 10px",textAlign:"right",color:TEXT,fontWeight:600}}>{metric==="pesos"?fmtM(tot):fmtU(tot)}</td>
+                })}
+                <td style={{padding:"8px 10px",textAlign:"right",color:BRAND,fontWeight:700}}>{metric==="pesos"?fmtM(grandTotal):fmtU(grandTotal)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ):(
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:32,textAlign:"center"}}>
+          <div style={{fontSize:14,color:MUTED}}>No hay datos para los filtros seleccionados.</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── APP ───────────────────────────────────────────────────────────────────── */
 function App(){
   const[cube,setCube]=useState(null)
@@ -829,29 +963,6 @@ function App(){
 
   const handleClear=async()=>{if(!confirm("¿Eliminar todos los datos?")) return;await clearData();setCube([]);setArticulos([]);setMeta({})}
 
-  /* ─── EXPORTAR PDF ──────────────────────────────────────────────────────── */
-  const exportarPDF=useCallback(async()=>{
-    const btn=document.getElementById("btnExportPDF")
-    if(btn){btn.disabled=true;btn.textContent="Generando..."}
-    try{
-      const el=document.getElementById("dashfact-root")
-      const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#eef0f8",logging:false,ignoreElements:e=>e.id==="btnExportPDF"})
-      const{jsPDF}=window.jspdf
-      const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"})
-      const pageW=pdf.internal.pageSize.getWidth(),pageH=pdf.internal.pageSize.getHeight()
-      const margin=8,imgW=pageW-margin*2,imgH=(canvas.height*imgW)/canvas.width
-      const imgData=canvas.toDataURL("image/png")
-      if(imgH<=pageH-margin*2){
-        pdf.addImage(imgData,"PNG",margin,margin,imgW,imgH)
-      }else{
-        let yOffset=0;const sliceH=pageH-margin*2;const pages=Math.ceil(imgH/sliceH)
-        for(let i=0;i<pages;i++){if(i>0) pdf.addPage();pdf.addImage(imgData,"PNG",margin,margin-yOffset,imgW,imgH);yOffset+=sliceH}
-      }
-      pdf.save("dashfact-reporte.pdf")
-    }catch(e){alert("Error al generar PDF: "+e.message)}
-    if(btn){btn.disabled=false;btn.textContent="⬇ Exportar PDF"}
-  },[])
-
   if(cube===null) return(
     <div style={{background:BRAND,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"system-ui"}}>
       <div style={{textAlign:"center"}}>
@@ -904,6 +1015,7 @@ function App(){
     ...(meta?.hasRentabilidad?[{key:"rentabilidad",label:"Rentabilidad"}]:[]),
     ...(meta?.hasZona?[{key:"zonas",label:"Zonas"}]:[]),
     ...(meta?.hasProvincia?[{key:"provincias",label:"Provincias"}]:[]),
+    ...((meta?.hasCliente)?[{key:"clientes-periodo",label:"Clientes × Período"}]:[]),
   ]
   const safeTab=TABS.find(t=>t.key===activeTab)?activeTab:"resumen"
 
@@ -919,7 +1031,6 @@ function App(){
         <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
           <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
           {hasData&&<button onClick={handleClear} style={{padding:"5px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6,color:"rgba(255,255,255,0.45)",cursor:"pointer",fontSize:11}}>Limpiar</button>}
-          <button id="btnExportPDF" onClick={exportarPDF} style={{padding:"6px 16px",background:"transparent",border:"1px solid rgba(255,255,255,0.35)",borderRadius:6,color:"rgba(255,255,255,0.85)",cursor:"pointer",fontWeight:500,fontSize:12}}>⬇ Exportar PDF</button>
           <button onClick={()=>fileRef.current&&fileRef.current.click()} style={{padding:"6px 16px",background:"#fff",border:"none",borderRadius:6,color:BRAND,cursor:"pointer",fontWeight:500,fontSize:12}}>↑ Importar Excel</button>
           <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
         </div>
@@ -994,6 +1105,7 @@ function App(){
             {safeTab==="rentabilidad"&&<RentabilidadSection data={rentData} artData={artData} hasCantidad={meta?.hasCantidad}/>}
             {safeTab==="zonas"&&<DetailTab data={zonaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Zona" color={ACCENT6}/>}
             {safeTab==="provincias"&&<DetailTab data={pciaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia" color={ACCENT7}/>}
+            {safeTab==="clientes-periodo"&&<ClientesPeriodoTab filteredRecords={filtered} meta={meta}/>}
           </div>
         </div>
       )}
