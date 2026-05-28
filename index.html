@@ -722,40 +722,45 @@ function RubrosTab({data,filteredRecords,ruboArts,hasCantidad,totalVentas,totalU
 
 /* ─── CLIENTES POR PERÍODO TAB ──────────────────────────────────────────────── */
 function ClientesPeriodoTab({filteredRecords,meta}){
-  const[fVend,setFVend]=useState("__ALL__")
-  const[fZona,setFZona]=useState("__ALL__")
+  const[selVends,setSelVends]=useState([])
+  const[selZonas,setSelZonas]=useState([])
   const[metric,setMetric]=useState("pesos")
 
   const vendedores=[...new Set(filteredRecords.map(r=>r.vendedor).filter(Boolean))].sort()
   const zonas=[...new Set(filteredRecords.map(r=>r.zona).filter(Boolean))].sort()
 
+  const toggleVend=v=>setSelVends(p=>p.includes(v)?p.filter(x=>x!==v):[...p,v])
+  const toggleZona=z=>setSelZonas(p=>p.includes(z)?p.filter(x=>x!==z):[...p,z])
+
   const base=filteredRecords.filter(r=>{
-    if(fVend!=="__ALL__"&&r.vendedor!==fVend) return false
-    if(fZona!=="__ALL__"&&r.zona!==fZona) return false
+    if(selVends.length>0&&!selVends.includes(r.vendedor)) return false
+    if(selZonas.length>0&&!selZonas.includes(r.zona)) return false
     return true
   })
 
   const periods=[...new Set(base.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
-  const clientes=[...new Set(base.map(r=>r.cliente).filter(Boolean))].sort()
 
-  const matrix={}
+  const zoneData={}
   base.forEach(r=>{
+    const zona=r.zona||"Sin zona"
     const cl=r.cliente||"Sin cliente"
     const p=toPeriod(r.y,r.m)
-    if(!matrix[cl]) matrix[cl]={}
-    if(!matrix[cl][p]) matrix[cl][p]={ventas:0,cantidad:0}
-    matrix[cl][p].ventas+=r.precio
-    matrix[cl][p].cantidad+=r.cantidad
+    if(!zoneData[zona]) zoneData[zona]={}
+    if(!zoneData[zona][cl]) zoneData[zona][cl]={}
+    if(!zoneData[zona][cl][p]) zoneData[zona][cl][p]={ventas:0,cantidad:0}
+    zoneData[zona][cl][p].ventas+=r.precio
+    zoneData[zona][cl][p].cantidad+=r.cantidad
   })
 
-  const clienteTotals=Object.entries(matrix).map(([name,ps])=>({
-    name,
-    total:Object.values(ps).reduce((s,x)=>s+(metric==="pesos"?x.ventas:x.cantidad),0)
-  })).sort((a,b)=>b.total-a.total)
+  const sortedZonas=Object.keys(zoneData).sort()
+  const valFn=(zona,cl,p)=>{const d=zoneData[zona]?.[cl]?.[p];return d?(metric==="pesos"?d.ventas:d.cantidad):0}
+  const clientTotal=(zona,cl)=>periods.reduce((s,p)=>s+valFn(zona,cl,p),0)
+  const zoneTotal=zona=>Object.keys(zoneData[zona]||{}).reduce((s,cl)=>s+clientTotal(zona,cl),0)
+  const grandTotal=sortedZonas.reduce((s,z)=>s+zoneTotal(z),0)
+  const periodGrandTotal=p=>base.filter(r=>toPeriod(r.y,r.m)===p).reduce((s,r)=>s+(metric==="pesos"?r.precio:r.cantidad),0)
+  const totalClients=sortedZonas.reduce((s,z)=>s+Object.keys(zoneData[z]).length,0)
 
-  const valFn=(cl,p)=>{const d=matrix[cl]?.[p];return d?(metric==="pesos"?d.ventas:d.cantidad):0}
-
-  const grandTotal=clienteTotals.reduce((s,c)=>s+c.total,0)
+  const pillStyle=(active)=>({padding:"4px 12px",fontSize:11,borderRadius:20,border:`1px solid ${active?BRAND:BORDER}`,background:active?BRAND_LIGHT:CARD,color:active?BRAND:MUTED,cursor:"pointer",fontWeight:active?500:400,whiteSpace:"nowrap"})
 
   if(!meta?.hasCliente) return(
     <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:32,textAlign:"center"}}>
@@ -765,85 +770,89 @@ function ClientesPeriodoTab({filteredRecords,meta}){
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      {/* Filtros */}
-      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"14px 18px",display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end",boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
-        {vendedores.length>0&&(
-          <div style={{display:"flex",flexDirection:"column",gap:4,minWidth:160}}>
-            <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED}}>Vendedor</span>
-            <select value={fVend} onChange={e=>setFVend(e.target.value)} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,padding:"5px 9px",fontSize:12,outline:"none"}}>
-              <option value="__ALL__">Todos</option>
-              {vendedores.map(v=><option key={v} value={v}>{v}</option>)}
-            </select>
-          </div>
-        )}
-        {zonas.length>0&&(
-          <div style={{display:"flex",flexDirection:"column",gap:4,minWidth:160}}>
-            <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED}}>Zona</span>
-            <select value={fZona} onChange={e=>setFZona(e.target.value)} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,padding:"5px 9px",fontSize:12,outline:"none"}}>
-              <option value="__ALL__">Todas</option>
-              {zonas.map(z=><option key={z} value={z}>{z}</option>)}
-            </select>
-          </div>
-        )}
-        {meta?.hasCantidad&&(
-          <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED}}>Métrica</span>
-            <MetricToggle value={metric} onChange={setMetric}/>
-          </div>
-        )}
-        <div style={{marginLeft:"auto",display:"flex",gap:16,alignItems:"center"}}>
-          <div style={{textAlign:"right"}}>
-            <div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1}}>Clientes</div>
-            <div style={{fontSize:16,fontWeight:500,color:BRAND}}>{clienteTotals.length}</div>
-          </div>
-          <div style={{textAlign:"right"}}>
-            <div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1}}>Total</div>
-            <div style={{fontSize:16,fontWeight:500,color:ACCENT1}}>{metric==="pesos"?fmtM(grandTotal):fmtU(grandTotal)}</div>
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"14px 18px",boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
+        <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
+          {vendedores.length>0&&(
+            <div style={{flex:1,minWidth:200}}>
+              <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED,marginBottom:8}}>Vendedor {selVends.length>0&&<span style={{color:BRAND}}>({selVends.length} sel.)</span>}</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                {vendedores.map(v=><button key={v} onClick={()=>toggleVend(v)} style={pillStyle(selVends.includes(v))}>{v}</button>)}
+              </div>
+            </div>
+          )}
+          {zonas.length>0&&(
+            <div style={{flex:1,minWidth:200}}>
+              <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED,marginBottom:8}}>Zona / Gira {selZonas.length>0&&<span style={{color:ACCENT2}}>({selZonas.length} sel.)</span>}</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                {zonas.map(z=><button key={z} onClick={()=>toggleZona(z)} style={{...pillStyle(selZonas.includes(z)),borderColor:selZonas.includes(z)?ACCENT2:BORDER,background:selZonas.includes(z)?"#e8f5f1":CARD,color:selZonas.includes(z)?ACCENT2:MUTED}}>{z}</button>)}
+              </div>
+            </div>
+          )}
+          <div style={{display:"flex",flexDirection:"column",gap:8,justifyContent:"space-between"}}>
+            {meta?.hasCantidad&&(
+              <div>
+                <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED,marginBottom:6}}>Métrica</div>
+                <MetricToggle value={metric} onChange={setMetric}/>
+              </div>
+            )}
+            <div style={{display:"flex",gap:16}}}>
+              <div style={{textAlign:"right"}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1}}>Clientes</div><div style={{fontSize:16,fontWeight:500,color:BRAND}}>{totalClients}</div></div>
+              <div style={{textAlign:"right"}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1}}>Total</div><div style={{fontSize:16,fontWeight:500,color:ACCENT1}}>{metric==="pesos"?fmtM(grandTotal):fmtU(grandTotal)}</div></div>
+            </div>
           </div>
         </div>
+        {(selVends.length>0||selZonas.length>0)&&(
+          <div style={{marginTop:10,display:"flex",gap:6,alignItems:"center"}}>
+            <span style={{fontSize:11,color:MUTED}}>Filtros activos:</span>
+            {selVends.map(v=><span key={v} style={{fontSize:11,color:BRAND,background:BRAND_LIGHT,border:`1px solid ${BRAND}30`,borderRadius:20,padding:"2px 10px",display:"flex",alignItems:"center",gap:4}}>{v}<span onClick={()=>toggleVend(v)} style={{cursor:"pointer",fontWeight:700,marginLeft:2}}>×</span></span>)}
+            {selZonas.map(z=><span key={z} style={{fontSize:11,color:ACCENT2,background:"#e8f5f1",border:`1px solid ${ACCENT2}30`,borderRadius:20,padding:"2px 10px",display:"flex",alignItems:"center",gap:4}}>{z}<span onClick={()=>toggleZona(z)} style={{cursor:"pointer",fontWeight:700,marginLeft:2}}>×</span></span>)}
+            <button onClick={()=>{setSelVends([]);setSelZonas([])}} style={{fontSize:11,color:MUTED,background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Limpiar todo</button>
+          </div>
+        )}
       </div>
 
-      {/* Tabla */}
-      {periods.length>0&&clienteTotals.length>0?(
+      {periods.length>0&&sortedZonas.length>0?(
         <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,boxShadow:"0 1px 4px rgba(26,35,126,0.06)",overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:500}}>
             <thead>
               <tr style={{background:BRAND_LIGHT}}>
-                <th style={{padding:"8px 12px",textAlign:"left",color:MUTED,fontSize:9,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,position:"sticky",left:0,background:BRAND_LIGHT,minWidth:160}}>Cliente</th>
-                {periods.map(p=>(
-                  <th key={p} style={{padding:"8px 10px",textAlign:"right",color:MUTED,fontSize:9,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap",minWidth:90}}>{periodLabel(p,true)}</th>
-                ))}
+                <th style={{padding:"8px 12px",textAlign:"left",color:MUTED,fontSize:9,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,position:"sticky",left:0,background:BRAND_LIGHT,minWidth:180}}>Cliente</th>
+                {periods.map(p=><th key={p} style={{padding:"8px 10px",textAlign:"right",color:MUTED,fontSize:9,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap",minWidth:88}}>{periodLabel(p,true)}</th>)}
                 <th style={{padding:"8px 10px",textAlign:"right",color:BRAND,fontSize:9,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap",fontWeight:600}}>Total</th>
               </tr>
             </thead>
             <tbody>
-              {clienteTotals.map((c,idx)=>(
-                <tr key={c.name}
-                  onMouseEnter={e=>e.currentTarget.style.background='#eef0f8'}
-                  onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#f8f9fc"}
-                  style={{borderBottom:`1px solid ${BORDER}`,background:idx%2===0?"#fff":"#f8f9fc"}}>
-                  <td style={{padding:"7px 12px",color:TEXT,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:200,position:"sticky",left:0,background:"inherit"}}>{c.name}</td>
-                  {periods.map(p=>{
-                    const val=valFn(c.name,p)
-                    return(
-                      <td key={p} style={{padding:"7px 10px",textAlign:"right",color:val>0?ACCENT1:MUTED,fontWeight:val>0?500:400}}>
-                        {val>0?(metric==="pesos"?fmtM(val):fmtU(val)):"—"}
-                      </td>
-                    )
-                  })}
-                  <td style={{padding:"7px 10px",textAlign:"right",color:BRAND,fontWeight:600}}>{metric==="pesos"?fmtM(c.total):fmtU(c.total)}</td>
-                </tr>
-              ))}
-              {/* Fila totales */}
-              <tr style={{borderTop:`2px solid ${BORDER}`,background:CARD2}}>
-                <td style={{padding:"8px 12px",color:TEXT,fontWeight:600,fontSize:12,position:"sticky",left:0,background:CARD2}}>TOTAL</td>
-                {periods.map(p=>{
-                  const tot=base.filter(r=>toPeriod(r.y,r.m)===p).reduce((s,r)=>s+(metric==="pesos"?r.precio:r.cantidad),0)
-                  return <td key={p} style={{padding:"8px 10px",textAlign:"right",color:TEXT,fontWeight:600}}>{metric==="pesos"?fmtM(tot):fmtU(tot)}</td>
-                })}
+              {sortedZonas.map(zona=>{
+                const clients=Object.keys(zoneData[zona]).sort((a,b)=>clientTotal(zona,b)-clientTotal(zona,a))
+                const ztot=zoneTotal(zona)
+                return(
+                  <React.Fragment key={zona}>
+                    <tr style={{background:`${BRAND}12`}}>
+                      <td colSpan={periods.length+2} style={{padding:"6px 12px",fontWeight:600,fontSize:11,color:BRAND,textTransform:"uppercase",letterSpacing:0.8,borderBottom:`1px solid ${BORDER}`,position:"sticky",left:0,background:`${BRAND}12`}}>📍 {zona}</td>
+                    </tr>
+                    {clients.map((cl,idx)=>(
+                      <tr key={cl} onMouseEnter={e=>e.currentTarget.style.background='#eef0f8'} onMouseLeave={e=>e.currentTarget.style.background=idx%2===0?"#fff":"#f8f9fc"} style={{borderBottom:`1px solid ${BORDER}`,background:idx%2===0?"#fff":"#f8f9fc"}}>
+                        <td style={{padding:"7px 12px 7px 20px",color:TEXT,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:200,position:"sticky",left:0,background:"inherit"}}>{cl}</td>
+                        {periods.map(p=>{const v=valFn(zona,cl,p);return<td key={p} style={{padding:"7px 10px",textAlign:"right",color:v>0?ACCENT1:MUTED,fontWeight:v>0?500:400}}>{v>0?(metric==="pesos"?fmtM(v):fmtU(v)):"—"}</td>})}
+                        <td style={{padding:"7px 10px",textAlign:"right",color:BRAND,fontWeight:600}}>{metric==="pesos"?fmtM(clientTotal(zona,cl)):fmtU(clientTotal(zona,cl))}</td>
+                      </tr>
+                    ))}
+                    <tr style={{background:`${ACCENT2}10`,borderBottom:`2px solid ${BORDER}`}}>
+                      <td style={{padding:"6px 12px 6px 20px",color:ACCENT2,fontWeight:600,fontSize:11,position:"sticky",left:0,background:`${ACCENT2}10`}}>Subtotal {zona}</td>
+                      {periods.map(p=>{const v=base.filter(r=>(r.zona||"Sin zona")===zona&&toPeriod(r.y,r.m)===p).reduce((s,r)=>s+(metric==="pesos"?r.precio:r.cantidad),0);return<td key={p} style={{padding:"6px 10px",textAlign:"right",color:ACCENT2,fontWeight:500}}>{v>0?(metric==="pesos"?fmtM(v):fmtU(v)):"—"}</td>})}
+                      <td style={{padding:"6px 10px",textAlign:"right",color:ACCENT2,fontWeight:600}}>{metric==="pesos"?fmtM(ztot):fmtU(ztot)}</td>
+                    </tr>
+                  </React.Fragment>
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{background:CARD2,borderTop:`2px solid ${BORDER}`}}>
+                <td style={{padding:"8px 12px",color:TEXT,fontWeight:700,fontSize:12,position:"sticky",left:0,background:CARD2}}>TOTAL GENERAL</td>
+                {periods.map(p=><td key={p} style={{padding:"8px 10px",textAlign:"right",color:TEXT,fontWeight:600}}>{metric==="pesos"?fmtM(periodGrandTotal(p)):fmtU(periodGrandTotal(p))}</td>)}
                 <td style={{padding:"8px 10px",textAlign:"right",color:BRAND,fontWeight:700}}>{metric==="pesos"?fmtM(grandTotal):fmtU(grandTotal)}</td>
               </tr>
-            </tbody>
+            </tfoot>
           </table>
         </div>
       ):(
@@ -970,17 +979,43 @@ function App(){
     if(btn){btn.disabled=true;btn.textContent="Generando..."}
     try{
       const el=document.getElementById("dashfact-content")
-      const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#eef0f8",logging:false,ignoreElements:e=>e.id==="btnExportPDF"})
+      const elRect=el.getBoundingClientRect()
+      const canvas=await html2canvas(el,{scale:1.5,useCORS:true,backgroundColor:"#eef0f8",logging:false,ignoreElements:e=>e.id==="btnExportPDF"})
       const{jsPDF}=window.jspdf
       const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"})
       const pageW=pdf.internal.pageSize.getWidth(),pageH=pdf.internal.pageSize.getHeight()
-      const margin=8,imgW=pageW-margin*2,imgH=(canvas.height*imgW)/canvas.width
-      const imgData=canvas.toDataURL("image/png")
-      if(imgH<=pageH-margin*2){
-        pdf.addImage(imgData,"PNG",margin,margin,imgW,imgH)
+      const margin=8,imgW=pageW-margin*2
+      const scaleFactor=imgW/canvas.width
+      const usableH_px=(pageH-margin*2)/scaleFactor
+      const totalH_px=canvas.height
+      if(totalH_px<=usableH_px){
+        pdf.addImage(canvas.toDataURL("image/png"),"PNG",margin,margin,imgW,totalH_px*scaleFactor)
       }else{
-        let yOffset=0;const sliceH=pageH-margin*2;const pages=Math.ceil(imgH/sliceH)
-        for(let i=0;i<pages;i++){if(i>0) pdf.addPage();pdf.addImage(imgData,"PNG",margin,margin-yOffset,imgW,imgH);yOffset+=sliceH}
+        const rows=el.querySelectorAll("tr")
+        const breaks=[0]
+        rows.forEach(row=>{
+          const rect=row.getBoundingClientRect()
+          const bottom=Math.round((rect.bottom-elRect.top)*1.5)
+          if(bottom>0&&bottom<totalH_px) breaks.push(bottom)
+        })
+        breaks.push(totalH_px)
+        const pts=[...new Set(breaks)].sort((a,b)=>a-b)
+        let start=0,pageNum=0
+        while(start<totalH_px){
+          if(pageNum>0) pdf.addPage()
+          const targetEnd=start+usableH_px
+          let breakAt=totalH_px
+          if(targetEnd<totalH_px){
+            const valid=pts.filter(b=>b>start&&b<=targetEnd)
+            breakAt=valid.length>0?valid[valid.length-1]:Math.min(targetEnd,totalH_px)
+          }
+          const sliceH=breakAt-start
+          const sc=document.createElement("canvas")
+          sc.width=canvas.width;sc.height=sliceH
+          sc.getContext("2d").drawImage(canvas,0,start,canvas.width,sliceH,0,0,canvas.width,sliceH)
+          pdf.addImage(sc.toDataURL("image/png"),"PNG",margin,margin,imgW,sliceH*scaleFactor)
+          start=breakAt;pageNum++
+        }
       }
       pdf.save("dashfact-reporte.pdf")
     }catch(e){alert("Error al generar PDF: "+e.message)}
