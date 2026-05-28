@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.2/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.2/babel.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/tabler-icons.min.css"/>
 
@@ -46,15 +46,15 @@
 </head>
 <body>
 <div id="root"></div>
-<div id="err" style="display:none;position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:16px;font-family:monospace;font-size:13px;z-index:9999;white-space:pre-wrap"></div>
+<div id="err" style="display:none;position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:16px;font-family:monospace;font-size:12px;z-index:9999;white-space:pre-wrap;max-height:200px;overflow:auto"></div>
 <script>
-window.onerror=function(msg,src,line,col,err){
+window.addEventListener('error',function(e){
   var el=document.getElementById('err');
   el.style.display='block';
-  el.textContent='ERROR: '+msg+'\nLine: '+line+'\n'+(err?err.stack:'');
-}
+  el.textContent='ERROR: '+(e.message||'unknown')+'\nFile: '+(e.filename||'?')+'\nLine: '+(e.lineno||0)+'\n'+(e.error&&e.error.stack?e.error.stack:'');
+},true);
 </script>
-<script type="text/babel">
+<script id="appcode" type="text/plain">
 const { useState, useEffect, useCallback, useRef } = React
 
 /* ─── Supabase ──────────────────────────────────────────────────────────────── */
@@ -1230,6 +1230,17 @@ function App(){
 }
 
 ReactDOM.render(React.createElement(App), document.getElementById("root"))
+</script>
+<script>
+try{
+  var src=document.getElementById('appcode').textContent;
+  var out=Babel.transform(src,{presets:['react']}).code;
+  eval(out);
+}catch(e){
+  var el=document.getElementById('err');
+  el.style.display='block';
+  el.textContent='BABEL ERROR:\n'+e.message+'\n'+(e.stack||'');
+}
 </script>
 </body>
 </html>
