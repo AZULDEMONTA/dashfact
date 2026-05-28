@@ -923,6 +923,8 @@ function App(){
   const[fEmpresa,setFEmpresa]=useState("__ALL__")
   const[fZona,setFZona]=useState("__ALL__")
 
+  const records=cube||[]
+
   useEffect(()=>{
     const t0=Date.now()
     loadData().then(({cube:c,articulos:a,meta:m,provArts:pa,ruboArts:ra,error})=>{
@@ -1065,7 +1067,6 @@ function App(){
     </div>
   )
 
-  const records=cube||[]
   const yearsDisp=[...new Set(records.map(r=>r.y).filter(v=>v>0))].sort((a,b)=>a-b)
   const mesesDisp=[...new Set(records.filter(r=>fYear==="__ALL__"||r.y===parseInt(fYear)).map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
   const uniq=key=>[...new Set(records.map(r=>r[key]).filter(Boolean))].sort()
