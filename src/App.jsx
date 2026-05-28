@@ -1,11 +1,54 @@
-import { useState, useEffect, useCallback, useRef } from "react"
-import * as XLSX from "xlsx"
-import { dbGet, dbSet, dbDelete } from "./lib/supabase.js"
-import html2canvas from "html2canvas"
-import jsPDF from "jspdf"
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Azul de Montaña</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.2/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#eef0f8;font-family:'Segoe UI',sans-serif;color:#e8edf5;min-height:100vh}
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-thumb{background:#3a424f;border-radius:3px}
+    input,select{background:#1a1f28;border:1px solid #3a424f;color:#e8edf5;border-radius:8px;padding:7px 11px;font-family:inherit;font-size:14px;outline:none;width:100%}
+    input:focus,select:focus{border-color:#58a6ff}
+    button{cursor:pointer;font-family:inherit;transition:all .15s}
+    .btn-g{background:none;border:1px solid #3a424f;color:#d8dfe8;padding:7px 12px;border-radius:8px;font-size:13px}
+    .btn-g:hover{border-color:#58a6ff;color:#58a6ff}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React
 
+/* ─── Supabase ──────────────────────────────────────────────────────────────── */
+const SUPABASE_URL  = "REEMPLAZAR_CON_TU_URL"
+const SUPABASE_KEY  = "REEMPLAZAR_CON_TU_KEY"
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+async function dbGet(key){
+  const{data,error}=await _sb.from("dashfact_data").select("value").eq("key",key).maybeSingle()
+  if(error) throw error
+  return data?data.value:null
+}
+async function dbSet(key,value){
+  const{error}=await _sb.from("dashfact_data").upsert({key,value,updated_at:new Date().toISOString()},{onConflict:"key"})
+  if(error) throw error
+}
+async function dbDelete(key){
+  const{error}=await _sb.from("dashfact_data").delete().eq("key",key)
+  if(error) throw error
+}
+
+/* ─── Constants ─────────────────────────────────────────────────────────────── */
 const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1"
-const CAT_FIELDS=["proveedor","rubro","vendedor","rentabilidad","provincia","cliente","empresa","localidad","zona"]
 const LOGO_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEF0lEQVR4nO1WXWhcRRT+zrl/m8ZEGmpJk6a2IbFQQUIjSA0VimAj2FqDK0bBR31RRBDNJo3TpU3NFhR9sBCVFqxI01CQKhIf7EMREooiQoNik5jSNO0mWJq/3ezeO3N8uEtd0+puuuqL+eA+3JnhnO/75pzDAKtYxcpBue9/h1MWAGyojz23saHr+fy1UsDFHx0RpRT7gYlns4ESEQJGpFQCRULZAFDbGGtbt6lb1tXtl5rNHXvz9+4UxTpglFLsZ0y3GG0EYnxj3oIIATD/MgFlA3Hz8Wd6n4HXRDAM0Szwmmu2xPYAcVNKLRTjQKg+G3QCjlg2Prcs+hJwxTfSVWotFOhnZQPxoLY+1pYJ7NMEEW+NfoBhe+mUfCcguI7/5NRY75nQhWf0SgkUKiCjlOKjx9OdwBohLAxO/py4AADrN3ecFbNml+9nY0Q4IzJCtxbk/QIMANiWc+iA5DTfdOxvHAjVV9fH2oLAPg0JjOfpliujR4YBodr6jl2ZwP2G4MBxUs9OjfX2r1R9IQKsFHD0ePq8oGI708JX05cSewDlAPEsAKzf9OYxtiq2M6eGAfpEB3IfM9UITCVDiC1OQfCb7fK0Y1vXIp6V3FClZ3bswI14PG6Av7yCUH3fiVibwGsmLCESsQ8DECCe3fpwomIxOdcSaIiRRVdn5TFifhQwSRH6AYwLwjQuLEmb3DkjfoYylq/LtclkkC3CgXz1lc3M8yenJxLttY3dDwW+eUEbaWcuX2v0wg3LorPMVkqMP3ttovflf+AK8u/eOS0SLLquxHSAnSJulNgDzMKP7PC7TY2z/T9N3rVlcZZGQC5bdvqJ5Hjka+C6BVT5Ybz48hb90//tCLBSwAfH0t8DXpMgkybAI17LkPmLjkPdV8d7+kX+OH9PXfoLocpWyPzQzOXEToKicEAVxrJBFE69vhPpfaBIk5iMD7HKQB4zLbx3d7Xz4NRYT78IKOz78Lzj8iFICiC3ZWN9Z+tKpuPySWgAxYFP3SLagNgm5pRrB+3JiZ7XRs/H53K9LuHQiQdA1Joa6x1i0oOAC1/rrpBgcdMxj0CopnrL0lMgt0lEE7M1VxbB7qnxt0/mElOY9FaUOe4hSNoYcVvqtnbtLtaFfAeMUoqNYL8Y0Uzke16w9/IvPd8CLzq5xLdRNaCBqHVp7OAQkx4keJJZ8mPhXmEXOF/9R59mnxZT1sSWa9m26Zy8mDgH9DnAh36hQADguNZBkTQJIo9U3/vG48W4wAAIOKBbW9/3tMbrIEpanDqS/DXxTkjspSKSD2hA8ZXRw8NEwSmQsxgIvRqNRq1CLtxsw23blDtPQZ1Xbs+ExbZiEAA0NLzi3shWVBmT5uuTlVeLbcdliJb82LxDKAak1Dc/hTFKjrOK/wa/A3rQ7dfNECyuAAAAAElFTkSuQmCC"
 
 const BG="#eef0f8",CARD="#ffffff",CARD2="#e8eaf4",BORDER="#dde0ee",TEXT="#0d1330",MUTED="#7a88a0"
@@ -16,6 +59,7 @@ const RENT_BG={Alta:"#e8f5e9",Media:"#fff3e0",Baja:"#ffebee","Sin dato":"#f5f6fa
 const VENDOR_COLORS=[BRAND,ACCENT1,ACCENT2,ACCENT3,ACCENT4,ACCENT5,ACCENT6,ACCENT7,ACCENT8,"#1a237e","#006064","#4e342e"]
 const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
+/* ─── Cube helpers ──────────────────────────────────────────────────────────── */
 function compressCube(cube){
   const tables={};const CAT=["proveedor","rubro","vendedor","rentabilidad","provincia","cliente","empresa","localidad","zona"]
   CAT.forEach(f=>{tables[f]=[...new Set(cube.map(r=>r[f]).filter(v=>v!=null))]})
@@ -38,7 +82,6 @@ function decompressCube({tables,rows}){
 }
 function compressArts(arts){return arts.map(a=>[a.name,Math.round(a.precio),a.cantidad,Math.round(a.costo),a.rows,a.rentabilidad??null])}
 function decompressArts(rows){return rows.map(r=>({name:r[0],precio:r[1],cantidad:r[2],costo:r[3],rows:r[4],rentabilidad:r[5]}))}
-
 function buildCube(rawRecords){
   const cm={},am={},pm={},rm={}
   for(const r of rawRecords){
@@ -48,30 +91,16 @@ function buildCube(rawRecords){
     if(r.articulo){
       if(!am[r.articulo]) am[r.articulo]={name:r.articulo,precio:0,cantidad:0,costo:0,rows:0,rentabilidad:r.rentabilidad}
       const a=am[r.articulo];a.precio+=r.precio;a.cantidad+=r.cantidad;a.costo+=r.costo;a.rows++
-      // Cross-reference: proveedor -> articulos
-      if(r.proveedor){
-        if(!pm[r.proveedor]) pm[r.proveedor]={}
-        if(!pm[r.proveedor][r.articulo]) pm[r.proveedor][r.articulo]={precio:0,cantidad:0}
-        pm[r.proveedor][r.articulo].precio+=r.precio;pm[r.proveedor][r.articulo].cantidad+=r.cantidad
-      }
-      // Cross-reference: rubro -> articulos
-      if(r.rubro){
-        if(!rm[r.rubro]) rm[r.rubro]={}
-        if(!rm[r.rubro][r.articulo]) rm[r.rubro][r.articulo]={precio:0,cantidad:0}
-        rm[r.rubro][r.articulo].precio+=r.precio;rm[r.rubro][r.articulo].cantidad+=r.cantidad
-      }
+      if(r.proveedor){if(!pm[r.proveedor]) pm[r.proveedor]={};if(!pm[r.proveedor][r.articulo]) pm[r.proveedor][r.articulo]={precio:0,cantidad:0};pm[r.proveedor][r.articulo].precio+=r.precio;pm[r.proveedor][r.articulo].cantidad+=r.cantidad}
+      if(r.rubro){if(!rm[r.rubro]) rm[r.rubro]={};if(!rm[r.rubro][r.articulo]) rm[r.rubro][r.articulo]={precio:0,cantidad:0};rm[r.rubro][r.articulo].precio+=r.precio;rm[r.rubro][r.articulo].cantidad+=r.cantidad}
     }
   }
-  // Compress cross-refs: keep top 20 per key
   const compressXRef=m=>Object.fromEntries(Object.entries(m).map(([k,arts])=>[k,Object.entries(arts).sort((a,b)=>b[1].precio-a[1].precio).slice(0,20).map(([name,v])=>[name,Math.round(v.precio),v.cantidad])]))
   return{cube:Object.values(cm),articulos:Object.values(am),provArts:compressXRef(pm),ruboArts:compressXRef(rm)}
 }
 function mergeCubes(a,b){
   const m={}
-  const add=r=>{
-    const k=`${r.y}|${r.m}|${r.proveedor??''} |${r.rubro??''} |${r.vendedor??''} |${r.rentabilidad??''} |${r.provincia??''} |${r.cliente??''} |${r.empresa??''} |${r.localidad??''} |${r.zona??''} `
-    if(!m[k]) m[k]={...r};else{m[k].precio+=r.precio;m[k].cantidad+=r.cantidad;m[k].costo+=r.costo;m[k].rows+=r.rows}
-  }
+  const add=r=>{const k=`${r.y}|${r.m}|${r.proveedor??''} |${r.rubro??''} |${r.vendedor??''} |${r.rentabilidad??''} |${r.provincia??''} |${r.cliente??''} |${r.empresa??''} |${r.localidad??''} |${r.zona??''} `;if(!m[k]) m[k]={...r};else{m[k].precio+=r.precio;m[k].cantidad+=r.cantidad;m[k].costo+=r.costo;m[k].rows+=r.rows}}
   a.forEach(add);b.forEach(add);return Object.values(m)
 }
 function mergeArts(a,b){
@@ -90,16 +119,15 @@ function mergeXRef(a,b){
   })
   return m
 }
-
 async function loadData(){
   try{
     const[cv,av,mv,pv,rv]=await Promise.all([dbGet(SK),dbGet(AK),dbGet(MK),dbGet(PAK),dbGet(RAK)])
     return{
-      cube:cv?decompressCube(JSON.parse(cv.value??cv)):null,
-      articulos:av?decompressArts(JSON.parse(av.value??av)):null,
-      meta:mv?JSON.parse(mv.value??mv):null,
-      provArts:pv?JSON.parse(pv.value??pv):null,
-      ruboArts:rv?JSON.parse(rv.value??rv):null,
+      cube:cv?decompressCube(JSON.parse(cv)):null,
+      articulos:av?decompressArts(JSON.parse(av)):null,
+      meta:mv?JSON.parse(mv):null,
+      provArts:pv?JSON.parse(pv):null,
+      ruboArts:rv?JSON.parse(rv):null,
     }
   }catch(e){return{cube:null,articulos:null,meta:null,provArts:null,ruboArts:null,error:String(e)}}
 }
@@ -107,7 +135,7 @@ async function saveData(cube,arts,meta,provArts,ruboArts){
   const cs=JSON.stringify(compressCube(cube)),as=JSON.stringify(compressArts(arts)),ms=JSON.stringify(meta)
   const ps=JSON.stringify(provArts||{}),rs=JSON.stringify(ruboArts||{})
   const kb=Math.round((cs.length+as.length+ms.length+ps.length+rs.length)/1024)
-  await Promise.all([dbSet(SK,cs),dbSet(AK,as),dbSet(MK,ms),dbSet(PAK,ps,true),dbSet(RAK,rs,true)])
+  await Promise.all([dbSet(SK,cs),dbSet(AK,as),dbSet(MK,ms),dbSet(PAK,ps),dbSet(RAK,rs)])
   return kb
 }
 async function clearData(){await Promise.all([dbDelete(SK),dbDelete(AK),dbDelete(MK)])}
@@ -194,7 +222,6 @@ function SaveBar({stage,progress,msg}){
     </div>
   )
 }
-
 function BarList({data,colorFn,totalVentas,totalUnidades,hasCantidad,limit=10}){
   const[metric,setMetric]=useState("pesos")
   const[expanded,setExpanded]=useState(false)
@@ -225,27 +252,20 @@ function BarList({data,colorFn,totalVentas,totalUnidades,hasCantidad,limit=10}){
     </div>
   )
 }
-
-function ChartCard({title,count,children}){
-  return(
-    <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px",flex:1,minWidth:280,boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-        <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>{title}</span>
-        {count&&<span style={{fontSize:11,color:MUTED}}>{count} cat.</span>}
-      </div>
-      {children}
+function ChartCard({title,count,children}){return(
+  <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px",flex:1,minWidth:280,boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+      <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>{title}</span>
+      {count&&<span style={{fontSize:11,color:MUTED}}>{count} cat.</span>}
     </div>
-  )
-}
-
-function DetailTab({data,hasCantidad,totalVentas,totalUnidades,dimLabel,color}){
-  return(
-    <ChartCard title={`Ranking por ${dimLabel}`} count={data.length}>
-      <BarList data={data} colorFn={color} totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={hasCantidad} limit={15}/>
-    </ChartCard>
-  )
-}
-
+    {children}
+  </div>
+)}
+function DetailTab({data,hasCantidad,totalVentas,totalUnidades,dimLabel,color}){return(
+  <ChartCard title={`Ranking por ${dimLabel}`} count={data.length}>
+    <BarList data={data} colorFn={color} totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={hasCantidad} limit={15}/>
+  </ChartCard>
+)}
 function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas}){
   const[metric,setMetric]=useState("pesos")
   const[expanded,setExpanded]=useState(false)
@@ -279,7 +299,6 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas}){
     </div>
   )
 }
-
 function RentabilidadSection({data,artData,hasCantidad}){
   const total=data.reduce((s,r)=>s+r.ventas,0)||1
   return(
@@ -301,7 +320,6 @@ function RentabilidadSection({data,artData,hasCantidad}){
     </div>
   )
 }
-
 function VendedoresTab({filteredRecords,meta,totalVentas,totalUnidades}){
   const[sel,setSel]=useState(null)
   const vendMap={}
@@ -355,7 +373,6 @@ function VendedoresTab({filteredRecords,meta,totalVentas,totalUnidades}){
     </div>
   )
 }
-
 function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
   const[sel,setSel]=useState(null)
   const[search,setSearch]=useState("")
@@ -420,7 +437,6 @@ function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
     </div>
   )
 }
-
 function EvolucionTab({filteredRecords,meta}){
   const[dim,setDim]=useState(()=>meta?.hasProveedor?"proveedor":meta?.hasRubro?"rubro":"vendedor")
   const[metric,setMetric]=useState("pesos")
@@ -501,7 +517,6 @@ function EvolucionTab({filteredRecords,meta}){
     </div>
   )
 }
-
 function MappingModal({headers,onConfirm,onCancel}){
   const[mapping,setMapping]=useState(()=>autoMap(headers))
   const[pet,setPet]=useState(true)
@@ -538,7 +553,6 @@ function MappingModal({headers,onConfirm,onCancel}){
     </div>
   )
 }
-
 function ConfirmImportModal({stats,onConfirm,onCancel}){
   const{rows,ventas,unidades,hasCantidad,periods,existingRows,cubeKB}=stats
   return(
@@ -565,26 +579,17 @@ function ConfirmImportModal({stats,onConfirm,onCancel}){
     </div>
   )
 }
-
-
-/* ─── PROVEEDORES TAB ─────────────────────────────────────────────────────── */
 function ProveedoresTab({data,filteredRecords,provArts,hasCantidad,totalVentas,totalUnidades}){
   const[sel,setSel]=useState(null)
   const[metric,setMetric]=useState("pesos")
   const sorted=metric==="pesos"?[...data].sort((a,b)=>b.ventas-a.ventas):[...data].sort((a,b)=>b.cantidad-a.cantidad)
   const maxV=sorted[0]?.[metric==="pesos"?"ventas":"cantidad"]||1
   const total=metric==="pesos"?totalVentas:totalUnidades
-
-  // For each proveedor: get rubros from filteredRecords
   function getRubros(provName){
     const map={}
-    filteredRecords.filter(r=>r.proveedor===provName&&r.rubro).forEach(r=>{
-      if(!map[r.rubro]) map[r.rubro]={name:r.rubro,precio:0,cantidad:0}
-      map[r.rubro].precio+=r.precio;map[r.rubro].cantidad+=r.cantidad
-    })
+    filteredRecords.filter(r=>r.proveedor===provName&&r.rubro).forEach(r=>{if(!map[r.rubro]) map[r.rubro]={name:r.rubro,precio:0,cantidad:0};map[r.rubro].precio+=r.precio;map[r.rubro].cantidad+=r.cantidad})
     return Object.values(map).sort((a,b)=>b.precio-a.precio).slice(0,8)
   }
-
   return(
     <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px",boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
@@ -612,7 +617,6 @@ function ProveedoresTab({data,filteredRecords,provArts,hasCantidad,totalVentas,t
             </div>
             {sel===d.name&&(
               <div style={{margin:"0 0 12px 0",padding:"14px 16px",background:"#f5f7ff",border:`1px solid ${ACCENT1}30`,borderTop:"none",borderRadius:"0 0 8px 8px",display:"flex",gap:16,flexWrap:"wrap"}}>
-                {/* Rubros */}
                 {rubros.length>0&&(
                   <div style={{flex:1,minWidth:200}}>
                     <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:10,fontWeight:600}}>Rubros</div>
@@ -628,7 +632,6 @@ function ProveedoresTab({data,filteredRecords,provArts,hasCantidad,totalVentas,t
                     ))}
                   </div>
                 )}
-                {/* Artículos más vendidos */}
                 {arts.length>0&&(
                   <div style={{flex:1,minWidth:220}}>
                     <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:10,fontWeight:600}}>Artículos más vendidos</div>
@@ -656,15 +659,12 @@ function ProveedoresTab({data,filteredRecords,provArts,hasCantidad,totalVentas,t
     </div>
   )
 }
-
-/* ─── RUBROS TAB ──────────────────────────────────────────────────────────── */
 function RubrosTab({data,filteredRecords,ruboArts,hasCantidad,totalVentas,totalUnidades}){
   const[sel,setSel]=useState(null)
   const[metric,setMetric]=useState("pesos")
   const sorted=metric==="pesos"?[...data].sort((a,b)=>b.ventas-a.ventas):[...data].sort((a,b)=>b.cantidad-a.cantidad)
   const maxV=sorted[0]?.[metric==="pesos"?"ventas":"cantidad"]||1
   const total=metric==="pesos"?totalVentas:totalUnidades
-
   return(
     <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"16px 18px",boxShadow:"0 1px 4px rgba(26,35,126,0.06)"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
@@ -719,7 +719,8 @@ function RubrosTab({data,filteredRecords,ruboArts,hasCantidad,totalVentas,totalU
   )
 }
 
-export default function App(){
+/* ─── APP ───────────────────────────────────────────────────────────────────── */
+function App(){
   const[cube,setCube]=useState(null)
   const[articulos,setArticulos]=useState(null)
   const[provArts,setProvArts]=useState({})
@@ -749,36 +750,42 @@ export default function App(){
   useEffect(()=>{
     const t0=Date.now()
     loadData().then(({cube:c,articulos:a,meta:m,provArts:pa,ruboArts:ra,error})=>{
+      const ms=Date.now()-t0
+      if(error){setStorageInfo({ok:false,error});setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});return}
+      const rows=c?.length||0,cells=rows*9
+      setStorageInfo({ok:true,loaded:true,rows,cells,ms})
       setCube(c||[]);setArticulos(a||[]);setMeta(m||{});setProvArts(pa||{});setRuboArts(ra||{})
-      setStorageInfo(error?{ok:false,error}:{ok:true,loaded:c!==null,rows:m?.totalRows||0,cells:c?.length||0,ms:Date.now()-t0})
     })
   },[])
 
-  const records=cube||[]
-
-  const handleFile=useCallback(e=>{
+  const handleFile=useCallback(async e=>{
     const file=e.target.files?.[0];if(!file) return
-    const reader=new FileReader()
-    reader.onload=ev=>{
-      const wb=XLSX.read(ev.target.result,{type:"array"})
-      const ws=wb.Sheets[wb.SheetNames[0]]
-      const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:""})
-      setRawHeaders(json[0]?.map(s=>String(s).trim())??[])
-      setRawRows(json.slice(1).filter(r=>r.some(c=>c!=="")))
-    }
-    reader.readAsArrayBuffer(file);setFileKey(k=>k+1)
+    setFileKey(k=>k+1)
+    const ab=await file.arrayBuffer()
+    const wb=XLSX.read(ab,{type:"array"})
+    const ws=wb.Sheets[wb.SheetNames[0]]
+    const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:""})
+    if(raw.length<2) return
+    const headers=raw[0].map(String)
+    setRawHeaders(headers)
+    setRawRows(raw.slice(1))
   },[])
 
-  const handleMappingConfirm=useCallback((mapping,pet=true)=>{
-    const hi={}
-    Object.entries(mapping).forEach(([k,col])=>{if(col) hi[k]=rawHeaders.indexOf(col)})
-    const has=k=>hi[k]!==undefined
-    const toN=v=>{if(v==null||v==="") return 0;if(typeof v==="number") return v;let s=String(v).trim().replace(/[$\s]/g,"");const lc=s.lastIndexOf(","),ld=s.lastIndexOf(".");if(lc>ld) s=s.replace(/\./g,"").replace(",",".");else if(ld>lc) s=s.replace(/,/g,"");else s=s.replace(/,/g,"");return parseFloat(s)||0}
-    const get=(row,k)=>has(k)?row[hi[k]]:undefined
-    const newMeta={hasProveedor:has("proveedor"),hasRubro:has("rubro"),hasArticulo:has("articulo"),hasVendedor:has("vendedor"),hasCantidad:has("cantidad"),hasProvincia:has("provincia"),hasRentabilidad:has("rentabilidad"),hasCosto:has("costo"),hasCliente:has("cliente"),hasEmpresa:has("empresa"),hasLocalidad:has("localidad"),hasZona:has("zona"),precioEsTotal:pet,mappedCols:mapping}
+  const handleMappingConfirm=useCallback((mapping,pet)=>{
+    if(!rawRows||!rawHeaders) return
+    const has=k=>!!mapping[k]
+    const get=(row,k)=>mapping[k]!=null?row[rawHeaders.indexOf(mapping[k])]:null
+    const newMeta={
+      hasProveedor:has("proveedor"),hasRubro:has("rubro"),hasVendedor:has("vendedor"),
+      hasRentabilidad:has("rentabilidad"),hasProvincia:has("provincia"),hasCliente:has("cliente"),
+      hasEmpresa:has("empresa"),hasLocalidad:has("localidad"),hasZona:has("zona"),
+      hasArticulo:has("articulo"),hasCantidad:has("cantidad"),hasCosto:has("costo"),
+    }
     const parsed=rawRows.map(row=>{
       const dt=parseDate(get(row,"fecha"))
-      const rp=toN(get(row,"precio")),rc=has("costo")?toN(get(row,"costo")):0,rq=has("cantidad")?toN(get(row,"cantidad")):1
+      const rp=parseFloat(String(get(row,"precio")||"0").replace(/[^\d.,-]/g,"").replace(",","."))||0
+      const rq=has("cantidad")?parseFloat(String(get(row,"cantidad")||"1").replace(/[^\d.,-]/g,"").replace(",","."))||1:1
+      const rc=has("costo")?parseFloat(String(get(row,"costo")||"0").replace(/[^\d.,-]/g,"").replace(",","."))||0:0
       const precio=pet?rp:rp*(rq||1),costo=pet?rc:rc*(rq||1),cantidad=rq||1
       let rentabilidad=null
       if(has("rentabilidad")){const rv=String(get(row,"rentabilidad")??"").trim();const rn=rv.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");rentabilidad=rn==="alta"?"Alta":rn==="media"?"Media":rn==="baja"?"Baja":(rv||"Sin dato")}
@@ -822,30 +829,23 @@ export default function App(){
 
   const handleClear=async()=>{if(!confirm("¿Eliminar todos los datos?")) return;await clearData();setCube([]);setArticulos([]);setMeta({})}
 
+  /* ─── EXPORTAR PDF ──────────────────────────────────────────────────────── */
   const exportarPDF=useCallback(async()=>{
     const btn=document.getElementById("btnExportPDF")
     if(btn){btn.disabled=true;btn.textContent="Generando..."}
     try{
       const el=document.getElementById("dashfact-root")
       const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#eef0f8",logging:false,ignoreElements:e=>e.id==="btnExportPDF"})
+      const{jsPDF}=window.jspdf
       const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"})
-      const pageW=pdf.internal.pageSize.getWidth()
-      const pageH=pdf.internal.pageSize.getHeight()
-      const margin=8
-      const imgW=pageW-margin*2
-      const imgH=(canvas.height*imgW)/canvas.width
+      const pageW=pdf.internal.pageSize.getWidth(),pageH=pdf.internal.pageSize.getHeight()
+      const margin=8,imgW=pageW-margin*2,imgH=(canvas.height*imgW)/canvas.width
       const imgData=canvas.toDataURL("image/png")
       if(imgH<=pageH-margin*2){
         pdf.addImage(imgData,"PNG",margin,margin,imgW,imgH)
       }else{
-        let yOffset=0
-        const sliceH=pageH-margin*2
-        const pages=Math.ceil(imgH/sliceH)
-        for(let i=0;i<pages;i++){
-          if(i>0) pdf.addPage()
-          pdf.addImage(imgData,"PNG",margin,margin-yOffset,imgW,imgH)
-          yOffset+=sliceH
-        }
+        let yOffset=0;const sliceH=pageH-margin*2;const pages=Math.ceil(imgH/sliceH)
+        for(let i=0;i<pages;i++){if(i>0) pdf.addPage();pdf.addImage(imgData,"PNG",margin,margin-yOffset,imgW,imgH);yOffset+=sliceH}
       }
       pdf.save("dashfact-reporte.pdf")
     }catch(e){alert("Error al generar PDF: "+e.message)}
@@ -862,6 +862,7 @@ export default function App(){
     </div>
   )
 
+  const records=cube||[]
   const yearsDisp=[...new Set(records.map(r=>r.y).filter(v=>v>0))].sort((a,b)=>a-b)
   const mesesDisp=[...new Set(records.filter(r=>fYear==="__ALL__"||r.y===parseInt(fYear)).map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
   const uniq=key=>[...new Set(records.map(r=>r[key]).filter(Boolean))].sort()
@@ -909,7 +910,6 @@ export default function App(){
   return(
     <div id="dashfact-root" style={{background:BG,minHeight:"100vh",color:TEXT,fontFamily:"system-ui,-apple-system,sans-serif",display:"flex",flexDirection:"column"}}>
       <style>{`select option{background:${BRAND};color:#fff}input::placeholder{color:${MUTED}}`}</style>
-      {/* ── Header row 1: logo + actions ── */}
       <div style={{background:BRAND_DARK,padding:"0 20px",display:"flex",alignItems:"center",gap:12,height:50,flexShrink:0}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginRight:8,flexShrink:0}}>
           <img src={LOGO_SRC} style={{height:26,width:26,objectFit:"contain",filter:"brightness(0) invert(1)"}} alt="logo"/>
@@ -920,14 +920,13 @@ export default function App(){
           <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
           {hasData&&<button onClick={handleClear} style={{padding:"5px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6,color:"rgba(255,255,255,0.45)",cursor:"pointer",fontSize:11}}>Limpiar</button>}
           {hasData&&<button id="btnExportPDF" onClick={exportarPDF} style={{padding:"6px 16px",background:"transparent",border:"1px solid rgba(255,255,255,0.35)",borderRadius:6,color:"rgba(255,255,255,0.85)",cursor:"pointer",fontWeight:500,fontSize:12}}>⬇ Exportar PDF</button>}
-          <button onClick={()=>fileRef.current?.click()} style={{padding:"6px 16px",background:"#fff",border:"none",borderRadius:6,color:BRAND,cursor:"pointer",fontWeight:500,fontSize:12}}>↑ Importar Excel</button>
+          <button onClick={()=>fileRef.current&&fileRef.current.click()} style={{padding:"6px 16px",background:"#fff",border:"none",borderRadius:6,color:BRAND,cursor:"pointer",fontWeight:500,fontSize:12}}>↑ Importar Excel</button>
           <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
         </div>
       </div>
-      {/* ── Header row 2: filters ── */}
       <div style={{background:BRAND,padding:"8px 20px",display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",flexShrink:0,borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
         {yearsDisp.length>1&&<Dropdown label="Año" value={fYear} options={yearsDisp.map(y=>({val:String(y),label:String(y)}))} onChange={v=>{setFYear(v);setFMes("__ALL__")}}/>}
-        <Dropdown label="Mes" value={fMes} options={mesesDisp.map(m=>({val:String(m),label:MESES[m]??`Mes ${m}`}))} onChange={setFMes}/>
+        <Dropdown label="Mes" value={fMes} options={mesesDisp.map(m=>({val:String(m),label:MESES[m]||`Mes ${m}`}))} onChange={setFMes}/>
         {meta?.hasEmpresa&&<Dropdown label="Empresa" value={fEmpresa} options={uniq("empresa")} onChange={setFEmpresa}/>}
         {meta?.hasCliente&&<Dropdown label="Cliente" value={fCliente} options={uniq("cliente")} onChange={setFCliente}/>}
         {meta?.hasProveedor&&<Dropdown label="Proveedor" value={fProv} options={uniq("proveedor")} onChange={setFProv}/>}
@@ -950,7 +949,7 @@ export default function App(){
           <img src={LOGO_SRC} style={{height:48,objectFit:"contain",marginBottom:16,opacity:0.15}} alt="logo"/>
           <div style={{fontSize:16,fontWeight:500,color:TEXT,marginBottom:8}}>Sin datos cargados</div>
           <div style={{fontSize:13,color:MUTED,lineHeight:1.9,maxWidth:500,margin:"0 auto"}}>Importá un Excel con columnas: FECHA, VENTA, CLIENTE, ARTICULO, CANTIDAD, RUBRO, PROVEEDOR, EMPRESA, RENTABILIDAD, VENDEDOR, ZONA, LOCALIDAD, PROVINCIA.</div>
-          <button onClick={()=>fileRef.current?.click()} style={{marginTop:24,padding:"10px 28px",background:BRAND,border:"none",borderRadius:8,color:"#fff",cursor:"pointer",fontWeight:500,fontSize:14}}>↑ Importar Excel</button>
+          <button onClick={()=>fileRef.current&&fileRef.current.click()} style={{marginTop:24,padding:"10px 28px",background:BRAND,border:"none",borderRadius:8,color:"#fff",cursor:"pointer",fontWeight:500,fontSize:14}}>↑ Importar Excel</button>
           <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
         </div>
       ):(
@@ -967,13 +966,13 @@ export default function App(){
             {safeTab==="resumen"&&(
               <>
                 <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
-                  <KpiCard icon="📋" label="Registros"     value={fmtN(filteredRows)}    sub="filas"                       accent={BRAND}/>
-                  <KpiCard icon="💰" label="Total Ventas"   value={fmtM(totalVentas)}     sub="en pesos"                    accent={ACCENT1}/>
-                  {meta?.hasCantidad&&<KpiCard icon="📦" label="Unidades" value={fmtU(totalUnidades)} sub="vendidas"        accent={ACCENT2}/>}
-                  {cliData[0]&&  <KpiCard icon="🏢" label="Top Cliente"   value={cliData[0].name}   sub={fmtM(cliData[0].ventas)}   accent={ACCENT4}/>}
-                  {provData[0]&& <KpiCard icon="🏆" label="Top Proveedor" value={provData[0].name}   sub={fmtM(provData[0].ventas)}  accent={ACCENT6}/>}
-                  {vendData[0]&& <KpiCard icon="⭐" label="Top Vendedor"  value={vendData[0].name}   sub={fmtM(vendData[0].ventas)}  accent={ACCENT3}/>}
-                  {pciaData[0]&& <KpiCard icon="📍" label="Top Provincia" value={pciaData[0].name}   sub={fmtM(pciaData[0].ventas)}  accent={ACCENT7}/>}
+                  <KpiCard icon="📋" label="Registros" value={fmtN(filteredRows)} sub="filas" accent={BRAND}/>
+                  <KpiCard icon="💰" label="Total Ventas" value={fmtM(totalVentas)} sub="en pesos" accent={ACCENT1}/>
+                  {meta?.hasCantidad&&<KpiCard icon="📦" label="Unidades" value={fmtU(totalUnidades)} sub="vendidas" accent={ACCENT2}/>}
+                  {cliData[0]&&<KpiCard icon="🏢" label="Top Cliente" value={cliData[0].name} sub={fmtM(cliData[0].ventas)} accent={ACCENT4}/>}
+                  {provData[0]&&<KpiCard icon="🏆" label="Top Proveedor" value={provData[0].name} sub={fmtM(provData[0].ventas)} accent={ACCENT6}/>}
+                  {vendData[0]&&<KpiCard icon="⭐" label="Top Vendedor" value={vendData[0].name} sub={fmtM(vendData[0].ventas)} accent={ACCENT3}/>}
+                  {pciaData[0]&&<KpiCard icon="📍" label="Top Provincia" value={pciaData[0].name} sub={fmtM(pciaData[0].ventas)} accent={ACCENT7}/>}
                 </div>
                 <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:2,color:MUTED,marginBottom:12,fontWeight:500}}>Comparativa general</div>
                 <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:12}}>
@@ -986,18 +985,23 @@ export default function App(){
                 </div>
               </>
             )}
-            {safeTab==="clientes"&&    <ClientesTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
-            {safeTab==="proveedores"&& <ProveedoresTab data={provData} filteredRecords={filtered} provArts={provArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
-            {safeTab==="rubros"&&      <RubrosTab data={rubroData} filteredRecords={filtered} ruboArts={ruboArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/> }
-            {safeTab==="vendedores"&&  <VendedoresTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
-            {safeTab==="evolucion"&&   <EvolucionTab filteredRecords={filtered} meta={meta}/>}
-            {safeTab==="articulos"&&   <ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas}/>}
+            {safeTab==="clientes"&&<ClientesTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
+            {safeTab==="proveedores"&&<ProveedoresTab data={provData} filteredRecords={filtered} provArts={provArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
+            {safeTab==="rubros"&&<RubrosTab data={rubroData} filteredRecords={filtered} ruboArts={ruboArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
+            {safeTab==="vendedores"&&<VendedoresTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
+            {safeTab==="evolucion"&&<EvolucionTab filteredRecords={filtered} meta={meta}/>}
+            {safeTab==="articulos"&&<ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas}/>}
             {safeTab==="rentabilidad"&&<RentabilidadSection data={rentData} artData={artData} hasCantidad={meta?.hasCantidad}/>}
-            {safeTab==="zonas"&&       <DetailTab data={zonaData}  hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Zona"       color={ACCENT6}/>}
-            {safeTab==="provincias"&&  <DetailTab data={pciaData}  hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia"  color={ACCENT7}/>}
+            {safeTab==="zonas"&&<DetailTab data={zonaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Zona" color={ACCENT6}/>}
+            {safeTab==="provincias"&&<DetailTab data={pciaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia" color={ACCENT7}/>}
           </div>
         </div>
       )}
     </div>
   )
 }
+
+ReactDOM.render(React.createElement(App), document.getElementById("root"))
+</script>
+</body>
+</html>
