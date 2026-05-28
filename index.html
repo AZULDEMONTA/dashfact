@@ -969,7 +969,7 @@ function App(){
     const btn=document.getElementById("btnExportPDF")
     if(btn){btn.disabled=true;btn.textContent="Generando..."}
     try{
-      const el=document.getElementById("dashfact-root")
+      const el=document.getElementById("dashfact-content")
       const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#eef0f8",logging:false,ignoreElements:e=>e.id==="btnExportPDF"})
       const{jsPDF}=window.jspdf
       const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"})
@@ -1098,7 +1098,7 @@ function App(){
               </button>
             ))}
           </div>
-          <div style={{flex:1,overflow:"auto",padding:"16px 20px",background:BG}}>
+          <div id="dashfact-content" style={{flex:1,overflow:"auto",padding:"16px 20px",background:BG}}>
             {safeTab==="resumen"&&(
               <>
                 <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
