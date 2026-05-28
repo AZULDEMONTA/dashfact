@@ -46,6 +46,14 @@
 </head>
 <body>
 <div id="root"></div>
+<div id="err" style="display:none;position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:16px;font-family:monospace;font-size:13px;z-index:9999;white-space:pre-wrap"></div>
+<script>
+window.onerror=function(msg,src,line,col,err){
+  var el=document.getElementById('err');
+  el.style.display='block';
+  el.textContent='ERROR: '+msg+'\nLine: '+line+'\n'+(err?err.stack:'');
+}
+</script>
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef } = React
 
