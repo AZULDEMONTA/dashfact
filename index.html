@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Neo Black & Gold</title>
+  <title>DASHFACT ADM</title>
   <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
@@ -877,13 +877,13 @@ function ClientesPeriodoTab({filteredRecords,meta}){
       </div>
 
       {periods.length>0&&sortedZonas.length>0?(
-        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,overflowX:"auto"}}>
+        <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,overflowX:"auto",overflowY:"auto",maxHeight:"70vh"}}>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:500}}>
-            <thead>
-              <tr style={{background:"rgba(255,255,255,0.02)"}}>
-                <th style={{padding:"8px 12px",textAlign:"left",color:T3,fontSize:9,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,position:"sticky",left:0,background:"rgba(30,41,59,0.98)",minWidth:180}}>Cliente</th>
-                {periods.map(p=><th key={p} style={{padding:"8px 10px",textAlign:"right",color:T3,fontSize:9,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap",minWidth:88}}>{periodLabel(p,true)}</th>)}
-                <th style={{padding:"8px 10px",textAlign:"right",color:BRAND,fontSize:9,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap",fontWeight:600}}>Total</th>
+            <thead style={{position:"sticky",top:0,zIndex:10}}>
+              <tr style={{background:"#1A1200"}}>
+                <th style={{padding:"10px 14px",textAlign:"left",color:BRAND,fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1.2,borderBottom:`2px solid ${BRAND}`,position:"sticky",left:0,top:0,background:"#1A1200",minWidth:180,zIndex:11}}>Cliente</th>
+                {periods.map(p=><th key={p} style={{padding:"10px 10px",textAlign:"right",color:BRAND,fontSize:11,fontWeight:700,borderBottom:`2px solid ${BRAND}`,whiteSpace:"nowrap",minWidth:88,letterSpacing:0.5}}>{periodLabel(p,true)}</th>)}
+                <th style={{padding:"10px 10px",textAlign:"right",color:"#FFD95A",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1.2,borderBottom:`2px solid ${BRAND}`,whiteSpace:"nowrap"}}>Total</th>
               </tr>
             </thead>
             <tbody>
@@ -911,9 +911,9 @@ function ClientesPeriodoTab({filteredRecords,meta}){
                 )
               })}
             </tbody>
-            <tfoot>
-              <tr style={{background:"rgba(255,255,255,0.03)",borderTop:`2px solid ${BORDER2}`}}>
-                <td style={{padding:"8px 12px",color:T1,fontWeight:500,fontSize:12,position:"sticky",left:0,background:"#1E1E1E"}}>Total general</td>
+            <tfoot style={{position:"sticky",bottom:0,zIndex:10}}>
+              <tr style={{background:"#1A1200",borderTop:`2px solid ${BRAND}`}}>
+                <td style={{padding:"9px 14px",color:BRAND,fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:0.8,position:"sticky",left:0,bottom:0,background:"#1A1200",zIndex:11}}>Total general</td>
                 {periods.map(p=><td key={p} style={{padding:"8px 10px",textAlign:"right",color:T1,fontWeight:500}}>{metric==="pesos"?fmtM(periodGrandTotal(p)):fmtU(periodGrandTotal(p))}</td>)}
                 <td style={{padding:"8px 10px",textAlign:"right",color:BRAND,fontWeight:600}}>{metric==="pesos"?fmtM(grandTotal):fmtU(grandTotal)}</td>
               </tr>
@@ -1047,7 +1047,9 @@ function App(){
     try{
       const el=document.getElementById("dashfact-content")
       const elRect=el.getBoundingClientRect()
-      const canvas=await html2canvas(el,{scale:1.5,useCORS:true,backgroundColor:"#0A0A0A",logging:false,ignoreElements:e=>e.id==="btnExportPDF"})
+      const SCALE=1,JPEG_Q=0.75
+      const canvas=await html2canvas(el,{scale:SCALE,useCORS:true,backgroundColor:"#0A0A0A",logging:false,ignoreElements:e=>e.id==="btnExportPDF"})
+      const toJpeg=c=>c.toDataURL("image/jpeg",JPEG_Q)
       const{jsPDF}=window.jspdf
       const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"})
       const pageW=pdf.internal.pageSize.getWidth(),pageH=pdf.internal.pageSize.getHeight()
@@ -1056,13 +1058,13 @@ function App(){
       const usableH_px=(pageH-margin*2)/scaleFactor
       const totalH_px=canvas.height
       if(totalH_px<=usableH_px){
-        pdf.addImage(canvas.toDataURL("image/png"),"PNG",margin,margin,imgW,totalH_px*scaleFactor)
+        pdf.addImage(toJpeg(canvas),"JPEG",margin,margin,imgW,totalH_px*scaleFactor)
       }else{
         const rows=el.querySelectorAll("tr")
         const breaks=[0]
         rows.forEach(row=>{
           const rect=row.getBoundingClientRect()
-          const bottom=Math.round((rect.bottom-elRect.top)*1.5)
+          const bottom=Math.round((rect.bottom-elRect.top)*SCALE)
           if(bottom>0&&bottom<totalH_px) breaks.push(bottom)
         })
         breaks.push(totalH_px)
@@ -1080,7 +1082,7 @@ function App(){
           const sc=document.createElement("canvas")
           sc.width=canvas.width;sc.height=sliceH
           sc.getContext("2d").drawImage(canvas,0,start,canvas.width,sliceH,0,0,canvas.width,sliceH)
-          pdf.addImage(sc.toDataURL("image/png"),"PNG",margin,margin,imgW,sliceH*scaleFactor)
+          pdf.addImage(toJpeg(sc),"JPEG",margin,margin,imgW,sliceH*scaleFactor)
           start=breakAt;pageNum++
         }
       }
