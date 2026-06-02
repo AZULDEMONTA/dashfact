@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Azul de Montaña</title>
+  <title>Neo Black & Gold</title>
   <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
@@ -14,31 +14,32 @@
 
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#0F172A;font-family:'Segoe UI',Inter,system-ui,sans-serif;color:#F8FAFC;min-height:100vh}
+    body{background:#0A0A0A;font-family:'Segoe UI',Inter,system-ui,sans-serif;color:#FFFFFF;min-height:100vh}
     ::-webkit-scrollbar{width:3px;height:3px}
-    ::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
-    input,select{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#F1F5F9;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;outline:none;width:100%;transition:border-color .15s}
-    input:focus,select:focus{border-color:#3B82F6}
+    ::-webkit-scrollbar-thumb{background:#2A2A2A;border-radius:2px}
+    input,select{background:rgba(255,255,255,0.04);border:1px solid #2A2A2A;color:#F1F5F9;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;outline:none;width:100%;transition:border-color .15s}
+    input:focus,select:focus{border-color:#F5B301}
     button{cursor:pointer;font-family:inherit;transition:all .15s}
     .dash-sidebar{width:56px;transition:width .2s ease;overflow:hidden;flex-shrink:0}
     .dash-sidebar:hover{width:180px}
-    .dash-sidebar .nav-label{opacity:0;width:0;overflow:hidden;transition:opacity .15s;white-space:nowrap;font-size:12px;color:#94A3B8}
+    .dash-sidebar .nav-label{opacity:0;width:0;overflow:hidden;transition:opacity .15s;white-space:nowrap;font-size:12px;color:#A0A0A0}
     .dash-sidebar:hover .nav-label{opacity:1;width:auto}
-    .dash-sidebar .nav-dot{width:5px;height:5px;border-radius:50%;background:#3B82F6;margin-left:auto;flex-shrink:0;transition:opacity .15s}
+    .dash-sidebar .nav-dot{width:5px;height:5px;border-radius:50%;background:#F5B301;margin-left:auto;flex-shrink:0;transition:opacity .15s}
     .dash-sidebar:hover .nav-dot{opacity:0;width:0}
-    .nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;color:#475569;transition:all .15s;min-height:38px;border-left:2px solid transparent}
-    .nav-item:hover{background:rgba(255,255,255,0.05);color:#CBD5E1}
-    .nav-item.active{background:rgba(59,130,246,0.12);color:#60A5FA;border-left-color:#3B82F6}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;color:#A0A0A0;transition:all .15s;min-height:38px;border-left:2px solid transparent}
+    .nav-item:hover{background:rgba(245,179,1,0.06);color:#FFD95A}
+    .nav-item.active{background:rgba(245,179,1,0.10);color:#F5B301;border-left-color:#F5B301}
     .nav-item i{font-size:18px;flex-shrink:0;width:20px;text-align:center}
-    .filter-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;color:#94A3B8;font-size:11px;transition:all .15s;white-space:nowrap}
-    .filter-pill:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.22);color:#F1F5F9}
-    .kpi-card{background:#1E293B;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;transition:border-color .2s}
-    .kpi-card:hover{border-color:rgba(255,255,255,0.18)}
-    .panel-card{background:#1E293B;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px 18px}
-    .rank-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.07)}
+    .filter-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;background:#161616;border:1px solid #2A2A2A;border-radius:8px;cursor:pointer;color:#A0A0A0;font-size:11px;transition:all .15s;white-space:nowrap}
+    .filter-pill:hover{background:#1E1E1E;border-color:#F5B301;color:#FFD95A}
+    .kpi-card{background:#161616;border:1px solid #2A2A2A;border-radius:12px;padding:16px;transition:border-color .2s;position:relative;overflow:hidden}
+    .kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#F5B301,#FFD95A)}
+    .kpi-card:hover{border-color:#F5B301}
+    .panel-card{background:#161616;border:1px solid #2A2A2A;border-radius:12px;padding:16px 18px}
+    .rank-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #1E1E1E}
     .rank-row:last-child{border-bottom:none}
-    .rank-row:hover{background:rgba(255,255,255,0.02);margin:0 -4px;padding-left:4px;padding-right:4px;border-radius:4px}
-    .pill-up{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(16,185,129,0.15);color:#10B981;font-weight:500}
+    .rank-row:hover{background:rgba(245,179,1,0.04);margin:0 -4px;padding-left:4px;padding-right:4px;border-radius:4px}
+    .pill-up{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(34,197,94,0.15);color:#22C55E;font-weight:500}
     .pill-down{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(239,68,68,0.15);color:#EF4444;font-weight:500}
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -80,12 +81,12 @@ async function dbDelete(key){
 const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1"
 const LOGO_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEF0lEQVR4nO1WXWhcRRT+zrl/m8ZEGmpJk6a2IbFQQUIjSA0VimAj2FqDK0bBR31RRBDNJo3TpU3NFhR9sBCVFqxI01CQKhIf7EMREooiQoNik5jSNO0mWJq/3ezeO3N8uEtd0+puuuqL+eA+3JnhnO/75pzDAKtYxcpBue9/h1MWAGyojz23saHr+fy1UsDFHx0RpRT7gYlns4ESEQJGpFQCRULZAFDbGGtbt6lb1tXtl5rNHXvz9+4UxTpglFLsZ0y3GG0EYnxj3oIIATD/MgFlA3Hz8Wd6n4HXRDAM0Szwmmu2xPYAcVNKLRTjQKg+G3QCjlg2Prcs+hJwxTfSVWotFOhnZQPxoLY+1pYJ7NMEEW+NfoBhe+mUfCcguI7/5NRY75nQhWf0SgkUKiCjlOKjx9OdwBohLAxO/py4AADrN3ecFbNml+9nY0Q4IzJCtxbk/QIMANiWc+iA5DTfdOxvHAjVV9fH2oLAPg0JjOfpliujR4YBodr6jl2ZwP2G4MBxUs9OjfX2r1R9IQKsFHD0ePq8oGI708JX05cSewDlAPEsAKzf9OYxtiq2M6eGAfpEB3IfM9UITCVDiC1OQfCb7fK0Y1vXIp6V3FClZ3bswI14PG6Av7yCUH3fiVibwGsmLCESsQ8DECCe3fpwomIxOdcSaIiRRVdn5TFifhQwSRH6AYwLwjQuLEmb3DkjfoYylq/LtclkkC3CgXz1lc3M8yenJxLttY3dDwW+eUEbaWcuX2v0wg3LorPMVkqMP3ttovflf+AK8u/eOS0SLLquxHSAnSJulNgDzMKP7PC7TY2z/T9N3rVlcZZGQC5bdvqJ5Hjka+C6BVT5Ybz48hb90//tCLBSwAfH0t8DXpMgkybAI17LkPmLjkPdV8d7+kX+OH9PXfoLocpWyPzQzOXEToKicEAVxrJBFE69vhPpfaBIk5iMD7HKQB4zLbx3d7Xz4NRYT78IKOz78Lzj8iFICiC3ZWN9Z+tKpuPySWgAxYFP3SLagNgm5pRrB+3JiZ7XRs/H53K9LuHQiQdA1Joa6x1i0oOAC1/rrpBgcdMxj0CopnrL0lMgt0lEE7M1VxbB7qnxt0/mElOY9FaUOe4hSNoYcVvqtnbtLtaFfAeMUoqNYL8Y0Uzke16w9/IvPd8CLzq5xLdRNaCBqHVp7OAQkx4keJJZ8mPhXmEXOF/9R59mnxZT1sSWa9m26Zy8mDgH9DnAh36hQADguNZBkTQJIo9U3/vG48W4wAAIOKBbW9/3tMbrIEpanDqS/DXxTkjspSKSD2hA8ZXRw8NEwSmQsxgIvRqNRq1CLtxsw23blDtPQZ1Xbs+ExbZiEAA0NLzi3shWVBmT5uuTlVeLbcdliJb82LxDKAak1Dc/hTFKjrOK/wa/A3rQ7dfNECyuAAAAAElFTkSuQmCC"
 
-const BG="#0F172A",CARD="#1E293B",CARD2="#253047",BORDER="rgba(255,255,255,0.06)",BORDER2="rgba(255,255,255,0.12)",TEXT="#F8FAFC",MUTED="#94A3B8",MUTED2="#475569"
-const BRAND="#3B82F6",BRAND_DARK="#1E40AF",BRAND_LIGHT="rgba(59,130,246,0.12)",SIDEBAR="#111827"
-const ACCENT1="#06B6D4",ACCENT2="#10B981",ACCENT3="#8B5CF6",ACCENT4="#F59E0B",ACCENT5="#EF4444",ACCENT6="#06B6D4",ACCENT7="#8B5CF6",ACCENT8="#10B981"
-const RENT_COLOR={Alta:"#10B981",Media:"#F59E0B",Baja:"#EF4444","Sin dato":"#475569"}
-const RENT_BG={Alta:"rgba(16,185,129,0.1)",Media:"rgba(245,158,11,0.1)",Baja:"rgba(239,68,68,0.1)","Sin dato":"rgba(71,85,105,0.1)"}
-const VENDOR_COLORS=[BRAND,ACCENT1,ACCENT3,ACCENT2,ACCENT4,ACCENT5,"#E879F9","#38BDF8","#34D399","#FB923C","#A78BFA","#22D3EE"]
+const BG="#0A0A0A",CARD="#161616",CARD2="#1A1A1A",BORDER="rgba(255,255,255,0.06)",BORDER2="#2A2A2A",TEXT="#FFFFFF",MUTED="#A0A0A0",MUTED2="#555555"
+const BRAND="#F5B301",BRAND_DARK="#C98F00",BRAND_LIGHT="rgba(245,179,1,0.10)",SIDEBAR="#111111"
+const ACCENT1="#FFD95A",ACCENT2="#22C55E",ACCENT3="#F5B301",ACCENT4="#FFD95A",ACCENT5="#EF4444",ACCENT6="#F5B301",ACCENT7="#FFD95A",ACCENT8="#22C55E"
+const RENT_COLOR={Alta:"#22C55E",Media:"#F5B301",Baja:"#EF4444","Sin dato":"#555555"}
+const RENT_BG={Alta:"rgba(34,197,94,0.1)",Media:"rgba(245,179,1,0.1)",Baja:"rgba(239,68,68,0.1)","Sin dato":"rgba(85,85,85,0.1)"}
+const VENDOR_COLORS=[BRAND,ACCENT1,ACCENT2,"#FFB800","#FFC933","#EF4444","#FF6B6B","#FFD95A","#22C55E","#F97316","#FBBF24","#86EFAC"]
 const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
 /* ─── Cube helpers ──────────────────────────────────────────────────────────── */
@@ -215,9 +216,9 @@ function KpiCard({icon,label,value,sub,accent}){return(
         {icon}
       </div>
     </div>
-    <div style={{fontSize:26,fontWeight:500,color:"#F8FAFC",letterSpacing:"-0.5px",lineHeight:1}}>{value}</div>
-    <div style={{fontSize:11,color:"#94A3B8",marginTop:6}}>{label}</div>
-    {sub&&<div style={{fontSize:10,color:"#475569",marginTop:3}}>{sub}</div>}
+    <div style={{fontSize:26,fontWeight:500,color:"#FFFFFF",letterSpacing:"-0.5px",lineHeight:1}}>{value}</div>
+    <div style={{fontSize:11,color:"#A0A0A0",marginTop:6}}>{label}</div>
+    {sub&&<div style={{fontSize:10,color:"#555555",marginTop:3}}>{sub}</div>}
   </div>
 )}
 function Dropdown({label,value,options,onChange}){
@@ -794,7 +795,7 @@ function ClientesPeriodoTab({filteredRecords,meta}){
   const periodGrandTotal=p=>base.filter(r=>toPeriod(r.y,r.m)===p).reduce((s,r)=>s+(metric==="pesos"?r.precio:r.cantidad),0)
   const totalClients=sortedZonas.reduce((s,z)=>s+Object.keys(zoneData[z]).length,0)
 
-  const T1="#F1F5F9",T2="#94A3B8",T3="#64748B"
+  const T1="#FFFFFF",T2="#A0A0A0",T3="#555555"
   const inputS={width:"100%",background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:T2,fontSize:11,outline:"none",marginBottom:6,fontFamily:"inherit"}
   const listS={display:"flex",flexDirection:"column",gap:2,maxHeight:140,overflowY:"auto"}
   const itemBase={display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:6,cursor:"pointer"}
@@ -862,7 +863,7 @@ function ClientesPeriodoTab({filteredRecords,meta}){
           {(selVends.length>0||selZonas.length>0)&&(
             <div>
               <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:6}}>
-                {selVends.map(v=><span key={v} style={{fontSize:10,color:"#60A5FA",background:"rgba(59,130,246,0.12)",borderRadius:20,padding:"2px 8px",display:"flex",alignItems:"center",gap:3}}>
+                {selVends.map(v=><span key={v} style={{fontSize:10,color:"#F5B301",background:"rgba(245,179,1,0.12)",borderRadius:20,padding:"2px 8px",display:"flex",alignItems:"center",gap:3}}>
                   {v}<span onClick={()=>toggleVend(v)} style={{cursor:"pointer"}}>×</span>
                 </span>)}
                 {selZonas.map(z=><span key={z} style={{fontSize:10,color:"#22D3EE",background:"rgba(6,182,212,0.12)",borderRadius:20,padding:"2px 8px",display:"flex",alignItems:"center",gap:3}}>
@@ -891,13 +892,13 @@ function ClientesPeriodoTab({filteredRecords,meta}){
                 const ztot=zoneTotal(zona)
                 return(
                   <React.Fragment key={zona}>
-                    <tr style={{background:"rgba(59,130,246,0.06)"}}>
-                      <td colSpan={periods.length+2} style={{padding:"6px 12px",fontWeight:500,fontSize:11,color:"#60A5FA",letterSpacing:0.5,borderBottom:`1px solid ${BORDER}`,position:"sticky",left:0,background:"rgba(59,130,246,0.06)"}}>📍 {zona}</td>
+                    <tr style={{background:"rgba(245,179,1,0.06)"}}>
+                      <td colSpan={periods.length+2} style={{padding:"6px 12px",fontWeight:500,fontSize:11,color:"#F5B301",letterSpacing:0.5,borderBottom:`1px solid ${BORDER}`,position:"sticky",left:0,background:"rgba(245,179,1,0.06)"}}>📍 {zona}</td>
                     </tr>
                     {clients.map((cl,idx)=>(
                       <tr key={cl} style={{borderBottom:`1px solid rgba(255,255,255,0.04)`,background:idx%2===0?"transparent":"rgba(255,255,255,0.01)"}}>
-                        <td style={{padding:"7px 12px 7px 20px",color:T1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:200,position:"sticky",left:0,background:idx%2===0?"#1E293B":"#202d3e"}}>{cl}</td>
-                        {periods.map(p=>{const v=valFn(zona,cl,p);return<td key={p} style={{padding:"7px 10px",textAlign:"right",color:v>0?"#60A5FA":T3,fontWeight:v>0?500:400}}>{v>0?(metric==="pesos"?fmtM(v):fmtU(v)):"—"}</td>})}
+                        <td style={{padding:"7px 12px 7px 20px",color:T1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:200,position:"sticky",left:0,background:idx%2===0?"#161616":"#1A1A1A"}}>{cl}</td>
+                        {periods.map(p=>{const v=valFn(zona,cl,p);return<td key={p} style={{padding:"7px 10px",textAlign:"right",color:v>0?"#FFD95A":T3,fontWeight:v>0?500:400}}>{v>0?(metric==="pesos"?fmtM(v):fmtU(v)):"—"}</td>})}
                         <td style={{padding:"7px 10px",textAlign:"right",color:BRAND,fontWeight:500}}>{metric==="pesos"?fmtM(clientTotal(zona,cl)):fmtU(clientTotal(zona,cl))}</td>
                       </tr>
                     ))}
@@ -912,7 +913,7 @@ function ClientesPeriodoTab({filteredRecords,meta}){
             </tbody>
             <tfoot>
               <tr style={{background:"rgba(255,255,255,0.03)",borderTop:`2px solid ${BORDER2}`}}>
-                <td style={{padding:"8px 12px",color:T1,fontWeight:500,fontSize:12,position:"sticky",left:0,background:"#253047"}}>Total general</td>
+                <td style={{padding:"8px 12px",color:T1,fontWeight:500,fontSize:12,position:"sticky",left:0,background:"#1E1E1E"}}>Total general</td>
                 {periods.map(p=><td key={p} style={{padding:"8px 10px",textAlign:"right",color:T1,fontWeight:500}}>{metric==="pesos"?fmtM(periodGrandTotal(p)):fmtU(periodGrandTotal(p))}</td>)}
                 <td style={{padding:"8px 10px",textAlign:"right",color:BRAND,fontWeight:600}}>{metric==="pesos"?fmtM(grandTotal):fmtU(grandTotal)}</td>
               </tr>
@@ -1046,7 +1047,7 @@ function App(){
     try{
       const el=document.getElementById("dashfact-content")
       const elRect=el.getBoundingClientRect()
-      const canvas=await html2canvas(el,{scale:1.5,useCORS:true,backgroundColor:"#0F172A",logging:false,ignoreElements:e=>e.id==="btnExportPDF"})
+      const canvas=await html2canvas(el,{scale:1.5,useCORS:true,backgroundColor:"#0A0A0A",logging:false,ignoreElements:e=>e.id==="btnExportPDF"})
       const{jsPDF}=window.jspdf
       const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"})
       const pageW=pdf.internal.pageSize.getWidth(),pageH=pdf.internal.pageSize.getHeight()
