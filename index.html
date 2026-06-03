@@ -236,7 +236,7 @@ function Dropdown({label,value,options,onChange}){
 function MetricToggle({value,onChange}){return(
   <div style={{display:"flex",background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER2}`,borderRadius:8,padding:2,gap:2}}>
     {["pesos","unidades"].map(v=>(
-      <button key={v} onClick={()=>onChange(v)} style={{padding:"4px 12px",background:value===v?"rgba(59,130,246,0.15)":"transparent",border:`1px solid ${value===v?"rgba(59,130,246,0.4)":"transparent"}`,borderRadius:6,color:value===v?BRAND:MUTED,cursor:"pointer",fontSize:11,fontWeight:value===v?500:400}}>
+      <button key={v} onClick={()=>onChange(v)} data-metric-active={value===v?"true":"false"} style={{padding:"4px 12px",background:value===v?"rgba(59,130,246,0.15)":"transparent",border:`1px solid ${value===v?"rgba(59,130,246,0.4)":"transparent"}`,borderRadius:6,color:value===v?BRAND:MUTED,cursor:"pointer",fontSize:11,fontWeight:value===v?500:400}}>
         {v==="pesos"?"$ Pesos":"Unidades"}
       </button>
     ))}
@@ -809,7 +809,7 @@ function ClientesPeriodoTab({filteredRecords,meta}){
   return(
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
 
-      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"14px 16px",display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:16,alignItems:"start"}}>
+      <div id="clientes-filter-panel" style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:"14px 16px",display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:16,alignItems:"start"}}>
 
         {vendedores.length>0&&(
           <div>
@@ -1044,7 +1044,84 @@ function App(){
   const exportarPDF=useCallback(async()=>{
     const btn=document.getElementById("btnExportPDF")
     if(btn){btn.disabled=true;btn.textContent="Generando..."}
-    // Guardar y quitar overflow/maxHeight de todos los contenedores scrollables
+
+    // ── 1. Ocultar panel de filtros y reemplazarlo con pills compactos ──
+    const filterPanel=document.getElementById("clientes-filter-panel")
+    let pillsDiv=null
+    if(filterPanel){
+      filterPanel.style.display="none"
+      // Leer filtros activos desde el DOM (pills ya renderizados) o construirlos
+      const activePills=[]
+      // Vendedores activos: buscar spans dorados dentro del panel
+      filterPanel.querySelectorAll("span").forEach(sp=>{
+        if(sp.style.color==="#F5B301"||sp.style.color==="rgb(245, 179, 1)"){
+          const txt=sp.textContent.replace("×","").trim()
+          if(txt) activePills.push({label:txt,color:"#F5B301",bg:"rgba(245,179,1,0.15)"})
+        }
+      })
+      // Zonas activas
+      filterPanel.querySelectorAll("span").forEach(sp=>{
+        if(sp.style.color==="#22D3EE"||sp.style.color==="rgb(34,211,238)"){
+          const txt=sp.textContent.replace("×","").trim()
+          if(txt) activePills.push({label:txt,color:"#22D3EE",bg:"rgba(6,182,212,0.15)"})
+        }
+      })
+      // Métrica activa: leer el botón activo del MetricToggle
+      const metricBtn=document.querySelector("[data-metric-active='true']")
+      const metricLabel=metricBtn?metricBtn.textContent.trim():null
+
+      // Totales: leer del panel
+      const totalEls=filterPanel.querySelectorAll("div")
+      let clientesVal="",totalVal=""
+      totalEls.forEach(d=>{
+        if(d.textContent.trim()==="Clientes") clientesVal=d.nextElementSibling?.textContent?.trim()||""
+        if(d.textContent.trim()==="Total") totalVal=d.nextElementSibling?.textContent?.trim()||""
+      })
+
+      pillsDiv=document.createElement("div")
+      pillsDiv.id="pdf-pills-bar"
+      pillsDiv.style.cssText="display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:10px 16px;background:#161616;border:1px solid #2A2A2A;border-radius:12px;margin-bottom:0"
+
+      // Label "Filtros:"
+      const lbl=document.createElement("span")
+      lbl.style.cssText="font-size:10px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-right:4px;font-family:Segoe UI,sans-serif"
+      lbl.textContent="Filtros activos:"
+      pillsDiv.appendChild(lbl)
+
+      if(activePills.length===0){
+        const np=document.createElement("span")
+        np.style.cssText="font-size:11px;color:#A0A0A0;font-family:Segoe UI,sans-serif"
+        np.textContent="Sin filtros aplicados"
+        pillsDiv.appendChild(np)
+      } else {
+        activePills.forEach(p=>{
+          const sp=document.createElement("span")
+          sp.style.cssText=`font-size:11px;color:${p.color};background:${p.bg};border-radius:20px;padding:3px 10px;font-family:Segoe UI,sans-serif`
+          sp.textContent=p.label
+          pillsDiv.appendChild(sp)
+        })
+      }
+
+      // Métrica y totales a la derecha
+      const right=document.createElement("div")
+      right.style.cssText="margin-left:auto;display:flex;align-items:center;gap:16px"
+      if(metricLabel){
+        const ms=document.createElement("span")
+        ms.style.cssText="font-size:11px;color:#A0A0A0;font-family:Segoe UI,sans-serif"
+        ms.textContent="Métrica: "+metricLabel
+        right.appendChild(ms)
+      }
+      if(clientesVal||totalVal){
+        const ts=document.createElement("span")
+        ts.style.cssText="font-size:11px;color:#A0A0A0;font-family:Segoe UI,sans-serif"
+        ts.innerHTML=`<span style='color:#F5B301;font-weight:600'>${clientesVal}</span> clientes &nbsp;·&nbsp; Total: <span style='color:#22D3EE;font-weight:600'>${totalVal}</span>`
+        right.appendChild(ts)
+      }
+      pillsDiv.appendChild(right)
+      filterPanel.parentNode.insertBefore(pillsDiv,filterPanel)
+    }
+
+    // ── 2. Quitar overflow/maxHeight de contenedores scrollables ──
     const snapshots=[]
     const allEls=document.querySelectorAll("*")
     allEls.forEach(el=>{
@@ -1057,7 +1134,6 @@ function App(){
         s.maxHeight="none"
       }
     })
-    // Tambien parchear clases CSS que tengan overflow:hidden/auto
     const styleOverride=document.createElement("style")
     styleOverride.id="pdf-override"
     styleOverride.textContent=`
@@ -1068,8 +1144,8 @@ function App(){
       .dash-sidebar { overflow: hidden !important; }
     `
     document.head.appendChild(styleOverride)
-    // Pequeña pausa para que el DOM se redibuje
-    await new Promise(r=>setTimeout(r,120))
+    await new Promise(r=>setTimeout(r,150))
+
     try{
       const el=document.getElementById("dashfact-content")
       const SCALE=1,JPEG_Q=0.75
@@ -1095,7 +1171,6 @@ function App(){
       if(totalH_px<=usableH_px){
         pdf.addImage(toJpeg(canvas),"JPEG",margin,margin,imgW,totalH_px*scaleFactor)
       }else{
-        // Cortar por filas para no partir registros al medio
         const rows=el.querySelectorAll("tr")
         const breaks=[0]
         rows.forEach(row=>{
@@ -1125,7 +1200,8 @@ function App(){
       }
       pdf.save("dashfact-reporte.pdf")
     }catch(e){alert("Error al generar PDF: "+e.message)}
-    // Restaurar todo
+
+    // ── 3. Restaurar todo ──
     snapshots.forEach(({el,overflow,overflowY,overflowX,maxHeight})=>{
       el.style.overflow=overflow
       el.style.overflowY=overflowY
@@ -1134,6 +1210,8 @@ function App(){
     })
     const ov=document.getElementById("pdf-override")
     if(ov) ov.remove()
+    if(pillsDiv) pillsDiv.remove()
+    if(filterPanel) filterPanel.style.display=""
     if(btn){btn.disabled=false;btn.textContent="⬇ Exportar PDF"}
   },[])
 
