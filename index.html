@@ -300,38 +300,77 @@ function DetailTab({data,hasCantidad,totalVentas,totalUnidades,dimLabel,color}){
     <BarList data={data} colorFn={color} totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={hasCantidad} limit={15}/>
   </ChartCard>
 )}
-function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,filteredRecords,meta}){
+function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,records,provArts,ruboArts}){
+  // records = full cube (tiene y,m,proveedor,rubro pero NO articulo)
+  // provArts = {prov: [[name,precio,cant],...]}
+  // ruboArts = {rubro: [[name,precio,cant],...]}
   const[metric,setMetric]=useState("pesos")
   const[expanded,setExpanded]=useState(false)
   const[search,setSearch]=useState("")
   const[filterProv,setFilterProv]=useState("__ALL__")
   const[filterRubro,setFilterRubro]=useState("__ALL__")
-  const allMonths=[...new Set((filteredRecords||[]).map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
+  const allYears=[...new Set((records||[]).map(r=>r.y).filter(v=>v>0))].sort((a,b)=>a-b)
+  const[filterYear,setFilterYear]=useState("__ALL__")
   const[mesDesde,setMesDesde]=useState("__ALL__")
   const[mesHasta,setMesHasta]=useState("__ALL__")
-  const allProvs=[...new Set((filteredRecords||[]).map(r=>r.proveedor).filter(Boolean))].sort()
-  const allRubros=[...new Set((filteredRecords||[]).map(r=>r.rubro).filter(Boolean))].sort()
-  const useRecords=filteredRecords&&(mesDesde!=="__ALL__"||mesHasta!=="__ALL__"||filterProv!=="__ALL__"||filterRubro!=="__ALL__")
-  let artBase=data
-  if(useRecords){
-    const recFil=(filteredRecords||[]).filter(r=>{
+  const allProvs=[...new Set((records||[]).map(r=>r.proveedor).filter(Boolean))].sort()
+  const allRubros=[...new Set((records||[]).map(r=>r.rubro).filter(Boolean))].sort()
+
+  // meses disponibles segun año seleccionado
+  const allMonths=[...new Set((records||[]).filter(r=>filterYear==="__ALL__"||r.y===parseInt(filterYear)).map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
+
+  // Reset mes cuando cambia año
+  const handleYearChange=y=>{setFilterYear(y);setMesDesde("__ALL__");setMesHasta("__ALL__")}
+
+  const hasFilters=filterProv!=="__ALL__"||filterRubro!=="__ALL__"||filterYear!=="__ALL__"||mesDesde!=="__ALL__"||mesHasta!=="__ALL__"
+
+  // ── Calcular lista de artículos ──
+  let artBase=data // fallback: todo
+  if(hasFilters){
+    // Filtrar registros del cubo por año/mes
+    const recsFiltered=(records||[]).filter(r=>{
+      if(filterYear!=="__ALL__"&&r.y!==parseInt(filterYear)) return false
       if(mesDesde!=="__ALL__"&&r.m<parseInt(mesDesde)) return false
       if(mesHasta!=="__ALL__"&&r.m>parseInt(mesHasta)) return false
-      if(filterProv!=="__ALL__"&&r.proveedor!==filterProv) return false
-      if(filterRubro!=="__ALL__"&&r.rubro!==filterRubro) return false
       return true
     })
-    const artMap={}
-    recFil.forEach(r=>{
-      if(!r.articulo) return
-      const k=r.articulo
-      if(!artMap[k]) artMap[k]={name:k,precio:0,cantidad:0,rentabilidad:r.rentabilidad}
-      artMap[k].precio+=r.precio
-      artMap[k].cantidad+=r.cantidad
-    })
-    artBase=Object.values(artMap)
+
+    if(filterProv!=="__ALL__"){
+      // Artículos del proveedor en el período: provArts da totales globales,
+      // pero necesitamos proporcional al período → usar los records filtrados
+      // para obtener fracción de ventas del proveedor en el período vs total,
+      // luego escalar los artículos de provArts
+      const provRecsAll=(records||[]).filter(r=>r.proveedor===filterProv)
+      const provRecsPer=recsFiltered.filter(r=>r.proveedor===filterProv)
+      const totalProvAll=provRecsAll.reduce((s,r)=>s+r.precio,0)||1
+      const totalProvPer=provRecsPer.reduce((s,r)=>s+r.precio,0)||0
+      const ratio=totalProvPer/totalProvAll
+      const artsList=(provArts||{})[filterProv]||[]
+      // Si hay filtro de rubro también, intersectar con ruboArts
+      if(filterRubro!=="__ALL__"){
+        const ruboSet=new Set(((ruboArts||{})[filterRubro]||[]).map(a=>a[0]))
+        artBase=artsList.filter(a=>ruboSet.has(a[0])).map(a=>({name:a[0],precio:Math.round(a[1]*ratio),cantidad:Math.round(a[2]*ratio)}))
+      } else {
+        artBase=artsList.map(a=>({name:a[0],precio:Math.round(a[1]*ratio),cantidad:Math.round(a[2]*ratio)}))
+      }
+    } else if(filterRubro!=="__ALL__"){
+      const ruboRecsAll=(records||[]).filter(r=>r.rubro===filterRubro)
+      const ruboRecsPer=recsFiltered.filter(r=>r.rubro===filterRubro)
+      const totalRuboAll=ruboRecsAll.reduce((s,r)=>s+r.precio,0)||1
+      const totalRuboPer=ruboRecsPer.reduce((s,r)=>s+r.precio,0)||0
+      const ratio=totalRuboPer/totalRuboAll
+      const artsList=(ruboArts||{})[filterRubro]||[]
+      artBase=artsList.map(a=>({name:a[0],precio:Math.round(a[1]*ratio),cantidad:Math.round(a[2]*ratio)}))
+    } else {
+      // Solo filtro año/mes: escalar artData global proporcionalmente
+      const totalAll=(records||[]).reduce((s,r)=>s+r.precio,0)||1
+      const totalPer=recsFiltered.reduce((s,r)=>s+r.precio,0)||0
+      const ratio=totalPer/totalAll
+      artBase=(data||[]).map(a=>({...a,precio:Math.round(a.precio*ratio),cantidad:Math.round(a.cantidad*ratio)}))
+    }
   }
-  const artFiltered=artBase.filter(d=>!search||d.name.toLowerCase().includes(search.toLowerCase()))
+
+  const artFiltered=(artBase||[]).filter(d=>d.precio>0&&(!search||d.name.toLowerCase().includes(search.toLowerCase())))
   const totalVentasLocal=artFiltered.reduce((s,d)=>s+d.precio,0)||totalVentas
   const sorted=metric==="pesos"?[...artFiltered].sort((a,b)=>b.precio-a.precio):[...artFiltered].sort((a,b)=>b.cantidad-a.cantidad)
   const shown=expanded?sorted:sorted.slice(0,15)
@@ -344,15 +383,21 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,filteredRe
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar artículo…" style={{...inputStyle,width:"100%",boxSizing:"border-box"}}/>
         </div>
         {allProvs.length>0&&(
-          <select value={filterProv} onChange={e=>setFilterProv(e.target.value)} style={{...selStyle,maxWidth:180}}>
+          <select value={filterProv} onChange={e=>{setFilterProv(e.target.value);setFilterRubro("__ALL__")}} style={{...selStyle,maxWidth:190}}>
             <option value="__ALL__">Todos los proveedores</option>
             {allProvs.map(p=><option key={p} value={p}>{p}</option>)}
           </select>
         )}
         {allRubros.length>0&&(
-          <select value={filterRubro} onChange={e=>setFilterRubro(e.target.value)} style={{...selStyle,maxWidth:180}}>
+          <select value={filterRubro} onChange={e=>{setFilterRubro(e.target.value);setFilterProv("__ALL__")}} style={{...selStyle,maxWidth:190}}>
             <option value="__ALL__">Todas las líneas/rubros</option>
             {allRubros.map(r=><option key={r} value={r}>{r}</option>)}
+          </select>
+        )}
+        {allYears.length>1&&(
+          <select value={filterYear} onChange={e=>handleYearChange(e.target.value)} style={selStyle}>
+            <option value="__ALL__">Todos los años</option>
+            {allYears.map(y=><option key={y} value={String(y)}>{y}</option>)}
           </select>
         )}
         {allMonths.length>1&&(<React.Fragment>
@@ -683,12 +728,16 @@ function ProveedoresTab({data,filteredRecords,provArts,hasCantidad,totalVentas,t
   const[sel,setSel]=useState(null)
   const[metric,setMetric]=useState("pesos")
   const[search,setSearch]=useState("")
-  const allMonths=[...new Set(filteredRecords.map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
+  const allYears=[...new Set(filteredRecords.map(r=>r.y).filter(v=>v>0))].sort((a,b)=>a-b)
+  const[filterYear,setFilterYear]=useState("__ALL__")
   const[mesDesde,setMesDesde]=useState("__ALL__")
   const[mesHasta,setMesHasta]=useState("__ALL__")
+  const allMonths=[...new Set(filteredRecords.filter(r=>filterYear==="__ALL__"||r.y===parseInt(filterYear)).map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
+  const handleYearChangeProv=y=>{setFilterYear(y);setMesDesde("__ALL__");setMesHasta("__ALL__")}
 
-  // Filter records by month range
+  // Filter records by year + month range
   const baseRecs=filteredRecords.filter(r=>{
+    if(filterYear!=="__ALL__"&&r.y!==parseInt(filterYear)) return false
     if(mesDesde!=="__ALL__"&&r.m<parseInt(mesDesde)) return false
     if(mesHasta!=="__ALL__"&&r.m>parseInt(mesHasta)) return false
     return true
@@ -734,6 +783,12 @@ function ProveedoresTab({data,filteredRecords,provArts,hasCantidad,totalVentas,t
         <div style={{flex:"1 1 180px"}}>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar proveedor…" style={{...inputStyle,width:"100%",boxSizing:"border-box"}}/>
         </div>
+        {allYears.length>1&&(
+          <select value={filterYear} onChange={e=>handleYearChangeProv(e.target.value)} style={selStyle}>
+            <option value="__ALL__">Todos los años</option>
+            {allYears.map(y=><option key={y} value={String(y)}>{y}</option>)}
+          </select>
+        )}
         {allMonths.length>1&&(<>
           <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
             <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Mes desde:</span>
@@ -826,11 +881,15 @@ function RubrosTab({data,filteredRecords,ruboArts,hasCantidad,totalVentas,totalU
   const[sel,setSel]=useState(null)
   const[metric,setMetric]=useState("pesos")
   const[search,setSearch]=useState("")
-  const allMonths=[...new Set(filteredRecords.map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
+  const allYears=[...new Set(filteredRecords.map(r=>r.y).filter(v=>v>0))].sort((a,b)=>a-b)
+  const[filterYear,setFilterYear]=useState("__ALL__")
   const[mesDesde,setMesDesde]=useState("__ALL__")
   const[mesHasta,setMesHasta]=useState("__ALL__")
+  const allMonths=[...new Set(filteredRecords.filter(r=>filterYear==="__ALL__"||r.y===parseInt(filterYear)).map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
+  const handleYearChangeRub=y=>{setFilterYear(y);setMesDesde("__ALL__");setMesHasta("__ALL__")}
 
   const baseRecs=filteredRecords.filter(r=>{
+    if(filterYear!=="__ALL__"&&r.y!==parseInt(filterYear)) return false
     if(mesDesde!=="__ALL__"&&r.m<parseInt(mesDesde)) return false
     if(mesHasta!=="__ALL__"&&r.m>parseInt(mesHasta)) return false
     return true
@@ -869,6 +928,12 @@ function RubrosTab({data,filteredRecords,ruboArts,hasCantidad,totalVentas,totalU
         <div style={{flex:"1 1 180px"}}>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar rubro / línea…" style={{...inputStyle,width:"100%",boxSizing:"border-box"}}/>
         </div>
+        {allYears.length>1&&(
+          <select value={filterYear} onChange={e=>handleYearChangeRub(e.target.value)} style={selStyle}>
+            <option value="__ALL__">Todos los años</option>
+            {allYears.map(y=><option key={y} value={String(y)}>{y}</option>)}
+          </select>
+        )}
         {allMonths.length>1&&(<>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Mes desde:</span>
@@ -1564,7 +1629,7 @@ function App(){
                 {safeTab==="rubros"&&<RubrosTab data={rubroData} filteredRecords={filtered} ruboArts={ruboArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="vendedores"&&<VendedoresTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="evolucion"&&<EvolucionTab filteredRecords={filtered} meta={meta}/>}
-                {safeTab==="articulos"&&<ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas} filteredRecords={filtered} meta={meta}/>}
+                {safeTab==="articulos"&&<ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas} records={records} provArts={provArts} ruboArts={ruboArts}/>}
                 {safeTab==="rentabilidad"&&<RentabilidadSection data={rentData} artData={artData} hasCantidad={meta?.hasCantidad}/>}
                 {safeTab==="zonas"&&<DetailTab data={zonaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Zona" color={ACCENT6}/>}
                 {safeTab==="provincias"&&<DetailTab data={pciaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia" color={ACCENT7}/>}
