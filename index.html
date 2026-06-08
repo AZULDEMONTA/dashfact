@@ -405,14 +405,14 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,records,pr
             <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Mes desde:</span>
             <select value={mesDesde} onChange={e=>{setMesDesde(e.target.value);if(e.target.value!=="__ALL__"&&mesHasta!=="__ALL__"&&parseInt(e.target.value)>parseInt(mesHasta))setMesHasta(e.target.value)}} style={selStyle}>
               <option value="__ALL__">Todos</option>
-              {allMonths.map(m=><option key={m} value={String(m)}>{MESES[m-1]||m}</option>)}
+              {allMonths.map(m=><option key={m} value={String(m)}>{MESES[m]||m}</option>)}
             </select>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Hasta:</span>
             <select value={mesHasta} onChange={e=>setMesHasta(e.target.value)} style={selStyle}>
               <option value="__ALL__">Todos</option>
-              {allMonths.filter(m=>mesDesde==="__ALL__"||m>=parseInt(mesDesde)).map(m=><option key={m} value={String(m)}>{MESES[m-1]||m}</option>)}
+              {allMonths.filter(m=>mesDesde==="__ALL__"||m>=parseInt(mesDesde)).map(m=><option key={m} value={String(m)}>{MESES[m]||m}</option>)}
             </select>
           </div>
         </React.Fragment>)}
@@ -794,14 +794,14 @@ function ProveedoresTab({data,filteredRecords,provArts,hasCantidad,totalVentas,t
             <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Mes desde:</span>
             <select value={mesDesde} onChange={e=>{setMesDesde(e.target.value);if(e.target.value!=="__ALL__"&&mesHasta!=="__ALL__"&&parseInt(e.target.value)>parseInt(mesHasta))setMesHasta(e.target.value)}} style={selStyle}>
               <option value="__ALL__">Todos</option>
-              {allMonths.map(m=><option key={m} value={String(m)}>{MESES[m-1]||m}</option>)}
+              {allMonths.map(m=><option key={m} value={String(m)}>{MESES[m]||m}</option>)}
             </select>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
             <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Hasta:</span>
             <select value={mesHasta} onChange={e=>setMesHasta(e.target.value)} style={selStyle}>
               <option value="__ALL__">Todos</option>
-              {allMonths.filter(m=>mesDesde==="__ALL__"||m>=parseInt(mesDesde)).map(m=><option key={m} value={String(m)}>{MESES[m-1]||m}</option>)}
+              {allMonths.filter(m=>mesDesde==="__ALL__"||m>=parseInt(mesDesde)).map(m=><option key={m} value={String(m)}>{MESES[m]||m}</option>)}
             </select>
           </div>
         </>)}
@@ -939,14 +939,14 @@ function RubrosTab({data,filteredRecords,ruboArts,hasCantidad,totalVentas,totalU
             <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Mes desde:</span>
             <select value={mesDesde} onChange={e=>{setMesDesde(e.target.value);if(e.target.value!=="__ALL__"&&mesHasta!=="__ALL__"&&parseInt(e.target.value)>parseInt(mesHasta))setMesHasta(e.target.value)}} style={selStyle}>
               <option value="__ALL__">Todos</option>
-              {allMonths.map(m=><option key={m} value={String(m)}>{MESES[m-1]||m}</option>)}
+              {allMonths.map(m=><option key={m} value={String(m)}>{MESES[m]||m}</option>)}
             </select>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Hasta:</span>
             <select value={mesHasta} onChange={e=>setMesHasta(e.target.value)} style={selStyle}>
               <option value="__ALL__">Todos</option>
-              {allMonths.filter(m=>mesDesde==="__ALL__"||m>=parseInt(mesDesde)).map(m=><option key={m} value={String(m)}>{MESES[m-1]||m}</option>)}
+              {allMonths.filter(m=>mesDesde==="__ALL__"||m>=parseInt(mesDesde)).map(m=><option key={m} value={String(m)}>{MESES[m]||m}</option>)}
             </select>
           </div>
         </>)}
