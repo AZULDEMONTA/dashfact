@@ -78,7 +78,7 @@ async function dbDelete(key){
 }
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
-const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1"
+const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1",APAK="art-period-v1"
 const LOGO_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEF0lEQVR4nO1WXWhcRRT+zrl/m8ZEGmpJk6a2IbFQQUIjSA0VimAj2FqDK0bBR31RRBDNJo3TpU3NFhR9sBCVFqxI01CQKhIf7EMREooiQoNik5jSNO0mWJq/3ezeO3N8uEtd0+puuuqL+eA+3JnhnO/75pzDAKtYxcpBue9/h1MWAGyojz23saHr+fy1UsDFHx0RpRT7gYlns4ESEQJGpFQCRULZAFDbGGtbt6lb1tXtl5rNHXvz9+4UxTpglFLsZ0y3GG0EYnxj3oIIATD/MgFlA3Hz8Wd6n4HXRDAM0Szwmmu2xPYAcVNKLRTjQKg+G3QCjlg2Prcs+hJwxTfSVWotFOhnZQPxoLY+1pYJ7NMEEW+NfoBhe+mUfCcguI7/5NRY75nQhWf0SgkUKiCjlOKjx9OdwBohLAxO/py4AADrN3ecFbNml+9nY0Q4IzJCtxbk/QIMANiWc+iA5DTfdOxvHAjVV9fH2oLAPg0JjOfpliujR4YBodr6jl2ZwP2G4MBxUs9OjfX2r1R9IQKsFHD0ePq8oGI708JX05cSewDlAPEsAKzf9OYxtiq2M6eGAfpEB3IfM9UITCVDiC1OQfCb7fK0Y1vXIp6V3FClZ3bswI14PG6Av7yCUH3fiVibwGsmLCESsQ8DECCe3fpwomIxOdcSaIiRRVdn5TFifhQwSRH6AYwLwjQuLEmb3DkjfoYylq/LtclkkC3CgXz1lc3M8yenJxLttY3dDwW+eUEbaWcuX2v0wg3LorPMVkqMP3ttovflf+AK8u/eOS0SLLquxHSAnSJulNgDzMKP7PC7TY2z/T9N3rVlcZZGQC5bdvqJ5Hjka+C6BVT5Ybz48hb90//tCLBSwAfH0t8DXpMgkybAI17LkPmLjkPdV8d7+kX+OH9PXfoLocpWyPzQzOXEToKicEAVxrJBFE69vhPpfaBIk5iMD7HKQB4zLbx3d7Xz4NRYT78IKOz78Lzj8iFICiC3ZWN9Z+tKpuPySWgAxYFP3SLagNgm5pRrB+3JiZ7XRs/H53K9LuHQiQdA1Joa6x1i0oOAC1/rrpBgcdMxj0CopnrL0lMgt0lEE7M1VxbB7qnxt0/mElOY9FaUOe4hSNoYcVvqtnbtLtaFfAeMUoqNYL8Y0Uzke16w9/IvPd8CLzq5xLdRNaCBqHVp7OAQkx4keJJZ8mPhXmEXOF/9R59mnxZT1sSWa9m26Zy8mDgH9DnAh36hQADguNZBkTQJIo9U3/vG48W4wAAIOKBbW9/3tMbrIEpanDqS/DXxTkjspSKSD2hA8ZXRw8NEwSmQsxgIvRqNRq1CLtxsw23blDtPQZ1Xbs+ExbZiEAA0NLzi3shWVBmT5uuTlVeLbcdliJb82LxDKAak1Dc/hTFKjrOK/wa/A3rQ7dfNECyuAAAAAElFTkSuQmCC"
 
 const BG="#0A0A0A",CARD="#161616",CARD2="#1A1A1A",BORDER="rgba(255,255,255,0.06)",BORDER2="#2A2A2A",TEXT="#FFFFFF",MUTED="#A0A0A0",MUTED2="#555555"
@@ -113,7 +113,7 @@ function decompressCube({tables,rows}){
 function compressArts(arts){return arts.map(a=>[a.name,Math.round(a.precio),a.cantidad,Math.round(a.costo),a.rows,a.rentabilidad??null])}
 function decompressArts(rows){return rows.map(r=>({name:r[0],precio:r[1],cantidad:r[2],costo:r[3],rows:r[4],rentabilidad:r[5]}))}
 function buildCube(rawRecords){
-  const cm={},am={},pm={},rm={}
+  const cm={},am={},pm={},rm={},apm={}
   for(const r of rawRecords){
     const ck=`${r.y}|${r.m}|${r.proveedor??''} |${r.rubro??''} |${r.vendedor??''} |${r.rentabilidad??''} |${r.provincia??''} |${r.cliente??''} |${r.empresa??''} |${r.localidad??''} |${r.zona??''} `
     if(!cm[ck]) cm[ck]={y:r.y,m:r.m,precio:0,cantidad:0,costo:0,rows:0,proveedor:r.proveedor,rubro:r.rubro,vendedor:r.vendedor,rentabilidad:r.rentabilidad,provincia:r.provincia,cliente:r.cliente,empresa:r.empresa,localidad:r.localidad,zona:r.zona}
@@ -123,15 +123,32 @@ function buildCube(rawRecords){
       const a=am[r.articulo];a.precio+=r.precio;a.cantidad+=r.cantidad;a.costo+=r.costo;a.rows++
       if(r.proveedor){if(!pm[r.proveedor]) pm[r.proveedor]={};if(!pm[r.proveedor][r.articulo]) pm[r.proveedor][r.articulo]={precio:0,cantidad:0};pm[r.proveedor][r.articulo].precio+=r.precio;pm[r.proveedor][r.articulo].cantidad+=r.cantidad}
       if(r.rubro){if(!rm[r.rubro]) rm[r.rubro]={};if(!rm[r.rubro][r.articulo]) rm[r.rubro][r.articulo]={precio:0,cantidad:0};rm[r.rubro][r.articulo].precio+=r.precio;rm[r.rubro][r.articulo].cantidad+=r.cantidad}
+      // artPeriod: key = "y|m|prov|rubro" → {art: {precio,cant}}
+      const apk=`${r.y}|${r.m}|${r.proveedor??''}|${r.rubro??''}`
+      if(!apm[apk]) apm[apk]={y:r.y,m:r.m,proveedor:r.proveedor??null,rubro:r.rubro??null,arts:{}}
+      const ap=apm[apk];if(!ap.arts[r.articulo]) ap.arts[r.articulo]={precio:0,cantidad:0,rentabilidad:r.rentabilidad}
+      ap.arts[r.articulo].precio+=r.precio;ap.arts[r.articulo].cantidad+=r.cantidad
     }
   }
   const compressXRef=m=>Object.fromEntries(Object.entries(m).map(([k,arts])=>[k,Object.entries(arts).sort((a,b)=>b[1].precio-a[1].precio).slice(0,20).map(([name,v])=>[name,Math.round(v.precio),v.cantidad])]))
-  return{cube:Object.values(cm),articulos:Object.values(am),provArts:compressXRef(pm),ruboArts:compressXRef(rm)}
+  const artPeriod=Object.values(apm).map(e=>({y:e.y,m:e.m,proveedor:e.proveedor,rubro:e.rubro,arts:Object.entries(e.arts).map(([name,v])=>({name,precio:Math.round(v.precio),cantidad:v.cantidad,rentabilidad:v.rentabilidad}))}))
+  return{cube:Object.values(cm),articulos:Object.values(am),provArts:compressXRef(pm),ruboArts:compressXRef(rm),artPeriod}
 }
 function mergeCubes(a,b){
   const m={}
   const add=r=>{const k=`${r.y}|${r.m}|${r.proveedor??''} |${r.rubro??''} |${r.vendedor??''} |${r.rentabilidad??''} |${r.provincia??''} |${r.cliente??''} |${r.empresa??''} |${r.localidad??''} |${r.zona??''} `;if(!m[k]) m[k]={...r};else{m[k].precio+=r.precio;m[k].cantidad+=r.cantidad;m[k].costo+=r.costo;m[k].rows+=r.rows}}
   a.forEach(add);b.forEach(add);return Object.values(m)
+}
+function mergeArtPeriod(a,b){
+  // merge two artPeriod arrays: same key = same y+m+prov+rubro
+  const m={}
+  const add=e=>{
+    const k=`${e.y}|${e.m}|${e.proveedor??''}|${e.rubro??''}`
+    if(!m[k]){m[k]={...e,arts:{...Object.fromEntries(e.arts.map(a=>[a.name,{...a}]))}}}
+    else{e.arts.forEach(a=>{if(!m[k].arts[a.name]) m[k].arts[a.name]={...a};else{m[k].arts[a.name].precio+=a.precio;m[k].arts[a.name].cantidad+=a.cantidad}})}
+  }
+  ;(a||[]).forEach(add);(b||[]).forEach(add)
+  return Object.values(m).map(e=>({...e,arts:Object.values(e.arts)}))
 }
 function mergeArts(a,b){
   const m={}
@@ -151,21 +168,22 @@ function mergeXRef(a,b){
 }
 async function loadData(){
   try{
-    const[cv,av,mv,pv,rv]=await Promise.all([dbGet(SK),dbGet(AK),dbGet(MK),dbGet(PAK),dbGet(RAK)])
+    const[cv,av,mv,pv,rv,apv]=await Promise.all([dbGet(SK),dbGet(AK),dbGet(MK),dbGet(PAK),dbGet(RAK),dbGet(APAK)])
     return{
       cube:cv?decompressCube(JSON.parse(cv)):null,
       articulos:av?decompressArts(JSON.parse(av)):null,
       meta:mv?JSON.parse(mv):null,
       provArts:pv?JSON.parse(pv):null,
       ruboArts:rv?JSON.parse(rv):null,
+      artPeriod:apv?JSON.parse(apv):null,
     }
-  }catch(e){return{cube:null,articulos:null,meta:null,provArts:null,ruboArts:null,error:String(e)}}
+  }catch(e){return{cube:null,articulos:null,meta:null,provArts:null,ruboArts:null,artPeriod:null,error:String(e)}}
 }
-async function saveData(cube,arts,meta,provArts,ruboArts){
+async function saveData(cube,arts,meta,provArts,ruboArts,artPeriod){
   const cs=JSON.stringify(compressCube(cube)),as=JSON.stringify(compressArts(arts)),ms=JSON.stringify(meta)
-  const ps=JSON.stringify(provArts||{}),rs=JSON.stringify(ruboArts||{})
-  const kb=Math.round((cs.length+as.length+ms.length+ps.length+rs.length)/1024)
-  await Promise.all([dbSet(SK,cs),dbSet(AK,as),dbSet(MK,ms),dbSet(PAK,ps),dbSet(RAK,rs)])
+  const ps=JSON.stringify(provArts||{}),rs=JSON.stringify(ruboArts||{}),aps=JSON.stringify(artPeriod||[])
+  const kb=Math.round((cs.length+as.length+ms.length+ps.length+rs.length+aps.length)/1024)
+  await Promise.all([dbSet(SK,cs),dbSet(AK,as),dbSet(MK,ms),dbSet(PAK,ps),dbSet(RAK,rs),dbSet(APAK,aps)])
   return kb
 }
 async function clearData(){await Promise.all([dbDelete(SK),dbDelete(AK),dbDelete(MK)])}
@@ -300,82 +318,84 @@ function DetailTab({data,hasCantidad,totalVentas,totalUnidades,dimLabel,color}){
     <BarList data={data} colorFn={color} totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={hasCantidad} limit={15}/>
   </ChartCard>
 )}
-function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,records,provArts,ruboArts}){
-  // records = full cube (tiene y,m,proveedor,rubro pero NO articulo)
-  // provArts = {prov: [[name,precio,cant],...]}
-  // ruboArts = {rubro: [[name,precio,cant],...]}
+function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,artPeriod,provArts,ruboArts}){
+  // artPeriod: [{y,m,proveedor,rubro,arts:[{name,precio,cantidad,rentabilidad},...]}]
+  // data: artData global (all-time totals), used when no filters applied
   const[metric,setMetric]=useState("pesos")
   const[expanded,setExpanded]=useState(false)
   const[search,setSearch]=useState("")
   const[filterProv,setFilterProv]=useState("__ALL__")
   const[filterRubro,setFilterRubro]=useState("__ALL__")
-  const allYears=[...new Set((records||[]).map(r=>r.y).filter(v=>v>0))].sort((a,b)=>a-b)
+
+  // Derive available years, provs, rubros from artPeriod (if available) else from data
+  const hasAP=(artPeriod||[]).length>0
+  const allYears=hasAP?[...new Set(artPeriod.map(e=>e.y).filter(v=>v>0))].sort((a,b)=>a-b):[]
   const[filterYear,setFilterYear]=useState("__ALL__")
   const[mesDesde,setMesDesde]=useState("__ALL__")
   const[mesHasta,setMesHasta]=useState("__ALL__")
-  const allProvs=[...new Set((records||[]).map(r=>r.proveedor).filter(Boolean))].sort()
-  const allRubros=[...new Set((records||[]).map(r=>r.rubro).filter(Boolean))].sort()
 
-  // meses disponibles segun año seleccionado
-  const allMonths=[...new Set((records||[]).filter(r=>filterYear==="__ALL__"||r.y===parseInt(filterYear)).map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
+  // Months available for the selected year
+  const allMonths=hasAP?[...new Set(artPeriod.filter(e=>filterYear==="__ALL__"||e.y===parseInt(filterYear)).map(e=>e.m).filter(v=>v!==undefined))].sort((a,b)=>a-b):[]
 
-  // Reset mes cuando cambia año
   const handleYearChange=y=>{setFilterYear(y);setMesDesde("__ALL__");setMesHasta("__ALL__")}
+
+  // Proveedores and rubros from artPeriod or xrefs
+  const allProvs=hasAP?[...new Set(artPeriod.map(e=>e.proveedor).filter(Boolean))].sort()
+                      :Object.keys(provArts||{}).sort()
+  const allRubros=hasAP?[...new Set(artPeriod.map(e=>e.rubro).filter(Boolean))].sort()
+                       :Object.keys(ruboArts||{}).sort()
 
   const hasFilters=filterProv!=="__ALL__"||filterRubro!=="__ALL__"||filterYear!=="__ALL__"||mesDesde!=="__ALL__"||mesHasta!=="__ALL__"
 
-  // ── Calcular lista de artículos ──
-  let artBase=data // fallback: todo
-  if(hasFilters){
-    // Filtrar registros del cubo por año/mes
-    const recsFiltered=(records||[]).filter(r=>{
-      if(filterYear!=="__ALL__"&&r.y!==parseInt(filterYear)) return false
-      if(mesDesde!=="__ALL__"&&r.m<parseInt(mesDesde)) return false
-      if(mesHasta!=="__ALL__"&&r.m>parseInt(mesHasta)) return false
+  // ── Compute artBase ──────────────────────────────────────────────────────
+  let artBase=data  // default: all-time totals
+
+  if(hasAP&&hasFilters){
+    // Filter artPeriod entries by all active filters
+    const apFiltered=(artPeriod||[]).filter(e=>{
+      if(filterYear!=="__ALL__"&&e.y!==parseInt(filterYear)) return false
+      if(mesDesde!=="__ALL__"&&e.m<parseInt(mesDesde)) return false
+      if(mesHasta!=="__ALL__"&&e.m>parseInt(mesHasta)) return false
+      if(filterProv!=="__ALL__"&&e.proveedor!==filterProv) return false
+      if(filterRubro!=="__ALL__"&&e.rubro!==filterRubro) return false
       return true
     })
-
+    // Aggregate across matching period entries
+    const artMap={}
+    apFiltered.forEach(e=>{
+      e.arts.forEach(a=>{
+        if(!artMap[a.name]) artMap[a.name]={name:a.name,precio:0,cantidad:0,rentabilidad:a.rentabilidad}
+        artMap[a.name].precio+=a.precio
+        artMap[a.name].cantidad+=a.cantidad
+      })
+    })
+    artBase=Object.values(artMap)
+  } else if(!hasAP&&hasFilters){
+    // Fallback: no artPeriod stored yet → use xrefs for prov/rubro filters
     if(filterProv!=="__ALL__"){
-      // Artículos del proveedor en el período: provArts da totales globales,
-      // pero necesitamos proporcional al período → usar los records filtrados
-      // para obtener fracción de ventas del proveedor en el período vs total,
-      // luego escalar los artículos de provArts
-      const provRecsAll=(records||[]).filter(r=>r.proveedor===filterProv)
-      const provRecsPer=recsFiltered.filter(r=>r.proveedor===filterProv)
-      const totalProvAll=provRecsAll.reduce((s,r)=>s+r.precio,0)||1
-      const totalProvPer=provRecsPer.reduce((s,r)=>s+r.precio,0)||0
-      const ratio=totalProvPer/totalProvAll
-      const artsList=(provArts||{})[filterProv]||[]
-      // Si hay filtro de rubro también, intersectar con ruboArts
+      const list=(provArts||{})[filterProv]||[]
       if(filterRubro!=="__ALL__"){
         const ruboSet=new Set(((ruboArts||{})[filterRubro]||[]).map(a=>a[0]))
-        artBase=artsList.filter(a=>ruboSet.has(a[0])).map(a=>({name:a[0],precio:Math.round(a[1]*ratio),cantidad:Math.round(a[2]*ratio)}))
+        artBase=list.filter(a=>ruboSet.has(a[0])).map(a=>({name:a[0],precio:a[1],cantidad:a[2]}))
       } else {
-        artBase=artsList.map(a=>({name:a[0],precio:Math.round(a[1]*ratio),cantidad:Math.round(a[2]*ratio)}))
+        artBase=list.map(a=>({name:a[0],precio:a[1],cantidad:a[2]}))
       }
     } else if(filterRubro!=="__ALL__"){
-      const ruboRecsAll=(records||[]).filter(r=>r.rubro===filterRubro)
-      const ruboRecsPer=recsFiltered.filter(r=>r.rubro===filterRubro)
-      const totalRuboAll=ruboRecsAll.reduce((s,r)=>s+r.precio,0)||1
-      const totalRuboPer=ruboRecsPer.reduce((s,r)=>s+r.precio,0)||0
-      const ratio=totalRuboPer/totalRuboAll
-      const artsList=(ruboArts||{})[filterRubro]||[]
-      artBase=artsList.map(a=>({name:a[0],precio:Math.round(a[1]*ratio),cantidad:Math.round(a[2]*ratio)}))
-    } else {
-      // Solo filtro año/mes: escalar artData global proporcionalmente
-      const totalAll=(records||[]).reduce((s,r)=>s+r.precio,0)||1
-      const totalPer=recsFiltered.reduce((s,r)=>s+r.precio,0)||0
-      const ratio=totalPer/totalAll
-      artBase=(data||[]).map(a=>({...a,precio:Math.round(a.precio*ratio),cantidad:Math.round(a.cantidad*ratio)}))
+      artBase=((ruboArts||{})[filterRubro]||[]).map(a=>({name:a[0],precio:a[1],cantidad:a[2]}))
     }
+    // year/month filters can't be applied without artPeriod, show a note below
   }
 
   const artFiltered=(artBase||[]).filter(d=>d.precio>0&&(!search||d.name.toLowerCase().includes(search.toLowerCase())))
   const totalVentasLocal=artFiltered.reduce((s,d)=>s+d.precio,0)||totalVentas
   const sorted=metric==="pesos"?[...artFiltered].sort((a,b)=>b.precio-a.precio):[...artFiltered].sort((a,b)=>b.cantidad-a.cantidad)
   const shown=expanded?sorted:sorted.slice(0,15)
+
   const inputStyle={background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,fontSize:12,padding:"5px 10px",outline:"none"}
   const selStyle={...inputStyle,cursor:"pointer"}
+
+  const needsReimport=!hasAP&&(filterYear!=="__ALL__"||mesDesde!=="__ALL__"||mesHasta!=="__ALL__")
+
   return(
     <div className="panel-card">
       <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14,alignItems:"center"}}>
@@ -421,7 +441,15 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,records,pr
           {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
         </div>
       </div>
+
+      {needsReimport&&(
+        <div style={{fontSize:11,color:BRAND,background:"rgba(245,179,1,0.08)",border:`1px solid ${BRAND}30`,borderRadius:6,padding:"6px 10px",marginBottom:10}}>
+          ⚠️ Para filtrar por período reimportá el Excel — el índice por fecha se genera al importar.
+        </div>
+      )}
+
       {artFiltered.length===0&&<div style={{fontSize:12,color:MUTED,fontStyle:"italic",padding:8}}>Sin resultados para los filtros aplicados.</div>}
+
       {artFiltered.length>0&&<div style={{overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
           <thead><tr>{["#","Artículo","$ Ventas",...(hasCantidad?["Unidades"]:[]),...(hasRentabilidad?["Rentabilidad"]:[]),"Part. %"].map(h=>(
@@ -1188,6 +1216,7 @@ function App(){
   const[articulos,setArticulos]=useState(null)
   const[provArts,setProvArts]=useState({})
   const[ruboArts,setRuboArts]=useState({})
+  const[artPeriod,setArtPeriod]=useState([])
   const[meta,setMeta]=useState(null)
   const[storageInfo,setStorageInfo]=useState(null)
   const[rawHeaders,setRawHeaders]=useState(null)
@@ -1214,12 +1243,12 @@ function App(){
 
   useEffect(()=>{
     const t0=Date.now()
-    loadData().then(({cube:c,articulos:a,meta:m,provArts:pa,ruboArts:ra,error})=>{
+    loadData().then(({cube:c,articulos:a,meta:m,provArts:pa,ruboArts:ra,artPeriod:ap,error})=>{
       const ms=Date.now()-t0
-      if(error){setStorageInfo({ok:false,error});setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});return}
+      if(error){setStorageInfo({ok:false,error});setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});setArtPeriod([]);return}
       const rows=c?.length||0,cells=rows*9
       setStorageInfo({ok:true,loaded:true,rows,cells,ms})
-      setCube(c||[]);setArticulos(a||[]);setMeta(m||{});setProvArts(pa||{});setRuboArts(ra||{})
+      setCube(c||[]);setArticulos(a||[]);setMeta(m||{});setProvArts(pa||{});setRuboArts(ra||{});setArtPeriod(ap||[])
     })
   },[])
 
@@ -1265,14 +1294,15 @@ function App(){
         localidad:has("localidad")?(String(get(row,"localidad")??"").trim()||"Sin localidad"):null,
         zona:has("zona")?(String(get(row,"zona")??"").trim()||"Sin zona"):null}
     }).filter(r=>r.y>0||r.precio>0)
-    const{cube:nc,articulos:na,provArts:npa,ruboArts:nra}=buildCube(parsed)
+    const{cube:nc,articulos:na,provArts:npa,ruboArts:nra,artPeriod:nap}=buildCube(parsed)
     const mc=mergeCubes(records,nc),ma=mergeArts(articulos||[],na)
     const mpa=mergeXRef(provArts||{},npa),mra=mergeXRef(ruboArts||{},nra)
     const cubeKB=Math.round(JSON.stringify(compressCube(mc)).length/1024)
     const ventas=parsed.reduce((s,r)=>s+r.precio,0),unidades=parsed.reduce((s,r)=>s+r.cantidad,0)
     const periods=[...new Set(parsed.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
     setRawHeaders(null);setRawRows(null)
-    setPendingImport({newCube:nc,newArts:na,newProvArts:npa,newRuboArts:nra,newMProvArts:mpa,newMRuboArts:mra,meta:newMeta,stats:{rows:parsed.length,ventas,unidades,hasCantidad:has("cantidad"),periods,existingRows:meta?.totalRows||0,cubeKB}})
+    const map=mergeArtPeriod(artPeriod||[],nap)
+    setPendingImport({newCube:nc,newArts:na,newProvArts:npa,newRuboArts:nra,newMProvArts:mpa,newMRuboArts:mra,newArtPeriod:nap,newMArtPeriod:map,meta:newMeta,stats:{rows:parsed.length,ventas,unidades,hasCantidad:has("cantidad"),periods,existingRows:meta?.totalRows||0,cubeKB}})
   },[rawHeaders,rawRows,records,articulos,meta])
 
   const handleImportConfirm=useCallback(async()=>{
@@ -1281,12 +1311,13 @@ function App(){
     setSaveStage("merging");setSaveProgress(15);await new Promise(r=>setTimeout(r,0))
     const mc=mergeCubes(records,pendingImport.newCube),ma=mergeArts(articulos||[],pendingImport.newArts)
     const mpa=pendingImport.newMProvArts||{},mra=pendingImport.newMRuboArts||{}
+    const map=pendingImport.newMArtPeriod||[]
     const nm={...pendingImport.meta,totalRows:(meta?.totalRows||0)+pendingImport.stats.rows}
     setSaveStage("compressing");setSaveProgress(40);await new Promise(r=>setTimeout(r,0))
-    setCube(mc);setArticulos(ma);setMeta(nm);setProvArts(mpa);setRuboArts(mra)
+    setCube(mc);setArticulos(ma);setMeta(nm);setProvArts(mpa);setRuboArts(mra);setArtPeriod(map)
     setSaveStage("saving");setSaveProgress(70);await new Promise(r=>setTimeout(r,0))
     try{
-      const kb=await saveData(mc,ma,nm,mpa,mra)
+      const kb=await saveData(mc,ma,nm,mpa,mra,map)
       setSaveStage("saved");setSaveProgress(100);setSaveMsg(`Guardado · ${fmtN(kb)} KB`)
       setTimeout(()=>{setSaveStage("idle");setSaveProgress(0);setSaveMsg("")},5000)
     }catch(e){setSaveStage("error");setSaveProgress(0);setSaveMsg(String(e))}
@@ -1629,7 +1660,7 @@ function App(){
                 {safeTab==="rubros"&&<RubrosTab data={rubroData} filteredRecords={filtered} ruboArts={ruboArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="vendedores"&&<VendedoresTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="evolucion"&&<EvolucionTab filteredRecords={filtered} meta={meta}/>}
-                {safeTab==="articulos"&&<ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas} records={records} provArts={provArts} ruboArts={ruboArts}/>}
+                {safeTab==="articulos"&&<ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas} artPeriod={artPeriod} provArts={provArts} ruboArts={ruboArts}/>}
                 {safeTab==="rentabilidad"&&<RentabilidadSection data={rentData} artData={artData} hasCantidad={meta?.hasCantidad}/>}
                 {safeTab==="zonas"&&<DetailTab data={zonaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Zona" color={ACCENT6}/>}
                 {safeTab==="provincias"&&<DetailTab data={pciaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia" color={ACCENT7}/>}
