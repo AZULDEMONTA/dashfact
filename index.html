@@ -202,7 +202,7 @@ function parseDate(v){
   return null
 }
 function fmtM(n){if(n==null)return"$0";const a=Math.abs(n);if(a>=1e9)return`$${(n/1e9).toFixed(1)}B`;if(a>=1e6)return`$${(n/1e6).toFixed(1)}M`;if(a>=1e3)return`$${new Intl.NumberFormat("es-AR").format(Math.round(n/1e3))}K`;return`$${Math.round(n)}`}
-function fmtU(n){if(n==null)return"0";if(Math.abs(n)>=1e3)return`${new Intl.NumberFormat("es-AR").format(Math.round(n/1e3))}K`;return new Intl.NumberFormat("es-AR").format(Math.round(n))}
+function fmtU(n){if(n==null)return"0";return new Intl.NumberFormat("es-AR").format(Math.round(n))}
 const fmtN=n=>new Intl.NumberFormat("es-AR").format(n??0)
 const fmtPct=n=>`${(n??0).toFixed(1)}%`
 const toPeriod=(y,m)=>y*100+m
@@ -300,18 +300,84 @@ function DetailTab({data,hasCantidad,totalVentas,totalUnidades,dimLabel,color}){
     <BarList data={data} colorFn={color} totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={hasCantidad} limit={15}/>
   </ChartCard>
 )}
-function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas}){
+function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,filteredRecords,meta}){
   const[metric,setMetric]=useState("pesos")
   const[expanded,setExpanded]=useState(false)
-  const sorted=metric==="pesos"?[...data].sort((a,b)=>b.precio-a.precio):[...data].sort((a,b)=>b.cantidad-a.cantidad)
-  const shown=expanded?sorted:sorted.slice(0,10)
+  const[search,setSearch]=useState("")
+  const[filterProv,setFilterProv]=useState("__ALL__")
+  const[filterRubro,setFilterRubro]=useState("__ALL__")
+  const allMonths=[...new Set((filteredRecords||[]).map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
+  const[mesDesde,setMesDesde]=useState("__ALL__")
+  const[mesHasta,setMesHasta]=useState("__ALL__")
+  const allProvs=[...new Set((filteredRecords||[]).map(r=>r.proveedor).filter(Boolean))].sort()
+  const allRubros=[...new Set((filteredRecords||[]).map(r=>r.rubro).filter(Boolean))].sort()
+  const useRecords=filteredRecords&&(mesDesde!=="__ALL__"||mesHasta!=="__ALL__"||filterProv!=="__ALL__"||filterRubro!=="__ALL__")
+  let artBase=data
+  if(useRecords){
+    const recFil=(filteredRecords||[]).filter(r=>{
+      if(mesDesde!=="__ALL__"&&r.m<parseInt(mesDesde)) return false
+      if(mesHasta!=="__ALL__"&&r.m>parseInt(mesHasta)) return false
+      if(filterProv!=="__ALL__"&&r.proveedor!==filterProv) return false
+      if(filterRubro!=="__ALL__"&&r.rubro!==filterRubro) return false
+      return true
+    })
+    const artMap={}
+    recFil.forEach(r=>{
+      if(!r.articulo) return
+      const k=r.articulo
+      if(!artMap[k]) artMap[k]={name:k,precio:0,cantidad:0,rentabilidad:r.rentabilidad}
+      artMap[k].precio+=r.precio
+      artMap[k].cantidad+=r.cantidad
+    })
+    artBase=Object.values(artMap)
+  }
+  const artFiltered=artBase.filter(d=>!search||d.name.toLowerCase().includes(search.toLowerCase()))
+  const totalVentasLocal=artFiltered.reduce((s,d)=>s+d.precio,0)||totalVentas
+  const sorted=metric==="pesos"?[...artFiltered].sort((a,b)=>b.precio-a.precio):[...artFiltered].sort((a,b)=>b.cantidad-a.cantidad)
+  const shown=expanded?sorted:sorted.slice(0,15)
+  const inputStyle={background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,fontSize:12,padding:"5px 10px",outline:"none"}
+  const selStyle={...inputStyle,cursor:"pointer"}
   return(
     <div className="panel-card">
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-        <div><span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED2,fontWeight:500}}>Por Artículo</span><span style={{fontSize:10,color:MUTED2,marginLeft:8,background:"rgba(255,255,255,0.05)",padding:"2px 8px",borderRadius:20}}>{data.length} artículos</span></div>
-        {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14,alignItems:"center"}}>
+        <div style={{flex:"1 1 200px"}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar artículo…" style={{...inputStyle,width:"100%",boxSizing:"border-box"}}/>
+        </div>
+        {allProvs.length>0&&(
+          <select value={filterProv} onChange={e=>setFilterProv(e.target.value)} style={{...selStyle,maxWidth:180}}>
+            <option value="__ALL__">Todos los proveedores</option>
+            {allProvs.map(p=><option key={p} value={p}>{p}</option>)}
+          </select>
+        )}
+        {allRubros.length>0&&(
+          <select value={filterRubro} onChange={e=>setFilterRubro(e.target.value)} style={{...selStyle,maxWidth:180}}>
+            <option value="__ALL__">Todas las líneas/rubros</option>
+            {allRubros.map(r=><option key={r} value={r}>{r}</option>)}
+          </select>
+        )}
+        {allMonths.length>1&&(<React.Fragment>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Mes desde:</span>
+            <select value={mesDesde} onChange={e=>{setMesDesde(e.target.value);if(e.target.value!=="__ALL__"&&mesHasta!=="__ALL__"&&parseInt(e.target.value)>parseInt(mesHasta))setMesHasta(e.target.value)}} style={selStyle}>
+              <option value="__ALL__">Todos</option>
+              {allMonths.map(m=><option key={m} value={String(m)}>{MESES[m-1]||m}</option>)}
+            </select>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Hasta:</span>
+            <select value={mesHasta} onChange={e=>setMesHasta(e.target.value)} style={selStyle}>
+              <option value="__ALL__">Todos</option>
+              {allMonths.filter(m=>mesDesde==="__ALL__"||m>=parseInt(mesDesde)).map(m=><option key={m} value={String(m)}>{MESES[m-1]||m}</option>)}
+            </select>
+          </div>
+        </React.Fragment>)}
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:10,color:MUTED}}>{artFiltered.length} artículos</span>
+          {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
+        </div>
       </div>
-      <div style={{overflowX:"auto"}}>
+      {artFiltered.length===0&&<div style={{fontSize:12,color:MUTED,fontStyle:"italic",padding:8}}>Sin resultados para los filtros aplicados.</div>}
+      {artFiltered.length>0&&<div style={{overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
           <thead><tr>{["#","Artículo","$ Ventas",...(hasCantidad?["Unidades"]:[]),...(hasRentabilidad?["Rentabilidad"]:[]),"Part. %"].map(h=>(
             <th key={h} style={{padding:"6px 8px",textAlign:h==="Artículo"?"left":"right",color:MUTED2,fontSize:9,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap"}}>{h}</th>
@@ -323,12 +389,12 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas}){
               <td style={{padding:"7px 8px",color:BRAND,textAlign:"right",fontWeight:500}}>{fmtM(d.precio)}</td>
               {hasCantidad&&<td style={{padding:"7px 8px",color:ACCENT1,textAlign:"right",fontWeight:500}}>{fmtU(d.cantidad)}</td>}
               {hasRentabilidad&&<td style={{padding:"7px 8px",textAlign:"right"}}><RentBadge nivel={d.rentabilidad||"Sin dato"}/></td>}
-              <td style={{padding:"7px 8px",color:MUTED2,textAlign:"right"}}>{fmtPct(totalVentas>0?d.precio/totalVentas*100:0)}</td>
+              <td style={{padding:"7px 8px",color:MUTED2,textAlign:"right"}}>{fmtPct(totalVentasLocal>0?d.precio/totalVentasLocal*100:0)}</td>
             </tr>
           ))}</tbody>
         </table>
-      </div>
-      {!expanded&&data.length>10&&<button onClick={()=>setExpanded(true)} style={{fontSize:11,color:BRAND,background:"none",border:"none",cursor:"pointer",marginTop:8,padding:0}}>+ Ver {data.length-10} más</button>}
+      </div>}
+      {!expanded&&artFiltered.length>15&&<button onClick={()=>setExpanded(true)} style={{fontSize:11,color:BRAND,background:"none",border:"none",cursor:"pointer",marginTop:8,padding:0}}>+ Ver {artFiltered.length-15} más</button>}
       {expanded&&<button onClick={()=>setExpanded(false)} style={{fontSize:11,color:MUTED,background:"none",border:"none",cursor:"pointer",marginTop:8,padding:0}}>Ver menos ▲</button>}
     </div>
   )
@@ -616,23 +682,85 @@ function ConfirmImportModal({stats,onConfirm,onCancel}){
 function ProveedoresTab({data,filteredRecords,provArts,hasCantidad,totalVentas,totalUnidades}){
   const[sel,setSel]=useState(null)
   const[metric,setMetric]=useState("pesos")
-  const sorted=metric==="pesos"?[...data].sort((a,b)=>b.ventas-a.ventas):[...data].sort((a,b)=>b.cantidad-a.cantidad)
+  const[search,setSearch]=useState("")
+  const allMonths=[...new Set(filteredRecords.map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
+  const[mesDesde,setMesDesde]=useState("__ALL__")
+  const[mesHasta,setMesHasta]=useState("__ALL__")
+
+  // Filter records by month range
+  const baseRecs=filteredRecords.filter(r=>{
+    if(mesDesde!=="__ALL__"&&r.m<parseInt(mesDesde)) return false
+    if(mesHasta!=="__ALL__"&&r.m>parseInt(mesHasta)) return false
+    return true
+  })
+
+  // Rebuild provData from filtered records
+  const provMapLocal={}
+  baseRecs.forEach(r=>{
+    const k=r.proveedor||"Sin proveedor"
+    if(!provMapLocal[k]) provMapLocal[k]={name:k,ventas:0,cantidad:0,rows:0}
+    provMapLocal[k].ventas+=r.precio
+    provMapLocal[k].cantidad+=r.cantidad
+    provMapLocal[k].rows+=(r.rows||1)
+  })
+  const localData=Object.values(provMapLocal)
+  const totalVentasLocal=baseRecs.reduce((s,r)=>s+r.precio,0)
+  const totalUnidadesLocal=baseRecs.reduce((s,r)=>s+r.cantidad,0)
+
+  const filtered=localData.filter(d=>!search||d.name.toLowerCase().includes(search.toLowerCase()))
+  const sorted=metric==="pesos"?[...filtered].sort((a,b)=>b.ventas-a.ventas):[...filtered].sort((a,b)=>b.cantidad-a.cantidad)
   const maxV=sorted[0]?.[metric==="pesos"?"ventas":"cantidad"]||1
-  const total=metric==="pesos"?totalVentas:totalUnidades
+  const total=metric==="pesos"?totalVentasLocal:totalUnidadesLocal
+
   function getRubros(provName){
     const map={}
-    filteredRecords.filter(r=>r.proveedor===provName&&r.rubro).forEach(r=>{if(!map[r.rubro]) map[r.rubro]={name:r.rubro,precio:0,cantidad:0};map[r.rubro].precio+=r.precio;map[r.rubro].cantidad+=r.cantidad})
+    baseRecs.filter(r=>r.proveedor===provName&&r.rubro).forEach(r=>{if(!map[r.rubro]) map[r.rubro]={name:r.rubro,precio:0,cantidad:0};map[r.rubro].precio+=r.precio;map[r.rubro].cantidad+=r.cantidad})
     return Object.values(map).sort((a,b)=>b.precio-a.precio).slice(0,8)
   }
+
+  function getArts(provName){
+    const map={}
+    baseRecs.filter(r=>r.proveedor===provName&&r.articulo).forEach(r=>{if(!map[r.articulo]) map[r.articulo]=[r.articulo,0,0];map[r.articulo][1]+=r.precio;map[r.articulo][2]+=r.cantidad})
+    return Object.values(map).sort((a,b)=>b[1]-a[1]).slice(0,8)
+  }
+
+  const inputStyle={background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,fontSize:12,padding:"5px 10px",outline:"none"}
+  const selStyle={...inputStyle,cursor:"pointer"}
+
   return(
     <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:"16px 18px"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-        <div><span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Ranking por Proveedor</span><span style={{fontSize:11,color:MUTED,marginLeft:8}}>{data.length} proveedores</span></div>
-        {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
+      {/* Filtros */}
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14,alignItems:"center"}}>
+        <div style={{flex:"1 1 180px"}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar proveedor…" style={{...inputStyle,width:"100%",boxSizing:"border-box"}}/>
+        </div>
+        {allMonths.length>1&&(<>
+          <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Mes desde:</span>
+            <select value={mesDesde} onChange={e=>{setMesDesde(e.target.value);if(e.target.value!=="__ALL__"&&mesHasta!=="__ALL__"&&parseInt(e.target.value)>parseInt(mesHasta))setMesHasta(e.target.value)}} style={selStyle}>
+              <option value="__ALL__">Todos</option>
+              {allMonths.map(m=><option key={m} value={String(m)}>{MESES[m-1]||m}</option>)}
+            </select>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Hasta:</span>
+            <select value={mesHasta} onChange={e=>setMesHasta(e.target.value)} style={selStyle}>
+              <option value="__ALL__">Todos</option>
+              {allMonths.filter(m=>mesDesde==="__ALL__"||m>=parseInt(mesDesde)).map(m=><option key={m} value={String(m)}>{MESES[m-1]||m}</option>)}
+            </select>
+          </div>
+        </>)}
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
+          <div><span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Proveedores</span><span style={{fontSize:11,color:MUTED,marginLeft:6}}>{sorted.length}{search?` de ${localData.length}`:""}</span></div>
+          {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
+        </div>
       </div>
+
+      {sorted.length===0&&<div style={{fontSize:12,color:MUTED,fontStyle:"italic",padding:12}}>Sin resultados para los filtros aplicados.</div>}
+
       {sorted.map((d,i)=>{
         const rubros=sel===d.name?getRubros(d.name):[]
-        const arts=(provArts[d.name]||[]).slice(0,8)
+        const arts=sel===d.name?getArts(d.name):(provArts[d.name]||[]).slice(0,8)
         return(
           <div key={d.name}>
             <div onClick={()=>setSel(sel===d.name?null:d.name)}
@@ -659,6 +787,7 @@ function ProveedoresTab({data,filteredRecords,provArts,hasCantidad,totalVentas,t
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:2,gap:8}}>
                           <span style={{fontSize:12,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{r.name}</span>
                           <span style={{fontSize:12,fontWeight:500,color:ACCENT2,flexShrink:0}}>{fmtM(r.precio)}</span>
+                          {hasCantidad&&<span style={{fontSize:11,color:MUTED,flexShrink:0}}>{fmtU(r.cantidad)} u.</span>}
                           <span style={{fontSize:11,color:MUTED,width:36,textAlign:"right",flexShrink:0}}>{fmtPct(d.ventas>0?r.precio/d.ventas*100:0)}</span>
                         </div>
                         <div style={{height:3,background:"#dde1f0",borderRadius:2}}><div style={{height:"100%",width:`${d.ventas>0?r.precio/d.ventas*100:0}%`,background:ACCENT2,borderRadius:2,opacity:0.75}}/></div>
@@ -696,17 +825,76 @@ function ProveedoresTab({data,filteredRecords,provArts,hasCantidad,totalVentas,t
 function RubrosTab({data,filteredRecords,ruboArts,hasCantidad,totalVentas,totalUnidades}){
   const[sel,setSel]=useState(null)
   const[metric,setMetric]=useState("pesos")
-  const sorted=metric==="pesos"?[...data].sort((a,b)=>b.ventas-a.ventas):[...data].sort((a,b)=>b.cantidad-a.cantidad)
+  const[search,setSearch]=useState("")
+  const allMonths=[...new Set(filteredRecords.map(r=>r.m).filter(v=>v!==undefined))].sort((a,b)=>a-b)
+  const[mesDesde,setMesDesde]=useState("__ALL__")
+  const[mesHasta,setMesHasta]=useState("__ALL__")
+
+  const baseRecs=filteredRecords.filter(r=>{
+    if(mesDesde!=="__ALL__"&&r.m<parseInt(mesDesde)) return false
+    if(mesHasta!=="__ALL__"&&r.m>parseInt(mesHasta)) return false
+    return true
+  })
+
+  const ruboMapLocal={}
+  baseRecs.forEach(r=>{
+    const k=r.rubro||"Sin rubro"
+    if(!ruboMapLocal[k]) ruboMapLocal[k]={name:k,ventas:0,cantidad:0,rows:0}
+    ruboMapLocal[k].ventas+=r.precio
+    ruboMapLocal[k].cantidad+=r.cantidad
+    ruboMapLocal[k].rows+=(r.rows||1)
+  })
+  const localData=Object.values(ruboMapLocal)
+  const totalVentasLocal=baseRecs.reduce((s,r)=>s+r.precio,0)
+  const totalUnidadesLocal=baseRecs.reduce((s,r)=>s+r.cantidad,0)
+
+  const filtered=localData.filter(d=>!search||d.name.toLowerCase().includes(search.toLowerCase()))
+  const sorted=metric==="pesos"?[...filtered].sort((a,b)=>b.ventas-a.ventas):[...filtered].sort((a,b)=>b.cantidad-a.cantidad)
   const maxV=sorted[0]?.[metric==="pesos"?"ventas":"cantidad"]||1
-  const total=metric==="pesos"?totalVentas:totalUnidades
+  const total=metric==="pesos"?totalVentasLocal:totalUnidadesLocal
+
+  function getArtsRubro(ruboName){
+    const map={}
+    baseRecs.filter(r=>r.rubro===ruboName&&r.articulo).forEach(r=>{if(!map[r.articulo]) map[r.articulo]=[r.articulo,0,0];map[r.articulo][1]+=r.precio;map[r.articulo][2]+=r.cantidad})
+    return Object.values(map).sort((a,b)=>b[1]-a[1]).slice(0,10)
+  }
+
+  const inputStyle={background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,fontSize:12,padding:"5px 10px",outline:"none"}
+  const selStyle={...inputStyle,cursor:"pointer"}
+
   return(
     <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:14,padding:"16px 18px"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-        <div><span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Ranking por Rubro</span><span style={{fontSize:11,color:MUTED,marginLeft:8}}>{data.length} rubros</span></div>
-        {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
+      {/* Filtros */}
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14,alignItems:"center"}}>
+        <div style={{flex:"1 1 180px"}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar rubro / línea…" style={{...inputStyle,width:"100%",boxSizing:"border-box"}}/>
+        </div>
+        {allMonths.length>1&&(<>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Mes desde:</span>
+            <select value={mesDesde} onChange={e=>{setMesDesde(e.target.value);if(e.target.value!=="__ALL__"&&mesHasta!=="__ALL__"&&parseInt(e.target.value)>parseInt(mesHasta))setMesHasta(e.target.value)}} style={selStyle}>
+              <option value="__ALL__">Todos</option>
+              {allMonths.map(m=><option key={m} value={String(m)}>{MESES[m-1]||m}</option>)}
+            </select>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:11,color:MUTED,whiteSpace:"nowrap"}}>Hasta:</span>
+            <select value={mesHasta} onChange={e=>setMesHasta(e.target.value)} style={selStyle}>
+              <option value="__ALL__">Todos</option>
+              {allMonths.filter(m=>mesDesde==="__ALL__"||m>=parseInt(mesDesde)).map(m=><option key={m} value={String(m)}>{MESES[m-1]||m}</option>)}
+            </select>
+          </div>
+        </>)}
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
+          <div><span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Rubros</span><span style={{fontSize:11,color:MUTED,marginLeft:6}}>{sorted.length}{search?` de ${localData.length}`:""}</span></div>
+          {hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
+        </div>
       </div>
+
+      {sorted.length===0&&<div style={{fontSize:12,color:MUTED,fontStyle:"italic",padding:12}}>Sin resultados para los filtros aplicados.</div>}
+
       {sorted.map((d,i)=>{
-        const arts=(ruboArts[d.name]||[]).slice(0,10)
+        const arts=sel===d.name?getArtsRubro(d.name):(ruboArts[d.name]||[]).slice(0,10)
         return(
           <div key={d.name}>
             <div onClick={()=>setSel(sel===d.name?null:d.name)}
@@ -1376,7 +1564,7 @@ function App(){
                 {safeTab==="rubros"&&<RubrosTab data={rubroData} filteredRecords={filtered} ruboArts={ruboArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="vendedores"&&<VendedoresTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="evolucion"&&<EvolucionTab filteredRecords={filtered} meta={meta}/>}
-                {safeTab==="articulos"&&<ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas}/>}
+                {safeTab==="articulos"&&<ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas} filteredRecords={filtered} meta={meta}/>}
                 {safeTab==="rentabilidad"&&<RentabilidadSection data={rentData} artData={artData} hasCantidad={meta?.hasCantidad}/>}
                 {safeTab==="zonas"&&<DetailTab data={zonaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Zona" color={ACCENT6}/>}
                 {safeTab==="provincias"&&<DetailTab data={pciaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia" color={ACCENT7}/>}
