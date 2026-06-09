@@ -30,8 +30,16 @@
     .nav-item:hover{background:rgba(245,179,1,0.06);color:#FFD95A}
     .nav-item.active{background:rgba(245,179,1,0.10);color:#F5B301;border-left-color:#F5B301}
     .nav-item i{font-size:18px;flex-shrink:0;width:20px;text-align:center}
-    .filter-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;background:#161616;border:1px solid #2A2A2A;border-radius:8px;cursor:pointer;color:#A0A0A0;font-size:11px;transition:all .15s;white-space:nowrap}
-    .filter-pill:hover{background:#1E1E1E;border-color:#F5B301;color:#FFD95A}
+    .fcell{display:flex;flex-direction:column;justify-content:center;padding:6px 12px;border-right:1px solid #1E1E1E;cursor:pointer;transition:background .15s;min-width:0}
+    .fcell:hover{background:rgba(245,179,1,0.05)}
+    .fcell-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:#444;margin-bottom:2px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+    .fcell-lbl i{font-size:11px}
+    .fcell-val{font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+    .fcell select{background:transparent;border:none;color:inherit;font-size:11px;outline:none;cursor:pointer;font-family:inherit;padding:0;max-width:110px}
+    .fcell.on{background:rgba(245,179,1,0.08);border-top:2px solid #F5B301;padding-top:4px}
+    .fcell.on .fcell-lbl{color:#C98F00}
+    .fcell.on .fcell-val{color:#F5B301;font-weight:500}
+    .fcell.on select{color:#F5B301}
     .kpi-card{background:#161616;border:1px solid #2A2A2A;border-radius:12px;padding:16px;transition:border-color .2s;position:relative;overflow:hidden}
     .kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#F5B301,#FFD95A)}
     .kpi-card:hover{border-color:#F5B301}
@@ -1629,32 +1637,42 @@ function App(){
         </div>
 
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
-          <div style={{background:SIDEBAR,padding:"10px 20px",display:"flex",alignItems:"center",gap:8,flexShrink:0,borderBottom:`1px solid ${BORDER}`,flexWrap:"wrap"}}>
-            <span style={{fontSize:13,fontWeight:500,color:TEXT,marginRight:4}}>{TABS.find(t=>t.key===safeTab)?.label||"Dashboard"}</span>
-            {yearsDisp.length>1&&<div className="filter-pill">
-              <i className="ti ti-calendar" style={{fontSize:13,color:MUTED2}} aria-hidden="true"/>
-              <select value={fYear} onChange={e=>{setFYear(e.target.value);setFMes("__ALL__")}} style={{background:"transparent",border:"none",color:MUTED,padding:0,fontSize:11,width:"auto",cursor:"pointer",outline:"none"}}>
-                <option value="__ALL__" style={{background:CARD}}>Todos los años</option>
-                {yearsDisp.map(y=><option key={y} value={String(y)} style={{background:CARD}}>{y}</option>)}
-              </select>
-            </div>}
-            <div className="filter-pill">
-              <i className="ti ti-calendar-month" style={{fontSize:13,color:MUTED2}} aria-hidden="true"/>
-              <select value={fMes} onChange={e=>setFMes(e.target.value)} style={{background:"transparent",border:"none",color:MUTED,padding:0,fontSize:11,width:"auto",cursor:"pointer",outline:"none"}}>
-                <option value="__ALL__" style={{background:CARD}}>Todos los meses</option>
-                {mesesDisp.map(m=><option key={m} value={String(m)} style={{background:CARD}}>{MESES[m]}</option>)}
-              </select>
+          <div style={{background:SIDEBAR,display:"flex",alignItems:"stretch",flexShrink:0,borderBottom:`1px solid ${BORDER}`,overflowX:"auto"}}>
+            <div style={{display:"flex",alignItems:"center",padding:"0 16px",borderRight:`1px solid #1E1E1E`,flexShrink:0}}>
+              <span style={{fontSize:13,fontWeight:500,color:TEXT,whiteSpace:"nowrap"}}>{TABS.find(t=>t.key===safeTab)?.label||"Dashboard"}</span>
             </div>
-            {meta?.hasEmpresa&&<div className="filter-pill"><i className="ti ti-building" style={{fontSize:13,color:MUTED2}} aria-hidden="true"/><select value={fEmpresa} onChange={e=>setFEmpresa(e.target.value)} style={{background:"transparent",border:"none",color:MUTED,padding:0,fontSize:11,width:"auto",cursor:"pointer",outline:"none"}}><option value="__ALL__" style={{background:CARD}}>Empresa</option>{uniq("empresa").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div>}
-            {meta?.hasProveedor&&<div className="filter-pill"><i className="ti ti-truck" style={{fontSize:13,color:MUTED2}} aria-hidden="true"/><select value={fProv} onChange={e=>setFProv(e.target.value)} style={{background:"transparent",border:"none",color:MUTED,padding:0,fontSize:11,width:"auto",cursor:"pointer",outline:"none"}}><option value="__ALL__" style={{background:CARD}}>Proveedor</option>{uniq("proveedor").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div>}
-            {meta?.hasRubro&&<div className="filter-pill"><i className="ti ti-tag" style={{fontSize:13,color:MUTED2}} aria-hidden="true"/><select value={fRubro} onChange={e=>setFRubro(e.target.value)} style={{background:"transparent",border:"none",color:MUTED,padding:0,fontSize:11,width:"auto",cursor:"pointer",outline:"none"}}><option value="__ALL__" style={{background:CARD}}>Rubro</option>{uniq("rubro").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div>}
-            {meta?.hasVendedor&&<div className="filter-pill"><i className="ti ti-user" style={{fontSize:13,color:MUTED2}} aria-hidden="true"/><select value={fVend} onChange={e=>setFVend(e.target.value)} style={{background:"transparent",border:"none",color:MUTED,padding:0,fontSize:11,width:"auto",cursor:"pointer",outline:"none"}}><option value="__ALL__" style={{background:CARD}}>Vendedor</option>{uniq("vendedor").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div>}
-            {meta?.hasRentabilidad&&<div className="filter-pill"><i className="ti ti-trending-up" style={{fontSize:13,color:MUTED2}} aria-hidden="true"/><select value={fRentab} onChange={e=>setFRentab(e.target.value)} style={{background:"transparent",border:"none",color:MUTED,padding:0,fontSize:11,width:"auto",cursor:"pointer",outline:"none"}}><option value="__ALL__" style={{background:CARD}}>Rentabilidad</option>{["Alta","Media","Baja"].map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div>}
-            {meta?.hasZona&&<div className="filter-pill"><i className="ti ti-map-pin" style={{fontSize:13,color:MUTED2}} aria-hidden="true"/><select value={fZona} onChange={e=>setFZona(e.target.value)} style={{background:"transparent",border:"none",color:MUTED,padding:0,fontSize:11,width:"auto",cursor:"pointer",outline:"none"}}><option value="__ALL__" style={{background:CARD}}>Zona</option>{uniq("zona").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div>}
-            {meta?.hasProvincia&&<div className="filter-pill"><i className="ti ti-map" style={{fontSize:13,color:MUTED2}} aria-hidden="true"/><select value={fPcia} onChange={e=>setFPcia(e.target.value)} style={{background:"transparent",border:"none",color:MUTED,padding:0,fontSize:11,width:"auto",cursor:"pointer",outline:"none"}}><option value="__ALL__" style={{background:CARD}}>Provincia</option>{uniq("provincia").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div>}
-            <div style={{flex:1}}/>
-            <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
-            {hasData&&<span style={{fontSize:10,color:MUTED2,background:"rgba(255,255,255,0.04)",padding:"3px 8px",borderRadius:6}}>{fmtN(filteredRows)} / {fmtN(totalRows)} filas</span>}
+            {yearsDisp.length>1&&(
+              <div className={`fcell${fYear!=="__ALL__"?" on":""}`}>
+                <div className="fcell-lbl"><i className="ti ti-calendar" aria-hidden="true"/>Año</div>
+                <div className="fcell-val">
+                  <select value={fYear} onChange={e=>{setFYear(e.target.value);setFMes("__ALL__")}}>
+                    <option value="__ALL__" style={{background:CARD}}>Todos</option>
+                    {yearsDisp.map(y=><option key={y} value={String(y)} style={{background:CARD}}>{y}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+            <div className={`fcell${fMes!=="__ALL__"?" on":""}`}>
+              <div className="fcell-lbl"><i className="ti ti-calendar-month" aria-hidden="true"/>Mes</div>
+              <div className="fcell-val">
+                <select value={fMes} onChange={e=>setFMes(e.target.value)}>
+                  <option value="__ALL__" style={{background:CARD}}>Todos</option>
+                  {mesesDisp.map(m=><option key={m} value={String(m)} style={{background:CARD}}>{MESES[m]}</option>)}
+                </select>
+              </div>
+            </div>
+            {meta?.hasEmpresa&&<div className={`fcell${fEmpresa!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-building" aria-hidden="true"/>Empresa</div><div className="fcell-val"><select value={fEmpresa} onChange={e=>setFEmpresa(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todas</option>{uniq("empresa").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
+            {meta?.hasProveedor&&<div className={`fcell${fProv!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-truck" aria-hidden="true"/>Proveedor</div><div className="fcell-val"><select value={fProv} onChange={e=>setFProv(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todos</option>{uniq("proveedor").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
+            {meta?.hasRubro&&<div className={`fcell${fRubro!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-tag" aria-hidden="true"/>Rubro</div><div className="fcell-val"><select value={fRubro} onChange={e=>setFRubro(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todos</option>{uniq("rubro").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
+            {meta?.hasVendedor&&<div className={`fcell${fVend!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-user" aria-hidden="true"/>Vendedor</div><div className="fcell-val"><select value={fVend} onChange={e=>setFVend(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todos</option>{uniq("vendedor").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
+            {meta?.hasRentabilidad&&<div className={`fcell${fRentab!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-trending-up" aria-hidden="true"/>Rentabilidad</div><div className="fcell-val"><select value={fRentab} onChange={e=>setFRentab(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todas</option>{["Alta","Media","Baja"].map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
+            {meta?.hasZona&&<div className={`fcell${fZona!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-map-pin" aria-hidden="true"/>Zona</div><div className="fcell-val"><select value={fZona} onChange={e=>setFZona(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todas</option>{uniq("zona").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
+            {meta?.hasProvincia&&<div className={`fcell${fPcia!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-map" aria-hidden="true"/>Provincia</div><div className="fcell-val"><select value={fPcia} onChange={e=>setFPcia(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todas</option>{uniq("provincia").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
+            {meta?.hasCliente&&<div className={`fcell${fCliente!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-building-store" aria-hidden="true"/>Cliente</div><div className="fcell-val"><select value={fCliente} onChange={e=>setFCliente(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todos</option>{uniq("cliente").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
+            <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8,padding:"0 14px",flexShrink:0,borderLeft:`1px solid #1E1E1E`}}>
+              <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
+              {hasData&&<span style={{fontSize:10,color:MUTED2,background:"rgba(255,255,255,0.04)",padding:"3px 8px",borderRadius:6,whiteSpace:"nowrap"}}>{fmtN(filteredRows)} / {fmtN(totalRows)} filas</span>}
+            </div>
           </div>
 
           <div id="dashfact-content" style={{flex:1,overflow:"auto",padding:"16px 20px",background:BG}}>
