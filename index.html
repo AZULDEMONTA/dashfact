@@ -1902,6 +1902,24 @@ function App(){
   const totalRows=meta?.totalRows||records.reduce((s,r)=>s+(r.rows||1),0)
   const totalVentas=filtered.reduce((s,r)=>s+r.precio,0)
   const totalUnidades=filtered.reduce((s,r)=>s+r.cantidad,0)
+  // Filtros de dimensión de la barra superior (SIN año/mes) para la pestaña Comparación,
+  // que maneja sus propios períodos A/B. El artPeriod sólo conserva proveedor/rubro.
+  const cmpFiltered=records.filter(r=>{
+    if(fProv!=="__ALL__"&&r.proveedor!==fProv) return false
+    if(fRubro!=="__ALL__"&&r.rubro!==fRubro) return false
+    if(fVend!=="__ALL__"&&r.vendedor!==fVend) return false
+    if(fRentab!=="__ALL__"&&r.rentabilidad!==fRentab) return false
+    if(fPcia!=="__ALL__"&&r.provincia!==fPcia) return false
+    if(fCliente!=="__ALL__"&&r.cliente!==fCliente) return false
+    if(fEmpresa!=="__ALL__"&&r.empresa!==fEmpresa) return false
+    if(fZona!=="__ALL__"&&r.zona!==fZona) return false
+    return true
+  })
+  const cmpArtPeriod=(artPeriod||[]).filter(e=>{
+    if(fProv!=="__ALL__"&&e.proveedor!==fProv) return false
+    if(fRubro!=="__ALL__"&&e.rubro!==fRubro) return false
+    return true
+  })
   function groupBy(arr,key){const map={};arr.forEach(r=>{const k=r[key]||"Sin dato";if(!map[k]) map[k]={name:k,ventas:0,costo:0,cantidad:0,rows:0,rentabilidad:r.rentabilidad};map[k].ventas+=r.precio;map[k].costo+=r.costo;map[k].cantidad+=r.cantidad;map[k].rows+=(r.rows||1)});return Object.values(map).sort((a,b)=>b.ventas-a.ventas)}
   const provData=meta?.hasProveedor?groupBy(filtered,"proveedor"):[]
   const rubroData=meta?.hasRubro?groupBy(filtered,"rubro"):[]
@@ -2047,7 +2065,7 @@ function App(){
                 {safeTab==="zonas"&&<DetailTab data={zonaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Zona" color={ACCENT6}/>}
                 {safeTab==="provincias"&&<DetailTab data={pciaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia" color={ACCENT7}/>}
                 {safeTab==="clientes-periodo"&&<ClientesPeriodoTab filteredRecords={filtered} meta={meta}/>}
-                {safeTab==="comparacion"&&<ComparacionTab records={records} provArts={provArts} ruboArts={ruboArts} artPeriod={artPeriod} meta={meta}/>}
+                {safeTab==="comparacion"&&<ComparacionTab records={cmpFiltered} provArts={provArts} ruboArts={ruboArts} artPeriod={cmpArtPeriod} meta={meta}/>}
               </>
             )}
           </div>
