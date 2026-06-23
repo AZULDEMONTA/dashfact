@@ -1250,6 +1250,337 @@ function ClientesPeriodoTab({filteredRecords,meta}){
 }
 
 /* ─── APP ───────────────────────────────────────────────────────────────────── */
+function ComparacionTab({records,provArts,ruboArts,artPeriod,meta}){
+  const DIMS=[
+    meta?.hasProveedor&&{key:"proveedor",label:"Proveedor"},
+    meta?.hasRubro&&{key:"rubro",label:"Rubro"},
+    meta?.hasArticulo&&{key:"articulo",label:"Artículo"},
+    meta?.hasVendedor&&{key:"vendedor",label:"Vendedor"},
+    meta?.hasCliente&&{key:"cliente",label:"Cliente"},
+    meta?.hasProvincia&&{key:"provincia",label:"Provincia"},
+    meta?.hasZona&&{key:"zona",label:"Zona"},
+    meta?.hasEmpresa&&{key:"empresa",label:"Empresa"},
+    meta?.hasLocalidad&&{key:"localidad",label:"Localidad"},
+  ].filter(Boolean)
+
+  const recs=records||[]
+  const aP=artPeriod||[]
+  const years=[...new Set(recs.map(r=>r.y).filter(y=>y>0))].sort((a,b)=>a-b)
+  const defB=years.length?years[years.length-1]:0
+  const defA=years.length>1?years[years.length-2]:defB
+
+  const[mode,setMode]=React.useState("periodos")
+  const[dim,setDim]=React.useState(DIMS[0]?.key||"proveedor")
+  const[metric,setMetric]=React.useState("pesos")
+  const[ent,setEnt]=React.useState("__ALL__")
+  const[rowMode,setRowMode]=React.useState("mes")
+  const[ay,setAy]=React.useState(String(defA))
+  const[af,setAf]=React.useState("0")
+  const[at,setAt]=React.useState("11")
+  const[by,setBy]=React.useState(String(defB))
+  const[bf,setBf]=React.useState("0")
+  const[bt,setBt]=React.useState("11")
+  const[entA,setEntA]=React.useState("")
+  const[entB,setEntB]=React.useState("")
+  const[pYear,setPYear]=React.useState(String(defB))
+  const[pf,setPf]=React.useState("0")
+  const[pt,setPt]=React.useState("11")
+
+  const isArt=dim==="articulo"
+  const hasUnid=!!meta?.hasCantidad
+  const fmtVal=x=>metric==="pesos"||!hasUnid?fmtM(x):fmtU(x)
+  const fmtDelta=x=>(x>=0?"+ ":"– ")+(metric==="pesos"||!hasUnid?fmtM(Math.abs(x)).slice(1):fmtU(Math.abs(x)))
+  const pct=(a,b)=>a===0?(b===0?0:100):(b-a)/a*100
+  const fmtPctD=x=>(x>=0?"+":"")+x.toFixed(1).replace(".",",")+"%"
+
+  // ----- list of entities for current dim -----
+  const entities=React.useMemo(()=>{
+    if(isArt){
+      const s=new Set()
+      aP.forEach(e=>e.arts.forEach(a=>s.add(a.name)))
+      return [...s].sort()
+    }
+    return [...new Set(recs.map(r=>r[dim]).filter(Boolean))].sort()
+  },[dim,isArt,recs,aP])
+
+  React.useEffect(()=>{
+    if(entA===""||!entities.includes(entA)) setEntA(entities[0]||"")
+    if(entB===""||!entities.includes(entB)) setEntB(entities[1]||entities[0]||"")
+    if(ent!=="__ALL__"&&!entities.includes(ent)) setEnt("__ALL__")
+  },[entities])
+
+  // ----- aggregation helpers -----
+  const valOf=x=>metric==="pesos"||!hasUnid?x.precio:x.cantidad
+  // sum over a year + month range, optionally a single entity
+  const aggRange=React.useCallback((entity,year,mFrom,mTo)=>{
+    let acc=0
+    if(isArt){
+      aP.forEach(e=>{
+        if(e.y!==year||e.m<mFrom||e.m>mTo) return
+        e.arts.forEach(a=>{if(entity==null||a.name===entity) acc+=(metric==="pesos"||!hasUnid?a.precio:(a.cantidad||0))})
+      })
+    }else{
+      recs.forEach(r=>{
+        if(r.y!==year||r.m<mFrom||r.m>mTo) return
+        if(entity!=null&&r[dim]!==entity) return
+        acc+=(metric==="pesos"||!hasUnid?r.precio:r.cantidad)
+      })
+    }
+    return acc
+  },[isArt,aP,recs,dim,metric,hasUnid])
+  // value for a single month
+  const aggMonth=React.useCallback((entity,year,m)=>aggRange(entity,year,m,m),[aggRange])
+
+  const monthOpts=MESES.map((m,i)=>({v:String(i),t:m}))
+  const yearOpts=years.map(y=>({v:String(y),t:String(y)}))
+
+  const Sel=({value,onChange,opts,extra,style})=>(
+    <select value={value} onChange={e=>onChange(e.target.value)} style={{background:CARD,color:TEXT,border:`1px solid ${BORDER2}`,borderRadius:8,padding:"7px 9px",fontSize:13,fontFamily:"inherit",outline:"none",cursor:"pointer",...(style||{})}}>
+      {extra}
+      {opts.map(o=><option key={o.v} value={o.v} style={{background:CARD,color:TEXT}}>{o.t}</option>)}
+    </select>
+  )
+  const Field=({label,children})=>(
+    <div style={{display:"flex",flexDirection:"column",gap:5,minWidth:0}}>
+      <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED2}}>{label}</span>
+      {children}
+    </div>
+  )
+  const dimLabel=DIMS.find(d=>d.key===dim)?.label||"Entidad"
+  const mFrom=parseInt,A_y=parseInt(ay),A_f=parseInt(af),A_t=Math.max(parseInt(af),parseInt(at))
+  const B_y=parseInt(by),B_f=parseInt(bf),B_t=Math.max(parseInt(bf),parseInt(bt))
+  const P_y=parseInt(pYear),P_f=parseInt(pf),P_t=Math.max(parseInt(pf),parseInt(pt))
+
+  // ===== compute KPIs / table / chart data =====
+  let totA=0,totB=0,labelA="",labelB="",rows=[],chartA=[],chartB=[],chartLabels=[]
+  let tableHeaders=[]
+
+  if(mode==="periodos"){
+    labelA=`${MESES[A_f].slice(0,3)}–${MESES[A_t].slice(0,3)} ${A_y}`
+    labelB=`${MESES[B_f].slice(0,3)}–${MESES[B_t].slice(0,3)} ${B_y}`
+    const sel=ent==="__ALL__"?null:ent
+    totA=aggRange(sel,A_y,A_f,A_t)
+    totB=aggRange(sel,B_y,B_f,B_t)
+
+    if(ent==="__ALL__"){
+      tableHeaders=[dimLabel,labelA,labelB,"Δ","Δ %"]
+      rows=entities.map(e=>{
+        const a=aggRange(e,A_y,A_f,A_t),b=aggRange(e,B_y,B_f,B_t)
+        return{key:e,c0:e,a,b,d:b-a,p:pct(a,b)}
+      }).filter(r=>r.a!==0||r.b!==0).sort((x,y)=>y.b-x.b)
+      // chart: top entities by period B
+      const top=rows.slice(0,8)
+      chartLabels=top.map(r=>r.c0)
+      chartA=top.map(r=>r.a);chartB=top.map(r=>r.b)
+    }else if(rowMode==="mes"){
+      tableHeaders=["Mes",`${A_y}`,`${B_y}`,"Δ","Δ %"]
+      const lenA=A_t-A_f+1,lenB=B_t-B_f+1,n=Math.max(lenA,lenB)
+      for(let i=0;i<n;i++){
+        const ma=A_f+i,mb=B_f+i
+        const a=ma<=A_t?aggMonth(sel,A_y,ma):0
+        const b=mb<=B_t?aggMonth(sel,B_y,mb):0
+        const lbl=(ma<=A_t?MESES[ma].slice(0,3):"·")+" / "+(mb<=B_t?MESES[mb].slice(0,3):"·")
+        rows.push({key:i,c0:lbl,a,b,d:b-a,p:pct(a,b)})
+        chartLabels.push(ma<=A_t?MESES[ma].slice(0,3):(mb<=B_t?MESES[mb].slice(0,3):""))
+        chartA.push(a);chartB.push(b)
+      }
+    }else{
+      tableHeaders=[dimLabel,labelA,labelB,"Δ","Δ %"]
+      rows=[{key:sel,c0:sel,a:totA,b:totB,d:totB-totA,p:pct(totA,totB)}]
+      chartLabels=[sel];chartA=[totA];chartB=[totB]
+    }
+  }else{
+    // mode === "entidades": A vs B in one period
+    labelA=entA||"—";labelB=entB||"—"
+    totA=aggRange(entA,P_y,P_f,P_t)
+    totB=aggRange(entB,P_y,P_f,P_t)
+    tableHeaders=["Mes",labelA,labelB,"Δ","Δ %"]
+    for(let m=P_f;m<=P_t;m++){
+      const a=aggMonth(entA,P_y,m),b=aggMonth(entB,P_y,m)
+      rows.push({key:m,c0:MESES[m].slice(0,3),a,b,d:b-a,p:pct(a,b)})
+      chartLabels.push(MESES[m].slice(0,3));chartA.push(a);chartB.push(b)
+    }
+  }
+
+  const dTot=totB-totA,pTot=pct(totA,totB)
+
+  // ===== grouped bar chart (SVG) =====
+  function Chart(){
+    const n=chartLabels.length
+    if(n===0) return <div style={{fontSize:12,color:MUTED2,padding:"20px 0",textAlign:"center"}}>Sin datos para el rango elegido</div>
+    const W=640,H=180,pl=8,pr=8,pTop=12,pBot=26
+    const maxV=Math.max(...chartA,...chartB,1)
+    const iw=W-pl-pr,ih=H-pTop-pBot,gw=iw/n,bw=Math.min(20,gw*0.32)
+    return(
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img">
+        <desc>Comparación entre período A y período B</desc>
+        {[0,1,2,3].map(g=>{const yy=pTop+ih-(ih*g/3);return <line key={g} x1={pl} y1={yy} x2={W-pr} y2={yy} stroke={BORDER2} strokeWidth="1"/>})}
+        {chartLabels.map((lb,j)=>{
+          const cx=pl+gw*j+gw/2
+          const ha=ih*(chartA[j]/maxV),hb=ih*(chartB[j]/maxV)
+          return(
+            <g key={j}>
+              <rect x={cx-bw-2} y={pTop+ih-ha} width={bw} height={Math.max(0,ha)} rx="2" fill={BRAND}/>
+              <rect x={cx+2} y={pTop+ih-hb} width={bw} height={Math.max(0,hb)} rx="2" fill={ACCENT1}/>
+              <text x={cx} y={H-9} fill={MUTED2} fontSize="10" textAnchor="middle" fontFamily="inherit">{String(lb).length>9?String(lb).slice(0,8)+"…":lb}</text>
+            </g>
+          )
+        })}
+      </svg>
+    )
+  }
+
+  const Legend=({color,txt})=>(
+    <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:10,color:MUTED2}}>
+      <i style={{width:9,height:9,borderRadius:2,background:color,display:"inline-block"}}/>{txt}
+    </span>
+  )
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {/* controls */}
+      <div className="panel-card">
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+          <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED2,fontWeight:500}}>Modo de comparación</span>
+          <div style={{display:"flex",background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER2}`,borderRadius:8,padding:2,gap:2}}>
+            {[["periodos","Períodos A vs B"],["entidades","Dos "+(dimLabel.toLowerCase())+"s"]].map(([v,t])=>(
+              <button key={v} onClick={()=>setMode(v)} style={{padding:"5px 12px",background:mode===v?BRAND_LIGHT:"transparent",border:`1px solid ${mode===v?"rgba(245,179,1,0.4)":"transparent"}`,borderRadius:6,color:mode===v?BRAND:MUTED,cursor:"pointer",fontSize:11,fontWeight:mode===v?500:400}}>{t}</button>
+            ))}
+          </div>
+          {hasUnid&&<div style={{marginLeft:"auto"}}><MetricToggle value={metric} onChange={setMetric}/></div>}
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:12}}>
+          <Field label="Analizar por">
+            <Sel value={dim} onChange={v=>{setDim(v);setEnt("__ALL__")}} opts={DIMS.map(d=>({v:d.key,t:d.label}))}/>
+          </Field>
+          {mode==="periodos"&&(
+            <Field label="Filtrar">
+              <Sel value={ent} onChange={setEnt} opts={entities.map(e=>({v:e,t:e}))} extra={<option value="__ALL__" style={{background:CARD,color:TEXT}}>Todos</option>}/>
+            </Field>
+          )}
+          {mode==="periodos"&&ent!=="__ALL__"&&(
+            <Field label="Vista">
+              <Sel value={rowMode} onChange={setRowMode} opts={[{v:"mes",t:"Mes a mes"},{v:"total",t:"Solo total"}]}/>
+            </Field>
+          )}
+        </div>
+
+        {mode==="periodos"?(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div style={{border:`1px solid ${BORDER2}`,borderRadius:10,padding:10}}>
+              <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:.6,color:BRAND,marginBottom:8}}>● Período A</div>
+              <div style={{display:"flex",gap:6}}>
+                <Sel value={ay} onChange={setAy} opts={yearOpts} style={{flex:1,minWidth:0}}/>
+                <Sel value={af} onChange={setAf} opts={monthOpts} style={{flex:1,minWidth:0}}/>
+                <Sel value={at} onChange={setAt} opts={monthOpts} style={{flex:1,minWidth:0}}/>
+              </div>
+            </div>
+            <div style={{border:`1px solid ${BORDER2}`,borderRadius:10,padding:10}}>
+              <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:.6,color:ACCENT1,marginBottom:8}}>● Período B</div>
+              <div style={{display:"flex",gap:6}}>
+                <Sel value={by} onChange={setBy} opts={yearOpts} style={{flex:1,minWidth:0}}/>
+                <Sel value={bf} onChange={setBf} opts={monthOpts} style={{flex:1,minWidth:0}}/>
+                <Sel value={bt} onChange={setBt} opts={monthOpts} style={{flex:1,minWidth:0}}/>
+              </div>
+            </div>
+          </div>
+        ):(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1.4fr",gap:10}}>
+            <div style={{border:`1px solid ${BORDER2}`,borderRadius:10,padding:10}}>
+              <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:.6,color:BRAND,marginBottom:8}}>● {dimLabel} A</div>
+              <Sel value={entA} onChange={setEntA} opts={entities.map(e=>({v:e,t:e}))} style={{width:"100%"}}/>
+            </div>
+            <div style={{border:`1px solid ${BORDER2}`,borderRadius:10,padding:10}}>
+              <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:.6,color:ACCENT1,marginBottom:8}}>● {dimLabel} B</div>
+              <Sel value={entB} onChange={setEntB} opts={entities.map(e=>({v:e,t:e}))} style={{width:"100%"}}/>
+            </div>
+            <div style={{border:`1px solid ${BORDER2}`,borderRadius:10,padding:10}}>
+              <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:.6,color:MUTED2,marginBottom:8}}>● Período</div>
+              <div style={{display:"flex",gap:6}}>
+                <Sel value={pYear} onChange={setPYear} opts={yearOpts} style={{flex:1,minWidth:0}}/>
+                <Sel value={pf} onChange={setPf} opts={monthOpts} style={{flex:1,minWidth:0}}/>
+                <Sel value={pt} onChange={setPt} opts={monthOpts} style={{flex:1,minWidth:0}}/>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* KPIs */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12}}>
+        <div className="panel-card">
+          <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED2,marginBottom:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{labelA}</div>
+          <div style={{fontSize:22,fontWeight:500,color:BRAND}}>{fmtVal(totA)}</div>
+        </div>
+        <div className="panel-card">
+          <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED2,marginBottom:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{labelB}</div>
+          <div style={{fontSize:22,fontWeight:500,color:ACCENT1}}>{fmtVal(totB)}</div>
+        </div>
+        <div className="panel-card">
+          <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED2,marginBottom:8}}>Variación</div>
+          <div style={{fontSize:22,fontWeight:500,color:dTot>=0?ACCENT2:ACCENT5}}>{fmtDelta(dTot)}</div>
+        </div>
+        <div className="panel-card">
+          <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:MUTED2,marginBottom:8}}>Variación %</div>
+          <div style={{fontSize:22,fontWeight:500,color:pTot>=0?ACCENT2:ACCENT5}}>{fmtPctD(pTot)}</div>
+        </div>
+      </div>
+
+      {/* chart */}
+      <div className="panel-card">
+        <div style={{display:"flex",gap:14,alignItems:"center",marginBottom:10}}>
+          <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED2,fontWeight:500}}>{mode==="periodos"&&ent==="__ALL__"?`Top ${dimLabel.toLowerCase()}s`:"Detalle por mes"}</span>
+          <Legend color={BRAND} txt={mode==="entidades"?(entA||"A"):"Período A"}/>
+          <Legend color={ACCENT1} txt={mode==="entidades"?(entB||"B"):"Período B"}/>
+        </div>
+        <Chart/>
+      </div>
+
+      {/* table */}
+      <div className="panel-card" style={{padding:0,overflow:"hidden"}}>
+        <div style={{maxHeight:420,overflow:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+            <thead>
+              <tr>
+                {tableHeaders.map((h,i)=>(
+                  <th key={i} style={{position:"sticky",top:0,background:CARD,color:ACCENT1,fontWeight:500,fontSize:9,letterSpacing:.6,textTransform:"uppercase",textAlign:i===0?"left":"right",padding:"10px 12px",borderBottom:`1px solid ${BRAND}`,zIndex:1}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length===0&&(
+                <tr><td colSpan={tableHeaders.length} style={{padding:"18px 12px",textAlign:"center",color:MUTED2}}>Sin datos para el rango elegido</td></tr>
+              )}
+              {rows.map(r=>{
+                const cls=r.d>=0?ACCENT2:ACCENT5
+                return(
+                  <tr key={r.key}>
+                    <td style={{padding:"8px 12px",textAlign:"left",color:TEXT,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:240,borderBottom:`1px solid ${BORDER2}`}}>{r.c0}</td>
+                    <td style={{padding:"8px 12px",textAlign:"right",color:TEXT,borderBottom:`1px solid ${BORDER2}`}}>{fmtVal(r.a)}</td>
+                    <td style={{padding:"8px 12px",textAlign:"right",color:TEXT,borderBottom:`1px solid ${BORDER2}`}}>{fmtVal(r.b)}</td>
+                    <td style={{padding:"8px 12px",textAlign:"right",color:cls,borderBottom:`1px solid ${BORDER2}`}}>{fmtDelta(r.d)}</td>
+                    <td style={{padding:"8px 12px",textAlign:"right",color:cls,borderBottom:`1px solid ${BORDER2}`}}>{fmtPctD(r.p)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td style={{position:"sticky",bottom:0,background:CARD,color:ACCENT1,fontWeight:500,padding:"10px 12px",textAlign:"left",borderTop:`1px solid ${BRAND}`}}>Total</td>
+                <td style={{position:"sticky",bottom:0,background:CARD,color:ACCENT1,fontWeight:500,padding:"10px 12px",textAlign:"right",borderTop:`1px solid ${BRAND}`}}>{fmtVal(totA)}</td>
+                <td style={{position:"sticky",bottom:0,background:CARD,color:ACCENT1,fontWeight:500,padding:"10px 12px",textAlign:"right",borderTop:`1px solid ${BRAND}`}}>{fmtVal(totB)}</td>
+                <td style={{position:"sticky",bottom:0,background:CARD,color:dTot>=0?ACCENT2:ACCENT5,fontWeight:500,padding:"10px 12px",textAlign:"right",borderTop:`1px solid ${BRAND}`}}>{fmtDelta(dTot)}</td>
+                <td style={{position:"sticky",bottom:0,background:CARD,color:pTot>=0?ACCENT2:ACCENT5,fontWeight:500,padding:"10px 12px",textAlign:"right",borderTop:`1px solid ${BRAND}`}}>{fmtPctD(pTot)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function App(){
   const[cube,setCube]=useState(null)
   const[articulos,setArticulos]=useState(null)
@@ -1593,6 +1924,7 @@ function App(){
     ...(meta?.hasZona?[{key:"zonas",label:"Zonas",icon:"ti-map-pin"}]:[]),
     ...(meta?.hasProvincia?[{key:"provincias",label:"Provincias",icon:"ti-map"}]:[]),
     ...((meta?.hasCliente)?[{key:"clientes-periodo",label:"Clientes × Período",icon:"ti-table"}]:[]),
+    ...((meta?.hasProveedor||meta?.hasRubro||meta?.hasVendedor||meta?.hasCliente||meta?.hasProvincia||meta?.hasZona||meta?.hasEmpresa||meta?.hasLocalidad||meta?.hasArticulo)?[{key:"comparacion",label:"Comparación",icon:"ti-arrows-diff"}]:[]),
   ]
   const safeTab=TABS.find(t=>t.key===activeTab)?activeTab:"resumen"
 
@@ -1715,6 +2047,7 @@ function App(){
                 {safeTab==="zonas"&&<DetailTab data={zonaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Zona" color={ACCENT6}/>}
                 {safeTab==="provincias"&&<DetailTab data={pciaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia" color={ACCENT7}/>}
                 {safeTab==="clientes-periodo"&&<ClientesPeriodoTab filteredRecords={filtered} meta={meta}/>}
+                {safeTab==="comparacion"&&<ComparacionTab records={records} provArts={provArts} ruboArts={ruboArts} artPeriod={artPeriod} meta={meta}/>}
               </>
             )}
           </div>
