@@ -1590,22 +1590,43 @@ function ComparacionTab({records,provArts,ruboArts,artPeriod,meta}){
 function AgenteIATab({records,meta}){
   const[query,setQuery]=useState("")
   const[resultado,setResultado]=useState(null)
+  const[pendiente,setPendiente]=useState(null)
 
   const uniq=key=>[...new Set(records.map(r=>r[key]).filter(Boolean))].sort()
   const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
+  const tokenize=s=>norm(s).replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(Boolean)
+  const STOP=["como","fue","el","la","los","las","de","del","que","paso","con","este","esta","esa","ese","año","ano","mes","meses","trimestre","semestre","viene","cliente","vendedor","rubro","rendimiento","a","un","una","se","por","cual","cuales","es","fueron","tuvo","tuvieron"]
 
   const clientes=meta?.hasCliente?uniq("cliente"):[]
   const vendedoresL=meta?.hasVendedor?uniq("vendedor"):[]
   const rubrosL=meta?.hasRubro?uniq("rubro"):[]
+  const universo=[...clientes.map(v=>[v,"cliente"]),...vendedoresL.map(v=>[v,"vendedor"]),...rubrosL.map(v=>[v,"rubro"])]
 
-  function findEntity(q){
+  function findEntityExacto(q){
     const nq=norm(q)
     let best=null,bestKey=null
-    const candidatos=[...clientes.map(v=>[v,"cliente"]),...vendedoresL.map(v=>[v,"vendedor"]),...rubrosL.map(v=>[v,"rubro"])]
-    candidatos.forEach(([name,tipo])=>{
+    universo.forEach(([name,tipo])=>{
       if(nq.indexOf(norm(name))>=0&&(!best||name.length>best.length)){best=name;bestKey=tipo}
     })
     return best?{tipo:bestKey,valor:best}:null
+  }
+
+  function sigTokens(s){return tokenize(s).filter(t=>t.length>=3&&!STOP.includes(t))}
+
+  function findCandidatosAprox(q){
+    const qTokens=sigTokens(q)
+    if(qTokens.length===0) return[]
+    const scored=universo.map(([name,tipo])=>{
+      const cTokens=sigTokens(name)
+      if(cTokens.length===0) return{name,tipo,score:0}
+      let matched=0
+      cTokens.forEach(ct=>{if(qTokens.some(qt=>qt===ct||qt.indexOf(ct)>=0||ct.indexOf(qt)>=0)) matched++})
+      return{name,tipo,score:matched/cTokens.length}
+    }).filter(c=>c.score>=0.5)
+    scored.sort((a,b)=>b.score-a.score)
+    const vistos=new Set(),out=[]
+    scored.forEach(c=>{if(!vistos.has(c.name)){vistos.add(c.name);out.push(c)}})
+    return out.slice(0,5)
   }
 
   function findVentana(q){
@@ -1617,17 +1638,10 @@ function AgenteIATab({records,meta}){
     return 3
   }
 
-  function responder(q){
-    if(!q||!q.trim()){setResultado(null);return}
-    const ent=findEntity(q)
-    if(!ent){
-      setResultado({tipo:"noEncontrado",vendedores:vendedoresL,rubros:rubrosL})
-      return
-    }
-    const win=findVentana(q)
+  function computeForEntity(ent,win){
     const recsFoco=records.filter(r=>r[ent.tipo]===ent.valor)
     const periods=[...new Set(recsFoco.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
-    if(periods.length===0){setResultado({tipo:"sinDatos",entidad:ent});return}
+    if(periods.length===0) return{tipo:"sinDatos",entidad:ent}
     const currentPeriods=periods.slice(-win),prevPeriods=periods.slice(Math.max(0,periods.length-2*win),periods.length-win)
     const currSet=new Set(currentPeriods),prevSet=new Set(prevPeriods)
     let curr=0,prev=0
@@ -1641,7 +1655,30 @@ function AgenteIATab({records,meta}){
     const byPeriod={}
     recsFoco.forEach(r=>{const p=toPeriod(r.y,r.m);if(p<=0) return;byPeriod[p]=(byPeriod[p]||0)+r.precio})
     const evolPeriods=periods.slice(-Math.min(periods.length,win*2))
-    setResultado({tipo:"entidad",entidad:ent,win,ventanaTxt,curr,prev,caida,byPeriod,evolPeriods})
+    return{tipo:"entidad",entidad:ent,win,ventanaTxt,curr,prev,caida,byPeriod,evolPeriods}
+  }
+
+  function responder(q){
+    if(!q||!q.trim()){setResultado(null);setPendiente(null);return}
+    const exacto=findEntityExacto(q)
+    if(exacto){
+      setPendiente(null)
+      setResultado(computeForEntity(exacto,findVentana(q)))
+      return
+    }
+    const candidatos=findCandidatosAprox(q)
+    if(candidatos.length===0){
+      setPendiente(null)
+      setResultado({tipo:"noEncontrado",vendedores:vendedoresL,rubros:rubrosL})
+      return
+    }
+    setResultado(null)
+    setPendiente({candidatos,ventana:findVentana(q)})
+  }
+
+  function elegirCandidato(cand){
+    setPendiente(null)
+    setResultado(computeForEntity({tipo:cand.tipo,valor:cand.name},pendiente.ventana))
   }
 
   function Chip({children,onClick}){
@@ -1662,6 +1699,8 @@ function AgenteIATab({records,meta}){
       </div>
     )
   }
+
+  const TIPO_LABEL={cliente:"cliente",vendedor:"vendedor",rubro:"rubro"}
 
   const ejemplos=[
     clientes[0]?`¿Cómo viene ${clientes[0]}?`:null,
@@ -1684,6 +1723,15 @@ function AgenteIATab({records,meta}){
           <Chip key={e} onClick={()=>{setQuery(e);responder(e)}}>{e}</Chip>
         ))}
       </div>
+
+      {pendiente&&<>
+        <AgentBubble>No encontré una coincidencia exacta. ¿A cuál de estos te referís?</AgentBubble>
+        <div style={{marginLeft:36,marginBottom:14}}>
+          {pendiente.candidatos.map(c=>(
+            <Chip key={c.tipo+c.name} onClick={()=>elegirCandidato(c)}>{c.name} ({TIPO_LABEL[c.tipo]})</Chip>
+          ))}
+        </div>
+      </>}
 
       {resultado?.tipo==="noEncontrado"&&<AgentBubble>
         No encontré ese nombre en tus datos.{resultado.vendedores.length>0?` Vendedores: ${resultado.vendedores.join(", ")}.`:""}{resultado.rubros.length>0?` Rubros: ${resultado.rubros.join(", ")}.`:""}
@@ -1729,7 +1777,6 @@ function AgenteIATab({records,meta}){
     </div>
   )
 }
-
 function App(){
   const[cube,setCube]=useState(null)
   const[articulos,setArticulos]=useState(null)
