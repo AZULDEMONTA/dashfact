@@ -1588,25 +1588,65 @@ function ComparacionTab({records,provArts,ruboArts,artPeriod,meta}){
 }
 
 function AgenteIATab({records,meta}){
-  const[nivel,setNivel]=useState(null)
-  const[alcance,setAlcance]=useState(null)
-  const[alcanceValor,setAlcanceValor]=useState(null)
-  const[comparaVs,setComparaVs]=useState(null)
-  const[ventana,setVentana]=useState(null)
-  const[umbral,setUmbral]=useState(null)
+  const[query,setQuery]=useState("")
+  const[resultado,setResultado]=useState(null)
 
   const uniq=key=>[...new Set(records.map(r=>r[key]).filter(Boolean))].sort()
+  const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
 
-  function reiniciar(){
-    setNivel(null);setAlcance(null);setAlcanceValor(null);setComparaVs(null);setVentana(null);setUmbral(null)
+  const clientes=meta?.hasCliente?uniq("cliente"):[]
+  const vendedoresL=meta?.hasVendedor?uniq("vendedor"):[]
+  const rubrosL=meta?.hasRubro?uniq("rubro"):[]
+
+  function findEntity(q){
+    const nq=norm(q)
+    let best=null,bestKey=null
+    const candidatos=[...clientes.map(v=>[v,"cliente"]),...vendedoresL.map(v=>[v,"vendedor"]),...rubrosL.map(v=>[v,"rubro"])]
+    candidatos.forEach(([name,tipo])=>{
+      if(nq.indexOf(norm(name))>=0&&(!best||name.length>best.length)){best=name;bestKey=tipo}
+    })
+    return best?{tipo:bestKey,valor:best}:null
   }
 
-  function elegirNivel(v){setNivel(v);setAlcance(null);setAlcanceValor(null);setComparaVs(null);setVentana(null);setUmbral(null)}
-  function elegirAlcance(v){setAlcance(v);setAlcanceValor(null)}
+  function findVentana(q){
+    const nq=norm(q)
+    if(nq.indexOf("ano")>=0) return 12
+    if(nq.indexOf("semestre")>=0) return 6
+    if(nq.indexOf("trimestre")>=0) return 3
+    if(nq.indexOf("mes")>=0) return 1
+    return 3
+  }
 
-  function Chip({active,onClick,children}){
+  function responder(q){
+    if(!q||!q.trim()){setResultado(null);return}
+    const ent=findEntity(q)
+    if(!ent){
+      setResultado({tipo:"noEncontrado",vendedores:vendedoresL,rubros:rubrosL})
+      return
+    }
+    const win=findVentana(q)
+    const recsFoco=records.filter(r=>r[ent.tipo]===ent.valor)
+    const periods=[...new Set(recsFoco.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
+    if(periods.length===0){setResultado({tipo:"sinDatos",entidad:ent});return}
+    const currentPeriods=periods.slice(-win),prevPeriods=periods.slice(Math.max(0,periods.length-2*win),periods.length-win)
+    const currSet=new Set(currentPeriods),prevSet=new Set(prevPeriods)
+    let curr=0,prev=0
+    recsFoco.forEach(r=>{
+      const p=toPeriod(r.y,r.m);if(p<=0) return
+      if(currSet.has(p)) curr+=r.precio
+      else if(prevSet.has(p)) prev+=r.precio
+    })
+    const caida=prev>0?(prev-curr)/prev:null
+    const ventanaTxt=win===1?"mes":(win===3?"trimestre":(win===6?"semestre":"año"))
+    const byPeriod={}
+    recsFoco.forEach(r=>{const p=toPeriod(r.y,r.m);if(p<=0) return;byPeriod[p]=(byPeriod[p]||0)+r.precio})
+    const evolPeriods=periods.slice(-Math.min(periods.length,win*2))
+    setResultado({tipo:"entidad",entidad:ent,win,ventanaTxt,curr,prev,caida,byPeriod,evolPeriods})
+  }
+
+  function Chip({children,onClick}){
     return(
-      <span onClick={onClick} style={{cursor:"pointer",background:active?"rgba(245,179,1,0.14)":"transparent",color:active?BRAND:MUTED2,fontSize:11,padding:"5px 12px",borderRadius:20,border:`1px solid ${active?"rgba(245,179,1,0.4)":BORDER}`,marginRight:8,marginBottom:8,display:"inline-block"}}>{children}{active?" ✓":""}</span>
+      <span onClick={onClick} style={{cursor:"pointer",background:"transparent",color:MUTED2,fontSize:11,padding:"5px 12px",borderRadius:20,border:`1px solid ${BORDER}`,marginRight:8,marginBottom:8,display:"inline-block"}}>{children}</span>
     )
   }
 
@@ -1623,161 +1663,69 @@ function AgenteIATab({records,meta}){
     )
   }
 
-  const windowMonths=v=>v==="mes"?1:(v==="trimestre"?3:6)
-
-  function windowsFor(recs,months){
-    const periods=[...new Set(recs.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
-    if(periods.length===0) return null
-    const currentPeriods=periods.slice(-months)
-    const prevPeriods=periods.slice(Math.max(0,periods.length-2*months),periods.length-months)
-    return{currentPeriods,prevPeriods}
-  }
-
-  function caidaPorDimension(recs,dimKey,currSet,prevSet,umbralPct,filterKey,filterVal){
-    let scoped=recs
-    if(filterKey&&filterVal) scoped=scoped.filter(r=>r[filterKey]===filterVal)
-    const by={}
-    scoped.forEach(r=>{
-      const p=toPeriod(r.y,r.m);if(p<=0) return
-      const k=r[dimKey]||"Sin dato"
-      if(!by[k]) by[k]={curr:0,prev:0}
-      if(currSet.has(p)) by[k].curr+=r.precio
-      else if(prevSet.has(p)) by[k].prev+=r.precio
-    })
-    const rows=Object.entries(by).map(([label,v])=>({label,prev:v.prev,curr:v.curr,caida:v.prev>0?(v.prev-v.curr)/v.prev:0}))
-      .filter(r=>r.prev>0&&r.caida>=umbralPct)
-    rows.sort((a,b)=>b.caida-a.caida)
-    return rows
-  }
-
-  function caidaVendedores(recs,currSet,prevSet,umbralPct,comparaVsSel,alcanceValorSel){
-    const by={}
-    recs.forEach(r=>{
-      const p=toPeriod(r.y,r.m);if(p<=0) return
-      const k=r.vendedor||"Sin dato"
-      if(!by[k]) by[k]={curr:0,prev:0}
-      if(currSet.has(p)) by[k].curr+=r.precio
-      else if(prevSet.has(p)) by[k].prev+=r.precio
-    })
-    const keys=Object.keys(by)
-    const n=keys.length||1
-    const teamCurr=keys.reduce((s,k)=>s+by[k].curr,0)/n
-    const list=alcanceValorSel?[alcanceValorSel]:keys
-    const rows=list.filter(k=>by[k]).map(k=>{
-      const d=by[k]
-      let base,caida
-      if(comparaVsSel==="equipo"){base=teamCurr;caida=teamCurr>0?(teamCurr-d.curr)/teamCurr:0}
-      else{base=d.prev;caida=d.prev>0?(d.prev-d.curr)/d.prev:0}
-      return{label:k,prev:base,curr:d.curr,caida}
-    }).filter(r=>r.prev>0&&r.caida>=umbralPct)
-    rows.sort((a,b)=>b.caida-a.caida)
-    return rows
-  }
-
-  const readyVentana=nivel==="general"||(nivel&&nivel!=="vendedores"&&(alcance==="todos"||alcanceValor))||(nivel==="vendedores"&&comparaVs)
-
-  let resultado=null
-  if(umbral!=null&&ventana){
-    const months=windowMonths(ventana)
-    const w=windowsFor(records,months)
-    if(!w){
-      resultado={rows:[],vacio:true}
-    } else {
-      const currSet=new Set(w.currentPeriods),prevSet=new Set(w.prevPeriods)
-      const umbralPct=umbral==="20"?0.2:(umbral==="40"?0.4:0)
-      let rows=[]
-      if(nivel==="clientes"){
-        rows=caidaPorDimension(records,"cliente",currSet,prevSet,umbralPct,alcance==="puntual"?"cliente":null,alcanceValor)
-      } else if(nivel==="rubros"){
-        rows=caidaPorDimension(records,"rubro",currSet,prevSet,umbralPct,alcance==="puntual"?"rubro":null,alcanceValor)
-      } else if(nivel==="vendedores"){
-        rows=caidaVendedores(records,currSet,prevSet,umbralPct,comparaVs,alcance==="puntual"?alcanceValor:null)
-      } else if(nivel==="general"){
-        const rc=caidaPorDimension(records,"cliente",currSet,prevSet,umbralPct,null,null).slice(0,10).map(r=>({...r,label:`${r.label} (cliente)`}))
-        const rr=meta?.hasRubro?caidaPorDimension(records,"rubro",currSet,prevSet,umbralPct,null,null).slice(0,10).map(r=>({...r,label:`${r.label} (rubro)`})):[]
-        rows=[...rc,...rr].sort((a,b)=>b.caida-a.caida)
-      }
-      resultado={rows,vacio:false}
-    }
-  }
-
-  const scopeLabel=[
-    nivel?{clientes:"Clientes",rubros:"Rubros",vendedores:"Vendedores",general:"General"}[nivel]:null,
-    alcanceValor?`Puntual: ${alcanceValor}`:(alcance==="todos"?"Todos":null),
-    comparaVs?(comparaVs==="equipo"?"vs. equipo":"vs. su historial"):null,
-    ventana?{mes:"Mes vs. anterior",trimestre:"Trimestre vs. anterior",semestre:"Últ. 6 meses"}[ventana]:null,
-    umbral!=null?(umbral==="0"?"cualquier baja":`caída ≥ ${umbral}%`):null,
-  ].filter(Boolean).join(" · ")
+  const ejemplos=[
+    clientes[0]?`¿Cómo viene ${clientes[0]}?`:null,
+    rubrosL[0]?`¿Qué pasó con ${rubrosL[0]} este trimestre?`:null,
+    vendedoresL[0]?`¿Cómo viene ${vendedoresL[0]} este año?`:null,
+  ].filter(Boolean)
 
   return(
     <div style={{display:"flex",flexDirection:"column"}}>
-      <AgentBubble>¿Qué nivel querés diagnosticar?</AgentBubble>
-      <div style={{marginLeft:36,marginBottom:14}}>
-        <Chip active={nivel==="clientes"} onClick={()=>elegirNivel("clientes")}>Clientes</Chip>
-        {meta?.hasRubro&&<Chip active={nivel==="rubros"} onClick={()=>elegirNivel("rubros")}>Rubros</Chip>}
-        {meta?.hasVendedor&&<Chip active={nivel==="vendedores"} onClick={()=>elegirNivel("vendedores")}>Vendedores</Chip>}
-        <Chip active={nivel==="general"} onClick={()=>elegirNivel("general")}>General</Chip>
+      <input
+        type="text"
+        value={query}
+        onChange={e=>setQuery(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter") responder(query)}}
+        placeholder="Preguntame algo, ej: ¿cómo viene un cliente o rubro este trimestre?"
+        style={{width:"100%",boxSizing:"border-box",background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"10px 12px",fontSize:12.5,color:TEXT,marginBottom:10}}
+      />
+      <div style={{display:"flex",flexWrap:"wrap",marginBottom:16}}>
+        {ejemplos.map(e=>(
+          <Chip key={e} onClick={()=>{setQuery(e);responder(e)}}>{e}</Chip>
+        ))}
       </div>
 
-      {nivel&&nivel!=="general"&&<>
-        <AgentBubble>{nivel==="clientes"?"¿Escaneo toda la cartera o un cliente puntual?":(nivel==="rubros"?"¿Todos los rubros o uno puntual?":"¿Todo el equipo o un vendedor puntual?")}</AgentBubble>
-        <div style={{marginLeft:36,marginBottom:8}}>
-          <Chip active={alcance==="todos"} onClick={()=>elegirAlcance("todos")}>Todos</Chip>
-          <Chip active={alcance==="puntual"} onClick={()=>elegirAlcance("puntual")}>Puntual</Chip>
+      {resultado?.tipo==="noEncontrado"&&<AgentBubble>
+        No encontré ese nombre en tus datos.{resultado.vendedores.length>0?` Vendedores: ${resultado.vendedores.join(", ")}.`:""}{resultado.rubros.length>0?` Rubros: ${resultado.rubros.join(", ")}.`:""}
+      </AgentBubble>}
+
+      {resultado?.tipo==="sinDatos"&&<AgentBubble>No hay datos suficientes para {resultado.entidad.valor}.</AgentBubble>}
+
+      {resultado?.tipo==="entidad"&&<>
+        <AgentBubble>
+          {resultado.curr===0&&resultado.prev>0?`${resultado.entidad.valor} dejó de comprar`:
+           resultado.caida==null?`${resultado.entidad.valor}: sin período anterior para comparar`:
+           resultado.caida>0.05?`${resultado.entidad.valor} cayó ${Math.round(resultado.caida*100)}% este ${resultado.ventanaTxt}`:
+           `${resultado.entidad.valor} se mantiene estable este ${resultado.ventanaTxt}`}
+        </AgentBubble>
+        <div style={{background:CARD,borderRadius:10,padding:"14px 16px",marginLeft:36,marginBottom:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+            <span style={{fontSize:11,color:MUTED}}>{resultado.ventanaTxt} anterior</span>
+            <span style={{fontSize:13,color:TEXT}}>{fmtM(resultado.prev)}</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between"}}>
+            <span style={{fontSize:11,color:MUTED}}>{resultado.ventanaTxt} actual</span>
+            <span style={{fontSize:13,color:TEXT}}>{fmtM(resultado.curr)}</span>
+          </div>
         </div>
-        {alcance==="puntual"&&<div style={{marginLeft:36,marginBottom:14}}>
-          <select style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"7px 10px",fontSize:12,color:TEXT}} value={alcanceValor||""} onChange={e=>setAlcanceValor(e.target.value||null)}>
-            <option value="" style={{background:CARD}}>Elegir...</option>
-            {uniq(nivel==="clientes"?"cliente":(nivel==="rubros"?"rubro":"vendedor")).map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}
-          </select>
+        {resultado.evolPeriods.length>0&&<div style={{background:CARD,borderRadius:10,padding:"14px 16px",marginLeft:36}}>
+          <div style={{fontSize:13,fontWeight:500,marginBottom:10,color:TEXT}}>Evolución reciente</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {resultado.evolPeriods.map(p=>{
+              const maxVal=Math.max(...resultado.evolPeriods.map(pp=>resultado.byPeriod[pp]||0),1)
+              return(
+                <div key={p} style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{width:80,fontSize:10,color:MUTED2}}>{periodLabel(p,true)}</span>
+                  <div style={{flex:1,height:8,background:BORDER2,borderRadius:4}}>
+                    <div style={{height:"100%",width:`${(resultado.byPeriod[p]||0)/maxVal*100}%`,background:BRAND,borderRadius:4}}/>
+                  </div>
+                  <span style={{width:70,fontSize:10,color:MUTED,textAlign:"right"}}>{fmtM(resultado.byPeriod[p]||0)}</span>
+                </div>
+              )
+            })}
+          </div>
         </div>}
       </>}
-
-      {nivel==="vendedores"&&(alcance==="todos"||alcanceValor)&&<>
-        <AgentBubble>¿Contra qué lo comparamos: su propio historial o el promedio del equipo?</AgentBubble>
-        <div style={{marginLeft:36,marginBottom:14}}>
-          <Chip active={comparaVs==="historial"} onClick={()=>setComparaVs("historial")}>Su historial</Chip>
-          <Chip active={comparaVs==="equipo"} onClick={()=>setComparaVs("equipo")}>Promedio del equipo</Chip>
-        </div>
-      </>}
-
-      {readyVentana&&<>
-        <AgentBubble>¿Qué comparamos: mes vs. mes anterior, trimestre vs. trimestre anterior, o últimos 6 meses?</AgentBubble>
-        <div style={{marginLeft:36,marginBottom:14}}>
-          <Chip active={ventana==="mes"} onClick={()=>{setVentana("mes");setUmbral(null)}}>Mes vs. anterior</Chip>
-          <Chip active={ventana==="trimestre"} onClick={()=>{setVentana("trimestre");setUmbral(null)}}>Trimestre vs. anterior</Chip>
-          <Chip active={ventana==="semestre"} onClick={()=>{setVentana("semestre");setUmbral(null)}}>Últ. 6 meses</Chip>
-        </div>
-      </>}
-
-      {ventana&&<>
-        <AgentBubble>¿A partir de qué caída te interesa que te avise?</AgentBubble>
-        <div style={{marginLeft:36,marginBottom:14}}>
-          <Chip active={umbral==="0"} onClick={()=>setUmbral("0")}>Cualquier baja</Chip>
-          <Chip active={umbral==="20"} onClick={()=>setUmbral("20")}>Mayor al 20%</Chip>
-          <Chip active={umbral==="40"} onClick={()=>setUmbral("40")}>Mayor al 40%</Chip>
-        </div>
-      </>}
-
-      {resultado&&<div style={{borderTop:`1px solid ${BORDER}`,paddingTop:14,marginTop:4}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-          <span style={{fontSize:11,color:MUTED2}}>{scopeLabel}</span>
-          <span onClick={reiniciar} style={{cursor:"pointer",fontSize:11,color:BRAND}}>Nueva consulta</span>
-        </div>
-        {resultado.vacio||resultado.rows.length===0?
-          <div style={{background:CARD,borderRadius:10,padding:"14px 16px",fontSize:12,color:MUTED}}>No se detectaron caídas con ese umbral en este alcance.</div>
-        :<div style={{background:CARD,borderRadius:10,padding:"14px 16px"}}>
-          {resultado.rows.slice(0,15).map((r,i)=>(
-            <div key={r.label} style={{display:"flex",alignItems:"center",padding:"8px 0",borderBottom:i<Math.min(resultado.rows.length,15)-1?`1px solid ${BORDER}`:"none"}}>
-              <span style={{flex:1,fontSize:12,color:TEXT}}>{r.label}</span>
-              <span style={{width:130,fontSize:11,color:MUTED2,textAlign:"right"}}>{fmtM(r.prev)} → {fmtM(r.curr)}</span>
-              <span style={{width:60,textAlign:"right"}}>
-                <span style={{background:"rgba(239,68,68,0.12)",color:ACCENT5,fontSize:10,padding:"2px 8px",borderRadius:20}}>-{Math.round(r.caida*100)}%</span>
-              </span>
-            </div>
-          ))}
-        </div>}
-      </div>}
     </div>
   )
 }
