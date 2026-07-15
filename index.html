@@ -1589,18 +1589,22 @@ function ComparacionTab({records,provArts,ruboArts,artPeriod,meta}){
 
 function AgenteIATab({records,meta}){
   const[query,setQuery]=useState("")
-  const[resultado,setResultado]=useState(null)
+  const[historial,setHistorial]=useState([])
   const[pendiente,setPendiente]=useState(null)
+  const[ultimoEntidad,setUltimoEntidad]=useState(null)
 
   const uniq=key=>[...new Set(records.map(r=>r[key]).filter(Boolean))].sort()
   const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
   const tokenize=s=>norm(s).replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(Boolean)
-  const STOP=["como","fue","el","la","los","las","de","del","que","paso","con","este","esta","esa","ese","año","ano","mes","meses","trimestre","semestre","viene","cliente","vendedor","rubro","rendimiento","a","un","una","se","por","cual","cuales","es","fueron","tuvo","tuvieron"]
+  const STOP=["como","fue","el","la","los","las","de","del","que","paso","con","este","esta","esa","ese","año","ano","mes","meses","trimestre","semestre","viene","cliente","vendedor","rubro","rendimiento","a","un","una","se","por","cual","cuales","es","fueron","tuvo","tuvieron","y","compro","vendio"]
 
   const clientes=meta?.hasCliente?uniq("cliente"):[]
   const vendedoresL=meta?.hasVendedor?uniq("vendedor"):[]
   const rubrosL=meta?.hasRubro?uniq("rubro"):[]
   const universo=[...clientes.map(v=>[v,"cliente"]),...vendedoresL.map(v=>[v,"vendedor"]),...rubrosL.map(v=>[v,"rubro"])]
+
+  const INTENT_KEYWORDS={rubro:"rubro",rubros:"rubro",proveedor:"proveedor",proveedores:"proveedor",vendedor:"vendedor",vendedores:"vendedor",zona:"zona",zonas:"zona",provincia:"provincia",provincias:"provincia",empresa:"empresa",empresas:"empresa",localidad:"localidad",localidades:"localidad"}
+  const DIM_PLURAL={rubro:"rubros",proveedor:"proveedores",vendedor:"vendedores",zona:"zonas",provincia:"provincias",empresa:"empresas",localidad:"localidades"}
 
   function findEntityExacto(q){
     const nq=norm(q)
@@ -1638,7 +1642,15 @@ function AgenteIATab({records,meta}){
     return 3
   }
 
-  function computeForEntity(ent,win){
+  function findIntentDim(q){
+    const tokens=tokenize(q)
+    for(const t of tokens){if(INTENT_KEYWORDS[t]) return INTENT_KEYWORDS[t]}
+    return null
+  }
+
+  function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+
+  function computeForEntity(ent,win,intentDim){
     const recsFoco=records.filter(r=>r[ent.tipo]===ent.valor)
     const periods=[...new Set(recsFoco.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
     if(periods.length===0) return{tipo:"sinDatos",entidad:ent}
@@ -1655,31 +1667,60 @@ function AgenteIATab({records,meta}){
     const byPeriod={}
     recsFoco.forEach(r=>{const p=toPeriod(r.y,r.m);if(p<=0) return;byPeriod[p]=(byPeriod[p]||0)+r.precio})
     const evolPeriods=periods.slice(-Math.min(periods.length,win*2))
-    return{tipo:"entidad",entidad:ent,win,ventanaTxt,curr,prev,caida,byPeriod,evolPeriods}
+
+    let mix=null
+    if(intentDim&&intentDim!==ent.tipo&&meta?.["has"+cap(intentDim)]){
+      const mixBy={}
+      recsFoco.forEach(r=>{
+        const p=toPeriod(r.y,r.m);if(p<=0||!currSet.has(p)) return
+        const k=r[intentDim]||"Sin dato"
+        mixBy[k]=(mixBy[k]||0)+r.precio
+      })
+      const total=Object.values(mixBy).reduce((s,v)=>s+v,0)
+      const rows=Object.entries(mixBy).map(([label,valor])=>({label,valor,pct:total>0?valor/total*100:0})).sort((a,b)=>b.valor-a.valor).slice(0,6)
+      if(rows.length>0) mix={dim:intentDim,rows,total}
+    }
+
+    return{tipo:"entidad",entidad:ent,win,ventanaTxt,curr,prev,caida,byPeriod,evolPeriods,mix}
+  }
+
+  function pushHistorial(pregunta,resultado,entidadUsada){
+    setHistorial(h=>[...h,{pregunta,resultado}])
+    if(entidadUsada) setUltimoEntidad(entidadUsada)
+    setQuery("")
   }
 
   function responder(q){
-    if(!q||!q.trim()){setResultado(null);setPendiente(null);return}
+    if(!q||!q.trim()) return
+    const intentDim=findIntentDim(q)
+    const win=findVentana(q)
     const exacto=findEntityExacto(q)
     if(exacto){
       setPendiente(null)
-      setResultado(computeForEntity(exacto,findVentana(q)))
+      pushHistorial(q,computeForEntity(exacto,win,intentDim),exacto)
       return
     }
     const candidatos=findCandidatosAprox(q)
-    if(candidatos.length===0){
-      setPendiente(null)
-      setResultado({tipo:"noEncontrado",vendedores:vendedoresL,rubros:rubrosL})
+    if(candidatos.length>0){
+      setPendiente({pregunta:q,candidatos,win,intentDim})
+      setQuery("")
       return
     }
-    setResultado(null)
-    setPendiente({candidatos,ventana:findVentana(q)})
+    if(ultimoEntidad){
+      pushHistorial(q,computeForEntity(ultimoEntidad,win,intentDim),ultimoEntidad)
+      return
+    }
+    pushHistorial(q,{tipo:"noEncontrado",vendedores:vendedoresL,rubros:rubrosL},null)
   }
 
   function elegirCandidato(cand){
+    const ent={tipo:cand.tipo,valor:cand.name}
+    const p=pendiente
     setPendiente(null)
-    setResultado(computeForEntity({tipo:cand.tipo,valor:cand.name},pendiente.ventana))
+    pushHistorial(p.pregunta,computeForEntity(ent,p.win,p.intentDim),ent)
   }
+
+  function reiniciar(){setHistorial([]);setPendiente(null);setUltimoEntidad(null);setQuery("")}
 
   function Chip({children,onClick}){
     return(
@@ -1700,6 +1741,85 @@ function AgenteIATab({records,meta}){
     )
   }
 
+  function UserBubble({children}){
+    return(
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
+        <div style={{background:BRAND_LIGHT,borderRadius:10,padding:"8px 14px",maxWidth:420}}>
+          <div style={{fontSize:12.5,lineHeight:1.5,color:TEXT}}>{children}</div>
+        </div>
+      </div>
+    )
+  }
+
+  function EvolucionCard({resultado}){
+    return(
+      <div style={{background:CARD,borderRadius:10,padding:"14px 16px",marginLeft:36,marginBottom:14}}>
+        <div style={{fontSize:13,fontWeight:500,marginBottom:10,color:TEXT}}>Evolución reciente</div>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {resultado.evolPeriods.map(p=>{
+            const maxVal=Math.max(...resultado.evolPeriods.map(pp=>resultado.byPeriod[pp]||0),1)
+            return(
+              <div key={p} style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{width:80,fontSize:10,color:MUTED2}}>{periodLabel(p,true)}</span>
+                <div style={{flex:1,height:8,background:BORDER2,borderRadius:4}}>
+                  <div style={{height:"100%",width:`${(resultado.byPeriod[p]||0)/maxVal*100}%`,background:BRAND,borderRadius:4}}/>
+                </div>
+                <span style={{width:70,fontSize:10,color:MUTED,textAlign:"right"}}>{fmtM(resultado.byPeriod[p]||0)}</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  function Turno({pregunta,resultado}){
+    return(
+      <div>
+        <UserBubble>{pregunta}</UserBubble>
+        {resultado.tipo==="noEncontrado"&&<AgentBubble>
+          No encontré ese nombre en tus datos.{resultado.vendedores.length>0?` Vendedores: ${resultado.vendedores.join(", ")}.`:""}{resultado.rubros.length>0?` Rubros: ${resultado.rubros.join(", ")}.`:""}
+        </AgentBubble>}
+        {resultado.tipo==="sinDatos"&&<AgentBubble>No hay datos suficientes para {resultado.entidad.valor}.</AgentBubble>}
+        {resultado.tipo==="entidad"&&<>
+          {resultado.mix?
+            <AgentBubble>{resultado.entidad.valor} — mix por {DIM_PLURAL[resultado.mix.dim]} en el {resultado.ventanaTxt} actual</AgentBubble>
+          :
+            <AgentBubble>
+              {resultado.curr===0&&resultado.prev>0?`${resultado.entidad.valor} dejó de comprar`:
+               resultado.caida==null?`${resultado.entidad.valor}: sin período anterior para comparar`:
+               resultado.caida>0.05?`${resultado.entidad.valor} cayó ${Math.round(resultado.caida*100)}% este ${resultado.ventanaTxt}`:
+               `${resultado.entidad.valor} se mantiene estable este ${resultado.ventanaTxt}`}
+            </AgentBubble>
+          }
+          {resultado.mix?
+            <div style={{background:CARD,borderRadius:10,padding:"14px 16px",marginLeft:36,marginBottom:14}}>
+              {resultado.mix.rows.map(r=>(
+                <div key={r.label} style={{display:"flex",alignItems:"center",padding:"6px 0"}}>
+                  <span style={{flex:1,fontSize:12,color:TEXT}}>{r.label}</span>
+                  <span style={{fontSize:11,color:MUTED2,marginRight:10}}>{fmtM(r.valor)}</span>
+                  <span style={{width:44,fontSize:10,color:MUTED,textAlign:"right"}}>{r.pct.toFixed(1)}%</span>
+                </div>
+              ))}
+            </div>
+          :
+            <div style={{background:CARD,borderRadius:10,padding:"14px 16px",marginLeft:36,marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                <span style={{fontSize:11,color:MUTED}}>{resultado.ventanaTxt} anterior</span>
+                <span style={{fontSize:13,color:TEXT}}>{fmtM(resultado.prev)}</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between"}}>
+                <span style={{fontSize:11,color:MUTED}}>{resultado.ventanaTxt} actual</span>
+                <span style={{fontSize:13,color:TEXT}}>{fmtM(resultado.curr)}</span>
+              </div>
+            </div>
+          }
+          {resultado.evolPeriods.length>0&&<EvolucionCard resultado={resultado}/>}
+        </>}
+      </div>
+    )
+  }
+
   const TIPO_LABEL={cliente:"cliente",vendedor:"vendedor",rubro:"rubro"}
 
   const ejemplos=[
@@ -1710,70 +1830,37 @@ function AgenteIATab({records,meta}){
 
   return(
     <div style={{display:"flex",flexDirection:"column"}}>
-      <input
-        type="text"
-        value={query}
-        onChange={e=>setQuery(e.target.value)}
-        onKeyDown={e=>{if(e.key==="Enter") responder(query)}}
-        placeholder="Preguntame algo, ej: ¿cómo viene un cliente o rubro este trimestre?"
-        style={{width:"100%",boxSizing:"border-box",background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"10px 12px",fontSize:12.5,color:TEXT,marginBottom:10}}
-      />
-      <div style={{display:"flex",flexWrap:"wrap",marginBottom:16}}>
-        {ejemplos.map(e=>(
-          <Chip key={e} onClick={()=>{setQuery(e);responder(e)}}>{e}</Chip>
-        ))}
+      {historial.length>0&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
+        <span onClick={reiniciar} style={{cursor:"pointer",fontSize:11,color:BRAND}}>Nueva charla</span>
+      </div>}
+
+      <div style={{display:"flex",flexDirection:"column"}}>
+        {historial.map((h,i)=><Turno key={i} pregunta={h.pregunta} resultado={h.resultado}/>)}
       </div>
 
-      {pendiente&&<>
+      {pendiente&&<div>
+        <UserBubble>{pendiente.pregunta}</UserBubble>
         <AgentBubble>No encontré una coincidencia exacta. ¿A cuál de estos te referís?</AgentBubble>
         <div style={{marginLeft:36,marginBottom:14}}>
           {pendiente.candidatos.map(c=>(
             <Chip key={c.tipo+c.name} onClick={()=>elegirCandidato(c)}>{c.name} ({TIPO_LABEL[c.tipo]})</Chip>
           ))}
         </div>
-      </>}
+      </div>}
 
-      {resultado?.tipo==="noEncontrado"&&<AgentBubble>
-        No encontré ese nombre en tus datos.{resultado.vendedores.length>0?` Vendedores: ${resultado.vendedores.join(", ")}.`:""}{resultado.rubros.length>0?` Rubros: ${resultado.rubros.join(", ")}.`:""}
-      </AgentBubble>}
-
-      {resultado?.tipo==="sinDatos"&&<AgentBubble>No hay datos suficientes para {resultado.entidad.valor}.</AgentBubble>}
-
-      {resultado?.tipo==="entidad"&&<>
-        <AgentBubble>
-          {resultado.curr===0&&resultado.prev>0?`${resultado.entidad.valor} dejó de comprar`:
-           resultado.caida==null?`${resultado.entidad.valor}: sin período anterior para comparar`:
-           resultado.caida>0.05?`${resultado.entidad.valor} cayó ${Math.round(resultado.caida*100)}% este ${resultado.ventanaTxt}`:
-           `${resultado.entidad.valor} se mantiene estable este ${resultado.ventanaTxt}`}
-        </AgentBubble>
-        <div style={{background:CARD,borderRadius:10,padding:"14px 16px",marginLeft:36,marginBottom:14}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-            <span style={{fontSize:11,color:MUTED}}>{resultado.ventanaTxt} anterior</span>
-            <span style={{fontSize:13,color:TEXT}}>{fmtM(resultado.prev)}</span>
-          </div>
-          <div style={{display:"flex",justifyContent:"space-between"}}>
-            <span style={{fontSize:11,color:MUTED}}>{resultado.ventanaTxt} actual</span>
-            <span style={{fontSize:13,color:TEXT}}>{fmtM(resultado.curr)}</span>
-          </div>
-        </div>
-        {resultado.evolPeriods.length>0&&<div style={{background:CARD,borderRadius:10,padding:"14px 16px",marginLeft:36}}>
-          <div style={{fontSize:13,fontWeight:500,marginBottom:10,color:TEXT}}>Evolución reciente</div>
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {resultado.evolPeriods.map(p=>{
-              const maxVal=Math.max(...resultado.evolPeriods.map(pp=>resultado.byPeriod[pp]||0),1)
-              return(
-                <div key={p} style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{width:80,fontSize:10,color:MUTED2}}>{periodLabel(p,true)}</span>
-                  <div style={{flex:1,height:8,background:BORDER2,borderRadius:4}}>
-                    <div style={{height:"100%",width:`${(resultado.byPeriod[p]||0)/maxVal*100}%`,background:BRAND,borderRadius:4}}/>
-                  </div>
-                  <span style={{width:70,fontSize:10,color:MUTED,textAlign:"right"}}>{fmtM(resultado.byPeriod[p]||0)}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>}
-      </>}
+      <input
+        type="text"
+        value={query}
+        onChange={e=>setQuery(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter") responder(query)}}
+        placeholder={ultimoEntidad?`Segui preguntando sobre ${ultimoEntidad.valor}, o nombrá otro cliente/vendedor/rubro`:"Preguntame algo, ej: ¿cómo viene un cliente o rubro este trimestre?"}
+        style={{width:"100%",boxSizing:"border-box",background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"10px 12px",fontSize:12.5,color:TEXT,marginBottom:10,marginTop:historial.length>0?10:0}}
+      />
+      {historial.length===0&&<div style={{display:"flex",flexWrap:"wrap"}}>
+        {ejemplos.map(e=>(
+          <Chip key={e} onClick={()=>{setQuery(e);responder(e)}}>{e}</Chip>
+        ))}
+      </div>}
     </div>
   )
 }
