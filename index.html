@@ -1587,6 +1587,261 @@ function ComparacionTab({records,provArts,ruboArts,artPeriod,meta}){
   )
 }
 
+function AgenteIATab({records,meta}){
+  const[step,setStep]=useState(0)
+  const[periodo,setPeriodo]=useState(null)
+  const[dimTipo,setDimTipo]=useState(null)
+  const[dimValor,setDimValor]=useState(null)
+  const[dimPicking,setDimPicking]=useState(null)
+  const[focoTipo,setFocoTipo]=useState(null)
+  const[focoValor,setFocoValor]=useState(null)
+  const[focoPicking,setFocoPicking]=useState(null)
+
+  const uniq=key=>[...new Set(records.map(r=>r[key]).filter(Boolean))].sort()
+
+  const PERIODOS=[
+    {key:"mes",label:"Último mes disponible",months:1},
+    {key:"trimestre",label:"Último trimestre",months:3},
+    {key:"semestre",label:"Último semestre",months:6},
+    {key:"anio",label:"Año actual",months:"year"},
+    {key:"todo",label:"Todo el histórico",months:"all"},
+  ]
+
+  function reiniciar(){
+    setStep(0);setPeriodo(null);setDimTipo(null);setDimValor(null);setDimPicking(null)
+    setFocoTipo(null);setFocoValor(null);setFocoPicking(null)
+  }
+
+  const scoped=dimTipo&&dimValor?records.filter(r=>r[dimTipo]===dimValor):records
+
+  function getWindows(recs,spec){
+    const periods=[...new Set(recs.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
+    if(periods.length===0) return null
+    let win=spec.months
+    if(win==="year"){const lastY=Math.floor(periods[periods.length-1]/100);win=periods.filter(p=>Math.floor(p/100)===lastY).length||1}
+    if(win==="all"){win=Math.max(1,Math.ceil(periods.length/2))}
+    const currentPeriods=periods.slice(-win)
+    const prevPeriods=periods.slice(Math.max(0,periods.length-2*win),periods.length-win)
+    return{periods,currentPeriods,prevPeriods}
+  }
+
+  function computeChurn(recs,currentPeriods,prevPeriods){
+    const currSet=new Set(currentPeriods),prevSet=new Set(prevPeriods)
+    const byClient={}
+    recs.forEach(r=>{
+      const p=toPeriod(r.y,r.m);if(p<=0) return
+      const c=r.cliente||"Sin cliente"
+      if(!byClient[c]) byClient[c]={curr:0,prev:0}
+      if(currSet.has(p)) byClient[c].curr+=r.precio
+      else if(prevSet.has(p)) byClient[c].prev+=r.precio
+    })
+    const entries=Object.entries(byClient)
+    const activos=entries.filter(([,v])=>v.curr>0).length
+    const churnedArr=entries.filter(([,v])=>v.prev>0&&v.curr===0)
+      .map(([cliente,v])=>({cliente,prevVentas:v.prev,promedioMensual:prevPeriods.length?v.prev/prevPeriods.length:v.prev}))
+      .sort((a,b)=>b.prevVentas-a.prevVentas)
+    const recuperados=entries.filter(([,v])=>v.prev===0&&v.curr>0).length
+    const facturacionRiesgo=churnedArr.reduce((s,c)=>s+c.promedioMensual,0)
+    const corte=Math.ceil(churnedArr.length/3)
+    const churned=churnedArr.map((c,i)=>({...c,severidad:i<corte?"Alto":"Medio"}))
+    return{activos,churned,recuperados,facturacionRiesgo}
+  }
+
+  const DIM_LABELS={vendedor:"Vendedor",proveedor:"Proveedor",rubro:"Rubro"}
+
+  function Chip({active,onClick,children}){
+    return(
+      <span onClick={onClick} style={{cursor:"pointer",background:active?"rgba(245,179,1,0.14)":"transparent",color:active?BRAND:MUTED2,fontSize:11,padding:"5px 12px",borderRadius:20,border:`1px solid ${active?"rgba(245,179,1,0.4)":BORDER}`}}>{children}{active?" ✓":""}</span>
+    )
+  }
+
+  function AgentBubble({children}){
+    return(
+      <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+        <div style={{width:26,height:26,borderRadius:"50%",background:CARD,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          <i className="ti ti-sparkles" style={{color:BRAND,fontSize:13}} aria-hidden="true"/>
+        </div>
+        <div style={{background:CARD,borderRadius:10,padding:"10px 14px",maxWidth:460}}>
+          <div style={{fontSize:12.5,lineHeight:1.5,color:TEXT}}>{children}</div>
+        </div>
+      </div>
+    )
+  }
+
+  if(step<3){
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <AgentBubble>¿Qué período querés analizar?</AgentBubble>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginLeft:36}}>
+          {PERIODOS.map(p=>(
+            <Chip key={p.key} active={periodo?.key===p.key} onClick={()=>{setPeriodo(p);if(step===0) setStep(1)}}>{p.label}</Chip>
+          ))}
+        </div>
+
+        {step>=1&&<>
+          <AgentBubble>¿Focalizamos en algún vendedor, proveedor o rubro en particular?</AgentBubble>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginLeft:36}}>
+            <Chip active={dimTipo===null} onClick={()=>{setDimTipo(null);setDimValor(null);setDimPicking(null);setStep(2)}}>Sin filtro</Chip>
+            {meta?.hasVendedor&&<Chip active={dimTipo==="vendedor"} onClick={()=>setDimPicking("vendedor")}>Vendedor</Chip>}
+            {meta?.hasProveedor&&<Chip active={dimTipo==="proveedor"} onClick={()=>setDimPicking("proveedor")}>Proveedor</Chip>}
+            {meta?.hasRubro&&<Chip active={dimTipo==="rubro"} onClick={()=>setDimPicking("rubro")}>Rubro</Chip>}
+          </div>
+          {dimPicking&&<div style={{marginLeft:36,display:"flex",gap:8,alignItems:"center"}}>
+            <select style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"7px 10px",fontSize:12,color:TEXT}} value={dimValor||""} onChange={e=>setDimValor(e.target.value)}>
+              <option value="" style={{background:CARD}}>Elegir {DIM_LABELS[dimPicking]?.toLowerCase()}...</option>
+              {uniq(dimPicking).map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}
+            </select>
+            <button disabled={!dimValor} onClick={()=>{setDimTipo(dimPicking);setDimPicking(null);setStep(2)}} style={{background:dimValor?BRAND:BORDER2,color:dimValor?"#161616":MUTED2,border:"none",borderRadius:8,padding:"7px 14px",fontSize:11,fontWeight:500,cursor:dimValor?"pointer":"default"}}>Continuar</button>
+          </div>}
+        </>}
+
+        {step>=2&&<>
+          <AgentBubble>¿Análisis general o algo puntual, como el rendimiento de un cliente o vendedor específico?</AgentBubble>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginLeft:36}}>
+            <Chip active={focoTipo===null&&focoPicking===null&&step===2} onClick={()=>{setFocoTipo(null);setFocoValor(null);setFocoPicking(null);setStep(3)}}>Análisis general</Chip>
+            {meta?.hasCliente&&<Chip active={focoTipo==="cliente"} onClick={()=>setFocoPicking("cliente")}>Un cliente puntual</Chip>}
+            {meta?.hasVendedor&&<Chip active={focoTipo==="vendedor"} onClick={()=>setFocoPicking("vendedor")}>Un vendedor puntual</Chip>}
+          </div>
+          {focoPicking&&<div style={{marginLeft:36,display:"flex",gap:8,alignItems:"center"}}>
+            <select style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"7px 10px",fontSize:12,color:TEXT}} value={focoValor||""} onChange={e=>setFocoValor(e.target.value)}>
+              <option value="" style={{background:CARD}}>Elegir {focoPicking}...</option>
+              {uniq(focoPicking).map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}
+            </select>
+            <button disabled={!focoValor} onClick={()=>{setFocoTipo(focoPicking);setFocoPicking(null);setStep(3)}} style={{background:focoValor?BRAND:BORDER2,color:focoValor?"#161616":MUTED2,border:"none",borderRadius:8,padding:"7px 14px",fontSize:11,fontWeight:500,cursor:focoValor?"pointer":"default"}}>Continuar</button>
+          </div>}
+        </>}
+      </div>
+    )
+  }
+
+  const scopeLabel=[periodo?.label,dimTipo?`${DIM_LABELS[dimTipo]}: ${dimValor}`:null,focoTipo?`${focoTipo==="cliente"?"Cliente":"Vendedor"}: ${focoValor}`:null].filter(Boolean).join(" · ")
+
+  if(focoTipo&&focoValor){
+    const recsFoco=scoped.filter(r=>r[focoTipo]===focoValor)
+    const byPeriod={}
+    recsFoco.forEach(r=>{const p=toPeriod(r.y,r.m);if(p<=0) return;byPeriod[p]=(byPeriod[p]||0)+r.precio})
+    const periods=Object.keys(byPeriod).map(Number).sort((a,b)=>a-b)
+    const total=recsFoco.reduce((s,r)=>s+r.precio,0)
+    const promedio=periods.length?total/periods.length:0
+    const last=periods[periods.length-1]
+    const prev=periods[periods.length-2]
+    const lastVal=last!=null?byPeriod[last]:0
+    const prevVal=prev!=null?byPeriod[prev]:0
+    const variacion=prevVal>0?((lastVal-prevVal)/prevVal*100):null
+    const maxVal=Math.max(...periods.map(p=>byPeriod[p]),1)
+    const mixKey=meta?.hasRubro?"rubro":(meta?.hasProveedor?"proveedor":null)
+    const mix={}
+    if(mixKey) recsFoco.forEach(r=>{const k=r[mixKey]||"Sin dato";mix[k]=(mix[k]||0)+r.precio})
+    const mixSorted=Object.entries(mix).sort((a,b)=>b[1]-a[1]).slice(0,5)
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{fontSize:11,color:MUTED2}}>{scopeLabel}</span>
+          <span onClick={reiniciar} style={{cursor:"pointer",fontSize:11,color:BRAND}}>Nueva consulta</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+          <div style={{background:CARD,borderRadius:10,padding:"12px 14px"}}>
+            <div style={{fontSize:11,color:MUTED,marginBottom:6}}>Total histórico</div>
+            <div style={{fontSize:18,fontWeight:500,color:TEXT}}>{fmtM(total)}</div>
+          </div>
+          <div style={{background:CARD,borderRadius:10,padding:"12px 14px"}}>
+            <div style={{fontSize:11,color:MUTED,marginBottom:6}}>Promedio mensual</div>
+            <div style={{fontSize:18,fontWeight:500,color:TEXT}}>{fmtM(promedio)}</div>
+          </div>
+          <div style={{background:CARD,borderRadius:10,padding:"12px 14px"}}>
+            <div style={{fontSize:11,color:MUTED,marginBottom:6}}>Último vs. anterior</div>
+            <div style={{fontSize:18,fontWeight:500,color:variacion==null?TEXT:(variacion>=0?ACCENT2:ACCENT5)}}>{variacion==null?"Sin dato":`${variacion>=0?"+":""}${variacion.toFixed(1)}%`}</div>
+          </div>
+        </div>
+        <div style={{background:CARD,borderRadius:10,padding:"14px 16px"}}>
+          <div style={{fontSize:13,fontWeight:500,marginBottom:10,color:TEXT}}>Evolución mensual</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {periods.map(p=>(
+              <div key={p} style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{width:80,fontSize:10,color:MUTED2}}>{periodLabel(p,true)}</span>
+                <div style={{flex:1,height:8,background:BORDER2,borderRadius:4}}>
+                  <div style={{height:"100%",width:`${byPeriod[p]/maxVal*100}%`,background:BRAND,borderRadius:4}}/>
+                </div>
+                <span style={{width:70,fontSize:10,color:MUTED,textAlign:"right"}}>{fmtM(byPeriod[p])}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {mixSorted.length>0&&<div style={{background:CARD,borderRadius:10,padding:"14px 16px"}}>
+          <div style={{fontSize:13,fontWeight:500,marginBottom:10,color:TEXT}}>{mixKey==="rubro"?"Mix por rubro":"Mix por proveedor"}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {mixSorted.map(([k,v])=>(
+              <div key={k} style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{flex:1,fontSize:11,color:TEXT}}>{k}</span>
+                <span style={{fontSize:11,color:MUTED2}}>{fmtM(v)}</span>
+                <span style={{width:44,fontSize:10,color:MUTED2,textAlign:"right"}}>{fmtPct(total>0?v/total*100:0)}</span>
+              </div>
+            ))}
+          </div>
+        </div>}
+      </div>
+    )
+  }
+
+  const windows=getWindows(scoped,periodo||PERIODOS[1])
+  if(!windows) return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <span style={{fontSize:11,color:MUTED2}}>{scopeLabel}</span>
+        <span onClick={reiniciar} style={{cursor:"pointer",fontSize:11,color:BRAND}}>Nueva consulta</span>
+      </div>
+      <div style={{background:CARD,borderRadius:10,padding:"14px 16px",fontSize:12,color:MUTED}}>No hay datos suficientes para este alcance.</div>
+    </div>
+  )
+  const{churned,activos,recuperados,facturacionRiesgo}=computeChurn(scoped,windows.currentPeriods,windows.prevPeriods)
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <span style={{fontSize:11,color:MUTED2}}>{scopeLabel}</span>
+        <span onClick={reiniciar} style={{cursor:"pointer",fontSize:11,color:BRAND}}>Nueva consulta</span>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+        <div style={{background:CARD,borderRadius:10,padding:"12px 14px"}}>
+          <div style={{fontSize:11,color:MUTED,marginBottom:6}}>Clientes activos</div>
+          <div style={{fontSize:20,fontWeight:500,color:TEXT}}>{fmtU(activos)}</div>
+        </div>
+        <div style={{background:CARD,borderRadius:10,padding:"12px 14px"}}>
+          <div style={{fontSize:11,color:MUTED,marginBottom:6}}>En riesgo de baja</div>
+          <div style={{fontSize:20,fontWeight:500,color:ACCENT5}}>{fmtU(churned.length)}</div>
+        </div>
+        <div style={{background:CARD,borderRadius:10,padding:"12px 14px"}}>
+          <div style={{fontSize:11,color:MUTED,marginBottom:6}}>Recuperados</div>
+          <div style={{fontSize:20,fontWeight:500,color:ACCENT2}}>{fmtU(recuperados)}</div>
+        </div>
+        <div style={{background:CARD,borderRadius:10,padding:"12px 14px"}}>
+          <div style={{fontSize:11,color:MUTED,marginBottom:6}}>Facturación en riesgo</div>
+          <div style={{fontSize:20,fontWeight:500,color:BRAND}}>{fmtM(facturacionRiesgo)}</div>
+        </div>
+      </div>
+      <div style={{background:CARD,borderRadius:10,padding:"14px 16px"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+          <span style={{fontSize:13,fontWeight:500,color:TEXT}}>Clientes que dejaron de comprar</span>
+          <span style={{fontSize:11,color:MUTED2}}>{churned.length} detectados</span>
+        </div>
+        {churned.length===0?
+          <div style={{fontSize:12,color:MUTED}}>No se detectaron clientes inactivos en este alcance.</div>
+        :<div style={{display:"flex",flexDirection:"column"}}>
+          {churned.slice(0,15).map((c,i)=>(
+            <div key={c.cliente} style={{display:"flex",alignItems:"center",padding:"8px 0",borderBottom:i<churned.length-1?`1px solid ${BORDER}`:"none"}}>
+              <span style={{flex:1,fontSize:12,color:TEXT}}>{c.cliente}</span>
+              <span style={{width:110,fontSize:11,color:MUTED2,textAlign:"right"}}>{fmtM(c.promedioMensual)} prom/mes</span>
+              <span style={{width:70,textAlign:"right"}}>
+                <span style={{background:c.severidad==="Alto"?"rgba(239,68,68,0.12)":"rgba(245,179,1,0.12)",color:c.severidad==="Alto"?ACCENT5:BRAND,fontSize:10,padding:"2px 8px",borderRadius:20}}>{c.severidad}</span>
+              </span>
+            </div>
+          ))}
+        </div>}
+      </div>
+    </div>
+  )
+}
+
 function App(){
   const[cube,setCube]=useState(null)
   const[articulos,setArticulos]=useState(null)
@@ -1939,6 +2194,7 @@ function App(){
   const hasData=records.length>0
   const TABS=[
     {key:"resumen",label:"Resumen",icon:"ti-layout-dashboard"},
+    ...(meta?.hasCliente?[{key:"agente",label:"Agente IA",icon:"ti-sparkles"}]:[]),
     ...(meta?.hasCliente?[{key:"clientes",label:"Clientes",icon:"ti-building-store",group:"dim"}]:[]),
     ...(meta?.hasProveedor?[{key:"proveedores",label:"Proveedores",icon:"ti-truck",group:"dim"}]:[]),
     ...(meta?.hasRubro?[{key:"rubros",label:"Rubros",icon:"ti-tag",group:"dim"}]:[]),
@@ -2096,6 +2352,7 @@ function App(){
                 {safeTab==="rentabilidad"&&<RentabilidadSection data={rentData} artData={artData} hasCantidad={meta?.hasCantidad}/>}
                 {safeTab==="zonas"&&<DetailTab data={zonaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Zona" color={ACCENT6}/>}
                 {safeTab==="provincias"&&<DetailTab data={pciaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia" color={ACCENT7}/>}
+                {safeTab==="agente"&&<AgenteIATab records={records} meta={meta}/>}
                 {safeTab==="clientes-periodo"&&<ClientesPeriodoTab filteredRecords={filtered} meta={meta}/>}
                 {safeTab==="comparacion"&&<ComparacionTab records={cmpFiltered} provArts={provArts} ruboArts={ruboArts} artPeriod={cmpArtPeriod} meta={meta}/>}
               </>
