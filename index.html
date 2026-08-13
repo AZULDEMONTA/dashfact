@@ -92,7 +92,7 @@ async function dbDelete(key){
 }
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
-const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1"
+const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1",CK="capas-v1"
 const LOGO_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEF0lEQVR4nO1WXWhcRRT+zrl/m8ZEGmpJk6a2IbFQQUIjSA0VimAj2FqDK0bBR31RRBDNJo3TpU3NFhR9sBCVFqxI01CQKhIf7EMREooiQoNik5jSNO0mWJq/3ezeO3N8uEtd0+puuuqL+eA+3JnhnO/75pzDAKtYxcpBue9/h1MWAGyojz23saHr+fy1UsDFHx0RpRT7gYlns4ESEQJGpFQCRULZAFDbGGtbt6lb1tXtl5rNHXvz9+4UxTpglFLsZ0y3GG0EYnxj3oIIATD/MgFlA3Hz8Wd6n4HXRDAM0Szwmmu2xPYAcVNKLRTjQKg+G3QCjlg2Prcs+hJwxTfSVWotFOhnZQPxoLY+1pYJ7NMEEW+NfoBhe+mUfCcguI7/5NRY75nQhWf0SgkUKiCjlOKjx9OdwBohLAxO/py4AADrN3ecFbNml+9nY0Q4IzJCtxbk/QIMANiWc+iA5DTfdOxvHAjVV9fH2oLAPg0JjOfpliujR4YBodr6jl2ZwP2G4MBxUs9OjfX2r1R9IQKsFHD0ePq8oGI708JX05cSewDlAPEsAKzf9OYxtiq2M6eGAfpEB3IfM9UITCVDiC1OQfCb7fK0Y1vXIp6V3FClZ3bswI14PG6Av7yCUH3fiVibwGsmLCESsQ8DECCe3fpwomIxOdcSaIiRRVdn5TFifhQwSRH6AYwLwjQuLEmb3DkjfoYylq/LtclkkC3CgXz1lc3M8yenJxLttY3dDwW+eUEbaWcuX2v0wg3LorPMVkqMP3ttovflf+AK8u/eOS0SLLquxHSAnSJulNgDzMKP7PC7TY2z/T9N3rVlcZZGQC5bdvqJ5Hjka+C6BVT5Ybz48hb90//tCLBSwAfH0t8DXpMgkybAI17LkPmLjkPdV8d7+kX+OH9PXfoLocpWyPzQzOXEToKicEAVxrJBFE69vhPpfaBIk5iMD7HKQB4zLbx3d7Xz4NRYT78IKOz78Lzj8iFICiC3ZWN9Z+tKpuPySWgAxYFP3SLagNgm5pRrB+3JiZ7XRs/H53K9LuHQiQdA1Joa6x1i0oOAC1/rrpBgcdMxj0CopnrL0lMgt0lEE7M1VxbB7qnxt0/mElOY9FaUOe4hSNoYcVvqtnbtLtaFfAeMUoqNYL8Y0Uzke16w9/IvPd8CLzq5xLdRNaCBqHVp7OAQkx4keJJZ8mPhXmEXOF/9R59mnxZT1sSWa9m26Zy8mDgH9DnAh36hQADguNZBkTQJIo9U3/vG48W4wAAIOKBbW9/3tMbrIEpanDqS/DXxTkjspSKSD2hA8ZXRw8NEwSmQsxgIvRqNRq1CLtxsw23blDtPQZ1Xbs+ExbZiEAA0NLzi3shWVBmT5uuTlVeLbcdliJb82LxDKAak1Dc/hTFKjrOK/wa/A3rQ7dfNECyuAAAAAElFTkSuQmCC"
 
 const BG="#0A0A0A",CARD="#161616",CARD2="#1A1A1A",BORDER="rgba(255,255,255,0.08)",BORDER2="#2A2A2A",TEXT="#FFFFFF",MUTED="#B0B0B0",MUTED2="#666666"
@@ -792,6 +792,40 @@ function ConfirmImportModal({stats,onConfirm,onCancel}){
         <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
           <button onClick={onCancel} style={{padding:"7px 18px",background:CARD,border:`1px solid ${BORDER}`,borderRadius:6,color:MUTED,cursor:"pointer",fontSize:12}}>← Volver</button>
           <button onClick={onConfirm} style={{padding:"7px 18px",background:BRAND,border:"none",borderRadius:6,color:"#fff",cursor:"pointer",fontWeight:500,fontSize:12}}>✓ Confirmar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+function fmtCapaDate(iso){
+  try{const d=new Date(iso);return d.toLocaleDateString("es-AR",{day:"numeric",month:"short"})}catch(e){return""}
+}
+function ImportedFilesPanel({capas,onAdd,onDelete,onClose}){
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:998}}>
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,width:440,maxWidth:"96vw",maxHeight:"84vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 32px rgba(0,0,0,0.12)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:`1px solid ${BORDER}`,flexShrink:0}}>
+          <span style={{fontSize:15,fontWeight:500,color:TEXT}}>Archivos importados</span>
+          <i className="ti ti-x" onClick={onClose} style={{fontSize:18,color:MUTED,cursor:"pointer"}} aria-hidden="true"/>
+        </div>
+        <div style={{padding:"14px 20px",overflowY:"auto",display:"flex",flexDirection:"column",gap:8}}>
+          {capas.length===0&&<div style={{fontSize:12,color:MUTED,padding:"10px 0"}}>Todavía no hay archivos importados con este registro. Los que ya cargaste antes de esta versión siguen en el dashboard, pero no aparecen listados acá individualmente.</div>}
+          {capas.map(c=>(
+            <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,background:CARD2,border:`1px solid ${BORDER}`,borderRadius:8,padding:"10px 12px"}}>
+              <i className="ti ti-file-spreadsheet" style={{fontSize:20,color:BRAND,flexShrink:0}} aria-hidden="true"/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{color:TEXT,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
+                <div style={{color:MUTED2,fontSize:11,marginTop:2}}>Cargado {fmtCapaDate(c.importedAt)} · {fmtN(c.rows)} filas{c.periods?.length?` · ${c.periods.length} período${c.periods.length===1?"":"s"}`:""}</div>
+              </div>
+              <i className="ti ti-trash" onClick={()=>onDelete(c.id)} title="Eliminar archivo" style={{fontSize:17,color:ACCENT5,cursor:"pointer",flexShrink:0}} aria-hidden="true"/>
+            </div>
+          ))}
+        </div>
+        <div style={{padding:"12px 20px 18px",flexShrink:0}}>
+          <div onClick={onAdd} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,border:`1px dashed ${BORDER2}`,borderRadius:8,padding:12,color:BRAND,fontSize:13,cursor:"pointer"}}>
+            <i className="ti ti-upload" style={{fontSize:18}} aria-hidden="true"/>
+            <span>Agregar archivo</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1881,6 +1915,9 @@ function App(){
   const[activeTab,setActiveTab]=useState("resumen")
   const[openGroups,setOpenGroups]=useState({})
   const[fileKey,setFileKey]=useState(0)
+  const[capas,setCapas]=useState([])
+  const[pendingFileName,setPendingFileName]=useState(null)
+  const[showFilesPanel,setShowFilesPanel]=useState(false)
   const fileRef=useRef()
   const[fYear,setFYear]=useState("__ALL__")
   const[fMes,setFMes]=useState("__ALL__")
@@ -1897,19 +1934,21 @@ function App(){
 
   useEffect(()=>{
     const t0=Date.now()
-    loadData().then(({cube:c,articulos:a,meta:m,provArts:pa,ruboArts:ra,error})=>{
+    Promise.all([loadData(),dbGet(CK).catch(()=>null)]).then(([{cube:c,articulos:a,meta:m,provArts:pa,ruboArts:ra,error},capasRaw])=>{
       const ms=Date.now()-t0
       if(error){setStorageInfo({ok:false,error});setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});setArtPeriod([]);return}
       const rows=c?.length||0,cells=rows*9
       setStorageInfo({ok:true,loaded:true,rows,cells,ms})
       const rebuiltAP=rebuildArtPeriod(c||[],pa||{},ra||{})
       setCube(c||[]);setArticulos(a||[]);setMeta(m||{});setProvArts(pa||{});setRuboArts(ra||{});setArtPeriod(rebuiltAP)
+      try{setCapas(capasRaw?JSON.parse(capasRaw):[])}catch(e){setCapas([])}
     })
   },[])
 
   const handleFile=useCallback(async e=>{
     const file=e.target.files?.[0];if(!file) return
     setFileKey(k=>k+1)
+    setPendingFileName(file.name)
     const ab=await file.arrayBuffer()
     const wb=XLSX.read(ab,{type:"array"})
     const ws=wb.Sheets[wb.SheetNames[0]]
@@ -1957,8 +1996,8 @@ function App(){
     const periods=[...new Set(parsed.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
     setRawHeaders(null);setRawRows(null)
     const map=mergeArtPeriod(artPeriod||[],nap)
-    setPendingImport({newCube:nc,newArts:na,newProvArts:npa,newRuboArts:nra,newMProvArts:mpa,newMRuboArts:mra,newArtPeriod:nap,newMArtPeriod:map,meta:newMeta,stats:{rows:parsed.length,ventas,unidades,hasCantidad:has("cantidad"),periods,existingRows:meta?.totalRows||0,cubeKB}})
-  },[rawHeaders,rawRows,records,articulos,meta])
+    setPendingImport({newCube:nc,newArts:na,newProvArts:npa,newRuboArts:nra,newMProvArts:mpa,newMRuboArts:mra,newArtPeriod:nap,newMArtPeriod:map,meta:newMeta,fileName:pendingFileName,stats:{rows:parsed.length,ventas,unidades,hasCantidad:has("cantidad"),periods,existingRows:meta?.totalRows||0,cubeKB}})
+  },[rawHeaders,rawRows,records,articulos,meta,pendingFileName])
 
   const handleImportConfirm=useCallback(async()=>{
     if(!pendingImport) return
@@ -1973,16 +2012,51 @@ function App(){
     setSaveStage("saving");setSaveProgress(70);await new Promise(r=>setTimeout(r,0))
     try{
       const kb=await saveData(mc,ma,nm,mpa,mra)
+      const nuevaCapa={
+        id:Date.now()+"-"+Math.random().toString(36).slice(2,7),
+        name:pendingImport.fileName||"archivo.xlsx",
+        importedAt:new Date().toISOString(),
+        rows:pendingImport.stats.rows,ventas:pendingImport.stats.ventas,unidades:pendingImport.stats.unidades,
+        periods:pendingImport.stats.periods,colsMeta:pendingImport.meta,
+        cube:compressCube(pendingImport.newCube),arts:compressArts(pendingImport.newArts),
+        provArts:pendingImport.newProvArts||{},ruboArts:pendingImport.newRuboArts||{},artPeriod:pendingImport.newArtPeriod||[],
+      }
+      const nuevasCapas=[...capas,nuevaCapa]
+      setCapas(nuevasCapas)
+      try{await dbSet(CK,JSON.stringify(nuevasCapas))}catch(e){}
       setSaveStage("saved");setSaveProgress(100);setSaveMsg(`Guardado · ${fmtN(kb)} KB`)
       setTimeout(()=>{setSaveStage("idle");setSaveProgress(0);setSaveMsg("")},5000)
     }catch(e){setSaveStage("error");setSaveProgress(0);setSaveMsg(String(e))}
-  },[pendingImport,records,articulos,meta])
+  },[pendingImport,records,articulos,meta,capas])
 
-  const handleClear=async()=>{if(!confirm("¿Eliminar todos los datos?")) return;await clearData();setCube([]);setArticulos([]);setMeta({})}
+  const handleClear=async()=>{if(!confirm("¿Eliminar todos los datos?")) return;await clearData();try{await dbDelete(CK)}catch(e){};setCube([]);setArticulos([]);setMeta({});setCapas([])}
+
+  const handleDeleteCapa=useCallback(async id=>{
+    const capa=capas.find(c=>c.id===id);if(!capa) return
+    if(!confirm(`¿Eliminar "${capa.name}"? Se recalculará el dashboard con los archivos restantes.`)) return
+    const nuevasCapas=capas.filter(c=>c.id!==id)
+    if(nuevasCapas.length===0){
+      await clearData();try{await dbDelete(CK)}catch(e){}
+      setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});setArtPeriod([]);setCapas([])
+      return
+    }
+    let mc=[],ma=[],mpa={},mra={},map=[],mm={totalRows:0}
+    nuevasCapas.forEach(c=>{
+      mc=mergeCubes(mc,decompressCube(c.cube));ma=mergeArts(ma,decompressArts(c.arts))
+      mpa=mergeXRef(mpa,c.provArts||{});mra=mergeXRef(mra,c.ruboArts||{})
+      map=mergeArtPeriod(map,c.artPeriod||[])
+      mm={...mm,...(c.colsMeta||{}),totalRows:mm.totalRows+(c.rows||0)}
+    })
+    try{await saveData(mc,ma,mm,mpa,mra);await dbSet(CK,JSON.stringify(nuevasCapas))}catch(e){alert("Error al recalcular: "+e)}
+    setCube(mc);setArticulos(ma);setMeta(mm);setProvArts(mpa);setRuboArts(mra);setArtPeriod(map);setCapas(nuevasCapas)
+  },[capas])
 
   const exportarPDF=useCallback(async()=>{
     const btn=document.getElementById("btnExportPDF")
-    if(btn){btn.disabled=true;btn.textContent="Generando..."}
+    const btnLabel=btn?btn.querySelector(".nav-label"):null
+    const btnLabelOriginal=btnLabel?btnLabel.textContent:null
+    if(btn){btn.style.pointerEvents="none";btn.style.opacity="0.6"}
+    if(btnLabel){btnLabel.textContent="Generando..."}
 
     // ── 1. Ocultar panel de filtros y reemplazarlo con pills compactos ──
     const filterPanel=document.getElementById("clientes-filter-panel")
@@ -2151,7 +2225,8 @@ function App(){
     if(ov) ov.remove()
     if(pillsDiv) pillsDiv.remove()
     if(filterPanel) filterPanel.style.display=""
-    if(btn){btn.disabled=false;btn.textContent="⬇ Exportar PDF"}
+    if(btn){btn.style.pointerEvents="";btn.style.opacity=""}
+    if(btnLabel){btnLabel.textContent=btnLabelOriginal||"Exportar pantalla a PDF"}
   },[])
 
   if(cube===null) return(
@@ -2237,6 +2312,7 @@ function App(){
       <style>{`select option{background:${CARD};color:${TEXT}} input::placeholder{color:${MUTED2}} .rank-row:hover{background:rgba(255,255,255,0.025)}`}</style>
       {rawHeaders&&<MappingModal headers={rawHeaders} onConfirm={handleMappingConfirm} onCancel={()=>{setRawHeaders(null);setRawRows(null)}}/>}
       {pendingImport&&<ConfirmImportModal stats={pendingImport.stats} onConfirm={handleImportConfirm} onCancel={()=>setPendingImport(null)}/>}
+      {showFilesPanel&&<ImportedFilesPanel capas={capas} onAdd={()=>{setShowFilesPanel(false);fileRef.current&&fileRef.current.click()}} onDelete={handleDeleteCapa} onClose={()=>setShowFilesPanel(false)}/>}
 
       <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:"100vh"}}>
 
@@ -2247,6 +2323,12 @@ function App(){
             </div>
             <span className="nav-label" style={{fontWeight:500,color:TEXT,fontSize:13,whiteSpace:"nowrap"}}>Azul de Montaña</span>
           </div>
+          {hasData&&<div style={{padding:"0 12px 10px",flexShrink:0}}>
+            <div id="btnExportPDF" className="nav-item" onClick={exportarPDF} title="Exportar pantalla a PDF" style={{background:BRAND_LIGHT,border:`1px solid ${BRAND}`,borderRadius:8,color:BRAND,padding:"10px 12px",minHeight:"auto"}}>
+              <i className="ti ti-file-type-pdf" style={{fontSize:20}} aria-hidden="true"/>
+              <span className="nav-label" style={{fontWeight:500}}>Exportar pantalla a PDF</span>
+            </div>
+          </div>}
           {TABS.filter(t=>!t.group).map(t=>(
             <div key={t.key} className={`nav-item${safeTab===t.key?" active":""}`} onClick={()=>setActiveTab(t.key)} title={t.label}>
               <i className={`ti ${t.icon||"ti-circle"}`} aria-hidden="true"/>
@@ -2276,14 +2358,10 @@ function App(){
           })}
           <div style={{flex:1}}/>
           <div style={{borderTop:`1px solid ${BORDER}`,paddingTop:8,flexShrink:0}}>
-            <div className="nav-item" onClick={()=>fileRef.current&&fileRef.current.click()} title="Importar Excel" style={{color:BRAND}}>
+            <div className="nav-item" onClick={()=>setShowFilesPanel(true)} title="Importar Excel" style={{color:BRAND}}>
               <i className="ti ti-upload" aria-hidden="true"/>
               <span className="nav-label">Importar Excel</span>
             </div>
-            {hasData&&<div className="nav-item" id="btnExportPDF" onClick={exportarPDF} title="Exportar PDF">
-              <i className="ti ti-file-type-pdf" aria-hidden="true"/>
-              <span className="nav-label">Exportar PDF</span>
-            </div>}
             {hasData&&<div className="nav-item" onClick={handleClear} title="Limpiar datos" style={{color:MUTED2}}>
               <i className="ti ti-trash" aria-hidden="true"/>
               <span className="nav-label">Limpiar datos</span>
