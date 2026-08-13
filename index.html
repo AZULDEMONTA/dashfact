@@ -26,6 +26,8 @@
     .dash-sidebar:hover .nav-label{opacity:1;width:auto}
     .dash-sidebar .nav-dot{width:5px;height:5px;border-radius:50%;background:#F5B301;margin-left:auto;flex-shrink:0;transition:opacity .15s}
     .dash-sidebar:hover .nav-dot{opacity:0;width:0}
+    .pdf-export-abbrev{opacity:1;transition:opacity .15s}
+    .dash-sidebar:hover .pdf-export-abbrev{opacity:0;width:0}
     .nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;color:#707070;transition:all .15s;min-height:38px;border-left:2px solid transparent}
     .nav-item:hover{background:rgba(245,179,1,0.07);color:#FFD95A}
     .nav-item.active{background:rgba(245,179,1,0.12);color:#F5B301;border-left-color:#F5B301}
@@ -735,14 +737,15 @@ function EvolucionTab({filteredRecords,meta}){
     </div>
   )
 }
-function MappingModal({headers,onConfirm,onCancel}){
+function MappingModal({headers,queueRemaining,onConfirm,onCancel}){
   const[mapping,setMapping]=useState(()=>autoMap(headers))
   const[pet,setPet]=useState(true)
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999}}>
       <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:28,width:520,maxWidth:"96vw",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,0.12)"}}>
         <div style={{fontSize:15,fontWeight:500,color:TEXT,marginBottom:4}}>Mapear columnas del Excel</div>
-        <div style={{fontSize:12,color:MUTED,marginBottom:20}}>Columnas detectadas automáticamente. Ajustá si es necesario.</div>
+        <div style={{fontSize:12,color:MUTED,marginBottom:queueRemaining>0?8:20}}>Columnas detectadas automáticamente. Ajustá si es necesario.</div>
+        {queueRemaining>0&&<div style={{fontSize:11,color:BRAND,background:BRAND_LIGHT,border:`1px solid ${BRAND}40`,borderRadius:6,padding:"5px 10px",marginBottom:16,display:"inline-block"}}>+{queueRemaining} archivo{queueRemaining===1?"":"s"} más en cola</div>}
         {CAMPOS.map(({key,req})=>(
           <div key={key} style={{display:"flex",alignItems:"center",gap:10,marginBottom:9}}>
             <span style={{color:req?BRAND:MUTED,width:130,fontSize:12,flexShrink:0}}>{CAMPO_LABELS[key]}{req?" *":""}</span>
@@ -771,13 +774,14 @@ function MappingModal({headers,onConfirm,onCancel}){
     </div>
   )
 }
-function ConfirmImportModal({stats,onConfirm,onCancel}){
+function ConfirmImportModal({stats,queueRemaining,onConfirm,onCancel}){
   const{rows,ventas,unidades,hasCantidad,periods,existingRows,cubeKB}=stats
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
       <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,padding:32,width:480,maxWidth:"96vw",boxShadow:"0 8px 32px rgba(0,0,0,0.12)"}}>
         <div style={{fontSize:16,fontWeight:500,color:TEXT,marginBottom:4}}>Confirmar importación</div>
-        <div style={{fontSize:12,color:MUTED,marginBottom:16}}>Revisá los datos antes de agregar</div>
+        <div style={{fontSize:12,color:MUTED,marginBottom:queueRemaining>0?8:16}}>Revisá los datos antes de agregar</div>
+        {queueRemaining>0&&<div style={{fontSize:11,color:BRAND,background:BRAND_LIGHT,border:`1px solid ${BRAND}40`,borderRadius:6,padding:"5px 10px",marginBottom:16,display:"inline-block"}}>+{queueRemaining} archivo{queueRemaining===1?"":"s"} más en cola</div>}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
           {[["Filas",fmtN(rows),BRAND],["Importe",fmtM(ventas),ACCENT1],...(hasCantidad?[["Unidades",fmtU(unidades),ACCENT2]]:[]),["Períodos",String(periods.length),ACCENT3]].map(([l,v,c])=>(
             <div key={l} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:8,padding:"10px 14px",borderLeft:`3px solid ${c}`}}>
@@ -1918,6 +1922,7 @@ function App(){
   const[capas,setCapas]=useState([])
   const[pendingFileName,setPendingFileName]=useState(null)
   const[showFilesPanel,setShowFilesPanel]=useState(false)
+  const[fileQueue,setFileQueue]=useState([])
   const fileRef=useRef()
   const[fYear,setFYear]=useState("__ALL__")
   const[fMes,setFMes]=useState("__ALL__")
@@ -1945,9 +1950,7 @@ function App(){
     })
   },[])
 
-  const handleFile=useCallback(async e=>{
-    const file=e.target.files?.[0];if(!file) return
-    setFileKey(k=>k+1)
+  const parseFile=useCallback(async file=>{
     setPendingFileName(file.name)
     const ab=await file.arrayBuffer()
     const wb=XLSX.read(ab,{type:"array"})
@@ -1958,6 +1961,14 @@ function App(){
     setRawHeaders(headers)
     setRawRows(raw.slice(1))
   },[])
+
+  const handleFile=useCallback(async e=>{
+    const files=Array.from(e.target.files||[])
+    if(files.length===0) return
+    setFileKey(k=>k+1)
+    setFileQueue(files.slice(1))
+    await parseFile(files[0])
+  },[parseFile])
 
   const handleMappingConfirm=useCallback((mapping,pet)=>{
     if(!rawRows||!rawHeaders) return
@@ -2024,10 +2035,20 @@ function App(){
       const nuevasCapas=[...capas,nuevaCapa]
       setCapas(nuevasCapas)
       try{await dbSet(CK,JSON.stringify(nuevasCapas))}catch(e){}
-      setSaveStage("saved");setSaveProgress(100);setSaveMsg(`Guardado · ${fmtN(kb)} KB`)
-      setTimeout(()=>{setSaveStage("idle");setSaveProgress(0);setSaveMsg("")},5000)
+      if(fileQueue.length>0){
+        const[next,...resto]=fileQueue
+        setFileQueue(resto)
+        setSaveMsg(`Guardado · ${fmtN(kb)} KB · siguiente: ${next.name}`)
+        setSaveStage("saved");setSaveProgress(100)
+        await new Promise(r=>setTimeout(r,600))
+        setSaveStage("idle");setSaveProgress(0);setSaveMsg("")
+        await parseFile(next)
+      } else {
+        setSaveStage("saved");setSaveProgress(100);setSaveMsg(`Guardado · ${fmtN(kb)} KB`)
+        setTimeout(()=>{setSaveStage("idle");setSaveProgress(0);setSaveMsg("")},5000)
+      }
     }catch(e){setSaveStage("error");setSaveProgress(0);setSaveMsg(String(e))}
-  },[pendingImport,records,articulos,meta,capas])
+  },[pendingImport,records,articulos,meta,capas,fileQueue,parseFile])
 
   const handleClear=async()=>{if(!confirm("¿Eliminar todos los datos?")) return;await clearData();try{await dbDelete(CK)}catch(e){};setCube([]);setArticulos([]);setMeta({});setCapas([])}
 
@@ -2310,8 +2331,8 @@ function App(){
   return(
     <div id="dashfact-root" style={{background:BG,minHeight:"100vh",color:TEXT,display:"flex",flexDirection:"column"}}>
       <style>{`select option{background:${CARD};color:${TEXT}} input::placeholder{color:${MUTED2}} .rank-row:hover{background:rgba(255,255,255,0.025)}`}</style>
-      {rawHeaders&&<MappingModal headers={rawHeaders} onConfirm={handleMappingConfirm} onCancel={()=>{setRawHeaders(null);setRawRows(null)}}/>}
-      {pendingImport&&<ConfirmImportModal stats={pendingImport.stats} onConfirm={handleImportConfirm} onCancel={()=>setPendingImport(null)}/>}
+      {rawHeaders&&<MappingModal headers={rawHeaders} queueRemaining={fileQueue.length} onConfirm={handleMappingConfirm} onCancel={()=>{setRawHeaders(null);setRawRows(null);setFileQueue([])}}/>}
+      {pendingImport&&<ConfirmImportModal stats={pendingImport.stats} queueRemaining={fileQueue.length} onConfirm={handleImportConfirm} onCancel={()=>{setPendingImport(null);setFileQueue([])}}/>}
       {showFilesPanel&&<ImportedFilesPanel capas={capas} onAdd={()=>{setShowFilesPanel(false);fileRef.current&&fileRef.current.click()}} onDelete={handleDeleteCapa} onClose={()=>setShowFilesPanel(false)}/>}
 
       <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:"100vh"}}>
@@ -2324,9 +2345,10 @@ function App(){
             <span className="nav-label" style={{fontWeight:500,color:TEXT,fontSize:13,whiteSpace:"nowrap"}}>Azul de Montaña</span>
           </div>
           {hasData&&<div style={{padding:"0 12px 10px",flexShrink:0}}>
-            <div id="btnExportPDF" className="nav-item" onClick={exportarPDF} title="Exportar pantalla a PDF" style={{background:BRAND_LIGHT,border:`1px solid ${BRAND}`,borderRadius:8,color:BRAND,padding:"10px 12px",minHeight:"auto"}}>
-              <i className="ti ti-file-type-pdf" style={{fontSize:20}} aria-hidden="true"/>
-              <span className="nav-label" style={{fontWeight:500}}>Exportar pantalla a PDF</span>
+            <div id="btnExportPDF" className="nav-item" onClick={exportarPDF} title="Exportar pantalla a PDF" style={{background:BRAND,border:`1px solid ${BRAND}`,borderRadius:8,color:"#1A1200",padding:"11px 12px",minHeight:"auto",boxShadow:"0 2px 8px rgba(245,179,1,0.25)"}}>
+              <i className="ti ti-file-type-pdf" style={{fontSize:21,color:"#1A1200",flexShrink:0}} aria-hidden="true"/>
+              <span className="pdf-export-abbrev" style={{fontWeight:700,fontSize:11,letterSpacing:0.4,whiteSpace:"nowrap",color:"#1A1200"}}>PDF</span>
+              <span className="nav-label" style={{fontWeight:600,color:"#1A1200"}}>Exportar pantalla a PDF</span>
             </div>
           </div>}
           {TABS.filter(t=>!t.group).map(t=>(
@@ -2367,7 +2389,7 @@ function App(){
               <span className="nav-label">Limpiar datos</span>
             </div>}
           </div>
-          <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{display:"none"}}/>
+          <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" multiple onChange={handleFile} style={{display:"none"}}/>
         </div>
 
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
