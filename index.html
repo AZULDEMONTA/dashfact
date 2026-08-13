@@ -804,13 +804,16 @@ function ConfirmImportModal({stats,queueRemaining,onConfirm,onCancel}){
 function fmtCapaDate(iso){
   try{const d=new Date(iso);return d.toLocaleDateString("es-AR",{day:"numeric",month:"short"})}catch(e){return""}
 }
-function ImportedFilesPanel({capas,onAdd,onDelete,onClose}){
+function ImportedFilesPanel({capas,onAdd,onDelete,onClose,onClearAll}){
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:998}}>
-      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,width:440,maxWidth:"96vw",maxHeight:"84vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 32px rgba(0,0,0,0.12)"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:`1px solid ${BORDER}`,flexShrink:0}}>
-          <span style={{fontSize:15,fontWeight:500,color:TEXT}}>Archivos importados</span>
-          <i className="ti ti-x" onClick={onClose} style={{fontSize:18,color:MUTED,cursor:"pointer"}} aria-hidden="true"/>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:998}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:12,width:440,maxWidth:"96vw",maxHeight:"84vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 32px rgba(0,0,0,0.12)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 16px",borderBottom:`1px solid ${BORDER}`,flexShrink:0}}>
+          <div onClick={onClose} style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",color:MUTED,padding:"4px 8px 4px 4px",borderRadius:6,flexShrink:0}}>
+            <i className="ti ti-arrow-left" style={{fontSize:18}} aria-hidden="true"/>
+            <span style={{fontSize:13}}>Volver</span>
+          </div>
+          <span style={{fontSize:15,fontWeight:500,color:TEXT,flex:1}}>Archivos importados</span>
         </div>
         <div style={{padding:"14px 20px",overflowY:"auto",display:"flex",flexDirection:"column",gap:8}}>
           {capas.length===0&&<div style={{fontSize:12,color:MUTED,padding:"10px 0"}}>Todavía no hay archivos importados con este registro. Los que ya cargaste antes de esta versión siguen en el dashboard, pero no aparecen listados acá individualmente.</div>}
@@ -825,11 +828,15 @@ function ImportedFilesPanel({capas,onAdd,onDelete,onClose}){
             </div>
           ))}
         </div>
-        <div style={{padding:"12px 20px 18px",flexShrink:0}}>
+        <div style={{padding:"12px 20px 18px",flexShrink:0,display:"flex",flexDirection:"column",gap:8}}>
           <div onClick={onAdd} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,border:`1px dashed ${BORDER2}`,borderRadius:8,padding:12,color:BRAND,fontSize:13,cursor:"pointer"}}>
             <i className="ti ti-upload" style={{fontSize:18}} aria-hidden="true"/>
             <span>Agregar archivo</span>
           </div>
+          {capas.length>0&&<div onClick={onClearAll} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"8px 12px",color:MUTED2,fontSize:12,cursor:"pointer"}}>
+            <i className="ti ti-trash" style={{fontSize:14}} aria-hidden="true"/>
+            <span>Eliminar todos los archivos</span>
+          </div>}
         </div>
       </div>
     </div>
@@ -2333,7 +2340,7 @@ function App(){
       <style>{`select option{background:${CARD};color:${TEXT}} input::placeholder{color:${MUTED2}} .rank-row:hover{background:rgba(255,255,255,0.025)}`}</style>
       {rawHeaders&&<MappingModal headers={rawHeaders} queueRemaining={fileQueue.length} onConfirm={handleMappingConfirm} onCancel={()=>{setRawHeaders(null);setRawRows(null);setFileQueue([])}}/>}
       {pendingImport&&<ConfirmImportModal stats={pendingImport.stats} queueRemaining={fileQueue.length} onConfirm={handleImportConfirm} onCancel={()=>{setPendingImport(null);setFileQueue([])}}/>}
-      {showFilesPanel&&<ImportedFilesPanel capas={capas} onAdd={()=>{setShowFilesPanel(false);fileRef.current&&fileRef.current.click()}} onDelete={handleDeleteCapa} onClose={()=>setShowFilesPanel(false)}/>}
+      {showFilesPanel&&<ImportedFilesPanel capas={capas} onAdd={()=>{setShowFilesPanel(false);fileRef.current&&fileRef.current.click()}} onDelete={handleDeleteCapa} onClearAll={handleClear} onClose={()=>setShowFilesPanel(false)}/>}
 
       <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:"100vh"}}>
 
@@ -2384,10 +2391,6 @@ function App(){
               <i className="ti ti-upload" aria-hidden="true"/>
               <span className="nav-label">Importar Excel</span>
             </div>
-            {hasData&&<div className="nav-item" onClick={handleClear} title="Limpiar datos" style={{color:MUTED2}}>
-              <i className="ti ti-trash" aria-hidden="true"/>
-              <span className="nav-label">Limpiar datos</span>
-            </div>}
           </div>
           <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" multiple onChange={handleFile} style={{display:"none"}}/>
         </div>
