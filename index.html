@@ -811,7 +811,7 @@ function ImportedFilesPanel({capas,onAdd,onDelete,onClose,onClearAll}){
         <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 16px",borderBottom:`1px solid ${BORDER}`,flexShrink:0}}>
           <div onClick={onClose} style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",color:MUTED,padding:"4px 8px 4px 4px",borderRadius:6,flexShrink:0}}>
             <i className="ti ti-arrow-left" style={{fontSize:18}} aria-hidden="true"/>
-            <span style={{fontSize:13}}>Volver</span>
+            <span style={{fontSize:13}}>← Volver</span>
           </div>
           <span style={{fontSize:15,fontWeight:500,color:TEXT,flex:1}}>Archivos importados</span>
         </div>
@@ -824,7 +824,10 @@ function ImportedFilesPanel({capas,onAdd,onDelete,onClose,onClearAll}){
                 <div style={{color:TEXT,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
                 <div style={{color:MUTED2,fontSize:11,marginTop:2}}>Cargado {fmtCapaDate(c.importedAt)} · {fmtN(c.rows)} filas{c.periods?.length?` · ${c.periods.length} período${c.periods.length===1?"":"s"}`:""}</div>
               </div>
-              <i className="ti ti-trash" onClick={()=>onDelete(c.id)} title="Eliminar archivo" style={{fontSize:17,color:ACCENT5,cursor:"pointer",flexShrink:0}} aria-hidden="true"/>
+              <div onClick={()=>onDelete(c.id)} title="Eliminar archivo" style={{display:"flex",alignItems:"center",gap:4,cursor:"pointer",color:ACCENT5,flexShrink:0,padding:"4px 8px",borderRadius:6,border:`1px solid ${ACCENT5}40`,fontSize:11}}>
+                <i className="ti ti-trash" style={{fontSize:14}} aria-hidden="true"/>
+                <span>Eliminar</span>
+              </div>
             </div>
           ))}
         </div>
