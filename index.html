@@ -134,16 +134,17 @@ function buildCube(rawRecords){
     const ck=`${r.y}|${r.m}|${r.proveedor??''} |${r.rubro??''} |${r.vendedor??''} |${r.rentabilidad??''} |${r.provincia??''} |${r.cliente??''} |${r.empresa??''} |${r.localidad??''} |${r.zona??''} `
     if(!cm[ck]) cm[ck]={y:r.y,m:r.m,precio:0,cantidad:0,costo:0,rows:0,proveedor:r.proveedor,rubro:r.rubro,vendedor:r.vendedor,rentabilidad:r.rentabilidad,provincia:r.provincia,cliente:r.cliente,empresa:r.empresa,localidad:r.localidad,zona:r.zona}
     const c=cm[ck];c.precio+=r.precio;c.cantidad+=r.cantidad;c.costo+=r.costo;c.rows++
-    if(r.articulo){
-      if(!am[r.articulo]) am[r.articulo]={name:r.articulo,precio:0,cantidad:0,costo:0,rows:0,rentabilidad:r.rentabilidad}
-      const a=am[r.articulo];a.precio+=r.precio;a.cantidad+=r.cantidad;a.costo+=r.costo;a.rows++
-      if(r.proveedor){if(!pm[r.proveedor]) pm[r.proveedor]={};if(!pm[r.proveedor][r.articulo]) pm[r.proveedor][r.articulo]={precio:0,cantidad:0};pm[r.proveedor][r.articulo].precio+=r.precio;pm[r.proveedor][r.articulo].cantidad+=r.cantidad}
-      if(r.rubro){if(!rm[r.rubro]) rm[r.rubro]={};if(!rm[r.rubro][r.articulo]) rm[r.rubro][r.articulo]={precio:0,cantidad:0};rm[r.rubro][r.articulo].precio+=r.precio;rm[r.rubro][r.articulo].cantidad+=r.cantidad}
+    {
+      const art=r.articulo||"Sin artículo"
+      if(!am[art]) am[art]={name:art,precio:0,cantidad:0,costo:0,rows:0,rentabilidad:r.rentabilidad}
+      const a=am[art];a.precio+=r.precio;a.cantidad+=r.cantidad;a.costo+=r.costo;a.rows++
+      if(r.proveedor){if(!pm[r.proveedor]) pm[r.proveedor]={};if(!pm[r.proveedor][art]) pm[r.proveedor][art]={precio:0,cantidad:0};pm[r.proveedor][art].precio+=r.precio;pm[r.proveedor][art].cantidad+=r.cantidad}
+      if(r.rubro){if(!rm[r.rubro]) rm[r.rubro]={};if(!rm[r.rubro][art]) rm[r.rubro][art]={precio:0,cantidad:0};rm[r.rubro][art].precio+=r.precio;rm[r.rubro][art].cantidad+=r.cantidad}
       // artPeriod: key = "y|m|prov|rubro" → {art: {precio,cant}}
       const apk=`${r.y}|${r.m}|${r.proveedor??''}|${r.rubro??''}`
       if(!apm[apk]) apm[apk]={y:r.y,m:r.m,proveedor:r.proveedor??null,rubro:r.rubro??null,arts:{}}
-      const ap=apm[apk];if(!ap.arts[r.articulo]) ap.arts[r.articulo]={precio:0,cantidad:0,rentabilidad:r.rentabilidad}
-      ap.arts[r.articulo].precio+=r.precio;ap.arts[r.articulo].cantidad+=r.cantidad
+      const ap=apm[apk];if(!ap.arts[art]) ap.arts[art]={precio:0,cantidad:0,rentabilidad:r.rentabilidad}
+      ap.arts[art].precio+=r.precio;ap.arts[art].cantidad+=r.cantidad
     }
   }
   const compressXRef=m=>Object.fromEntries(Object.entries(m).map(([k,arts])=>[k,Object.entries(arts).sort((a,b)=>b[1].precio-a[1].precio).slice(0,20).map(([name,v])=>[name,Math.round(v.precio),v.cantidad])]))
@@ -2027,7 +2028,8 @@ function App(){
     const mc=mergeCubes(records,pendingImport.newCube),ma=mergeArts(articulos||[],pendingImport.newArts)
     const mpa=pendingImport.newMProvArts||{},mra=pendingImport.newMRuboArts||{}
     const map=pendingImport.newMArtPeriod||[]
-    const nm={...pendingImport.meta,totalRows:(meta?.totalRows||0)+pendingImport.stats.rows}
+    const nm={...meta,...pendingImport.meta,totalRows:(meta?.totalRows||0)+pendingImport.stats.rows}
+    ;["hasProveedor","hasRubro","hasVendedor","hasRentabilidad","hasProvincia","hasCliente","hasEmpresa","hasLocalidad","hasZona","hasArticulo","hasCantidad","hasCosto"].forEach(k=>{nm[k]=!!(meta?.[k]||pendingImport.meta?.[k])})
     setSaveStage("compressing");setSaveProgress(40);await new Promise(r=>setTimeout(r,0))
     setCube(mc);setArticulos(ma);setMeta(nm);setProvArts(mpa);setRuboArts(mra);setArtPeriod(map)
     setSaveStage("saving");setSaveProgress(70);await new Promise(r=>setTimeout(r,0))
