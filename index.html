@@ -42,6 +42,12 @@
     .fcell.on .fcell-lbl{color:#C98F00}
     .fcell.on .fcell-val{color:#F5B301;font-weight:500}
     .fcell.on select{color:#F5B301}
+    .ms-wrap{position:relative}
+    .ms-menu{position:absolute;top:100%;left:0;margin-top:2px;background:#161616;border:1px solid #2A2A2A;border-radius:8px;padding:6px;min-width:180px;max-height:240px;overflow:auto;z-index:50;box-shadow:0 8px 20px rgba(0,0,0,0.4)}
+    .ms-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;font-size:11px;color:#FFFFFF;white-space:nowrap}
+    .ms-row:hover{background:rgba(245,179,1,0.07)}
+    .ms-row input{accent-color:#F5B301;width:13px;height:13px;cursor:pointer;flex-shrink:0}
+    .ms-row-all{border-bottom:1px solid #2A2A2A;margin-bottom:4px;padding-bottom:8px;color:#F5B301;font-weight:500}
     .kpi-card{background:#161616;border:1px solid #2A2A2A;border-radius:12px;padding:16px;transition:border-color .2s;position:relative;overflow:hidden}
     .kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#F5B301,#FFD95A)}
     .kpi-card:hover{border-color:#F5B301}
@@ -1913,6 +1919,38 @@ function AgenteIATab({records,meta}){
     </div>
   )
 }
+function MultiSelect({icon,label,options,selected,onChange,allLabel}){
+  const[open,setOpen]=useState(false)
+  const ref=useRef(null)
+  useEffect(()=>{
+    function onDoc(e){if(ref.current&&!ref.current.contains(e.target))setOpen(false)}
+    document.addEventListener("mousedown",onDoc)
+    return()=>document.removeEventListener("mousedown",onDoc)
+  },[])
+  const isOn=selected.length>0
+  const valText=selected.length===0?allLabel:(selected.length===1?selected[0]:`${selected.length} seleccionados`)
+  function toggle(v){onChange(selected.includes(v)?selected.filter(x=>x!==v):[...selected,v])}
+  return(
+    <div className={`fcell ms-wrap${isOn?" on":""}`} ref={ref}>
+      <div className="fcell-lbl"><i className={`ti ${icon}`} aria-hidden="true"/>{label}</div>
+      <div className="fcell-val" onClick={()=>setOpen(o=>!o)} style={{cursor:"pointer"}}>{valText}</div>
+      {open&&(
+        <div className="ms-menu" onClick={e=>e.stopPropagation()}>
+          <label className="ms-row ms-row-all">
+            <input type="checkbox" checked={selected.length===0} onChange={()=>{onChange([]);}}/>
+            {allLabel}
+          </label>
+          {options.map(v=>(
+            <label key={v} className="ms-row">
+              <input type="checkbox" checked={selected.includes(v)} onChange={()=>toggle(v)}/>
+              {v}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 function App(){
   const[cube,setCube]=useState(null)
   const[articulos,setArticulos]=useState(null)
@@ -1937,14 +1975,14 @@ function App(){
   const fileRef=useRef()
   const[fYear,setFYear]=useState("__ALL__")
   const[fMes,setFMes]=useState("__ALL__")
-  const[fProv,setFProv]=useState("__ALL__")
-  const[fRubro,setFRubro]=useState("__ALL__")
-  const[fVend,setFVend]=useState("__ALL__")
-  const[fRentab,setFRentab]=useState("__ALL__")
-  const[fPcia,setFPcia]=useState("__ALL__")
-  const[fCliente,setFCliente]=useState("__ALL__")
-  const[fEmpresa,setFEmpresa]=useState("__ALL__")
-  const[fZona,setFZona]=useState("__ALL__")
+  const[fProv,setFProv]=useState([])
+  const[fRubro,setFRubro]=useState([])
+  const[fVend,setFVend]=useState([])
+  const[fRentab,setFRentab]=useState([])
+  const[fPcia,setFPcia]=useState([])
+  const[fCliente,setFCliente]=useState([])
+  const[fEmpresa,setFEmpresa]=useState([])
+  const[fZona,setFZona]=useState([])
 
   const records=cube||[]
 
@@ -2280,14 +2318,14 @@ function App(){
   const filtered=records.filter(r=>{
     if(fYear!=="__ALL__"&&r.y!==parseInt(fYear)) return false
     if(fMes!=="__ALL__"&&r.m!==parseInt(fMes)) return false
-    if(fProv!=="__ALL__"&&r.proveedor!==fProv) return false
-    if(fRubro!=="__ALL__"&&r.rubro!==fRubro) return false
-    if(fVend!=="__ALL__"&&r.vendedor!==fVend) return false
-    if(fRentab!=="__ALL__"&&r.rentabilidad!==fRentab) return false
-    if(fPcia!=="__ALL__"&&r.provincia!==fPcia) return false
-    if(fCliente!=="__ALL__"&&r.cliente!==fCliente) return false
-    if(fEmpresa!=="__ALL__"&&r.empresa!==fEmpresa) return false
-    if(fZona!=="__ALL__"&&r.zona!==fZona) return false
+    if(fProv.length&&!fProv.includes(r.proveedor)) return false
+    if(fRubro.length&&!fRubro.includes(r.rubro)) return false
+    if(fVend.length&&!fVend.includes(r.vendedor)) return false
+    if(fRentab.length&&!fRentab.includes(r.rentabilidad)) return false
+    if(fPcia.length&&!fPcia.includes(r.provincia)) return false
+    if(fCliente.length&&!fCliente.includes(r.cliente)) return false
+    if(fEmpresa.length&&!fEmpresa.includes(r.empresa)) return false
+    if(fZona.length&&!fZona.includes(r.zona)) return false
     return true
   })
   const filteredRows=filtered.reduce((s,r)=>s+(r.rows||1),0)
@@ -2297,19 +2335,19 @@ function App(){
   // Filtros de dimensión de la barra superior (SIN año/mes) para la pestaña Comparación,
   // que maneja sus propios períodos A/B. El artPeriod sólo conserva proveedor/rubro.
   const cmpFiltered=records.filter(r=>{
-    if(fProv!=="__ALL__"&&r.proveedor!==fProv) return false
-    if(fRubro!=="__ALL__"&&r.rubro!==fRubro) return false
-    if(fVend!=="__ALL__"&&r.vendedor!==fVend) return false
-    if(fRentab!=="__ALL__"&&r.rentabilidad!==fRentab) return false
-    if(fPcia!=="__ALL__"&&r.provincia!==fPcia) return false
-    if(fCliente!=="__ALL__"&&r.cliente!==fCliente) return false
-    if(fEmpresa!=="__ALL__"&&r.empresa!==fEmpresa) return false
-    if(fZona!=="__ALL__"&&r.zona!==fZona) return false
+    if(fProv.length&&!fProv.includes(r.proveedor)) return false
+    if(fRubro.length&&!fRubro.includes(r.rubro)) return false
+    if(fVend.length&&!fVend.includes(r.vendedor)) return false
+    if(fRentab.length&&!fRentab.includes(r.rentabilidad)) return false
+    if(fPcia.length&&!fPcia.includes(r.provincia)) return false
+    if(fCliente.length&&!fCliente.includes(r.cliente)) return false
+    if(fEmpresa.length&&!fEmpresa.includes(r.empresa)) return false
+    if(fZona.length&&!fZona.includes(r.zona)) return false
     return true
   })
   const cmpArtPeriod=(artPeriod||[]).filter(e=>{
-    if(fProv!=="__ALL__"&&e.proveedor!==fProv) return false
-    if(fRubro!=="__ALL__"&&e.rubro!==fRubro) return false
+    if(fProv.length&&!fProv.includes(e.proveedor)) return false
+    if(fRubro.length&&!fRubro.includes(e.rubro)) return false
     return true
   })
   function groupBy(arr,key){const map={};arr.forEach(r=>{const k=r[key]||"Sin dato";if(!map[k]) map[k]={name:k,ventas:0,costo:0,cantidad:0,rows:0,rentabilidad:r.rentabilidad};map[k].ventas+=r.precio;map[k].costo+=r.costo;map[k].cantidad+=r.cantidad;map[k].rows+=(r.rows||1)});return Object.values(map).sort((a,b)=>b.ventas-a.ventas)}
@@ -2426,16 +2464,16 @@ function App(){
                   </select>
                 </div>
               </div>
-              {meta?.hasEmpresa&&<div className={`fcell${fEmpresa!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-building" aria-hidden="true"/>Empresa</div><div className="fcell-val"><select value={fEmpresa} onChange={e=>setFEmpresa(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todas</option>{uniq("empresa").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
-              {meta?.hasProveedor&&<div className={`fcell${fProv!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-truck" aria-hidden="true"/>Proveedor</div><div className="fcell-val"><select value={fProv} onChange={e=>setFProv(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todos</option>{uniq("proveedor").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
-              {meta?.hasRubro&&<div className={`fcell${fRubro!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-tag" aria-hidden="true"/>Rubro</div><div className="fcell-val"><select value={fRubro} onChange={e=>setFRubro(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todos</option>{uniq("rubro").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
-              {meta?.hasVendedor&&<div className={`fcell${fVend!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-user" aria-hidden="true"/>Vendedor</div><div className="fcell-val"><select value={fVend} onChange={e=>setFVend(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todos</option>{uniq("vendedor").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
+              {meta?.hasEmpresa&&<MultiSelect icon="ti-building" label="Empresa" options={uniq("empresa")} selected={fEmpresa} onChange={setFEmpresa} allLabel="Todas"/>}
+              {meta?.hasProveedor&&<MultiSelect icon="ti-truck" label="Proveedor" options={uniq("proveedor")} selected={fProv} onChange={setFProv} allLabel="Todos"/>}
+              {meta?.hasRubro&&<MultiSelect icon="ti-tag" label="Rubro" options={uniq("rubro")} selected={fRubro} onChange={setFRubro} allLabel="Todos"/>}
+              {meta?.hasVendedor&&<MultiSelect icon="ti-user" label="Vendedor" options={uniq("vendedor")} selected={fVend} onChange={setFVend} allLabel="Todos"/>}
             </div>
             <div style={{display:"flex",alignItems:"stretch",flexWrap:"wrap",borderTop:`1px solid #202020`}}>
-              {meta?.hasZona&&<div className={`fcell${fZona!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-map-pin" aria-hidden="true"/>Zona</div><div className="fcell-val"><select value={fZona} onChange={e=>setFZona(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todas</option>{uniq("zona").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
-              {meta?.hasProvincia&&<div className={`fcell${fPcia!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-map" aria-hidden="true"/>Provincia</div><div className="fcell-val"><select value={fPcia} onChange={e=>setFPcia(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todas</option>{uniq("provincia").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
-              {meta?.hasCliente&&<div className={`fcell${fCliente!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-building-store" aria-hidden="true"/>Cliente</div><div className="fcell-val"><select value={fCliente} onChange={e=>setFCliente(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todos</option>{uniq("cliente").map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
-              {meta?.hasRentabilidad&&<div className={`fcell${fRentab!=="__ALL__"?" on":""}`}><div className="fcell-lbl"><i className="ti ti-trending-up" aria-hidden="true"/>Rentabilidad</div><div className="fcell-val"><select value={fRentab} onChange={e=>setFRentab(e.target.value)}><option value="__ALL__" style={{background:CARD}}>Todas</option>{["Alta","Media","Baja"].map(v=><option key={v} value={v} style={{background:CARD}}>{v}</option>)}</select></div></div>}
+              {meta?.hasZona&&<MultiSelect icon="ti-map-pin" label="Zona" options={uniq("zona")} selected={fZona} onChange={setFZona} allLabel="Todas"/>}
+              {meta?.hasProvincia&&<MultiSelect icon="ti-map" label="Provincia" options={uniq("provincia")} selected={fPcia} onChange={setFPcia} allLabel="Todas"/>}
+              {meta?.hasCliente&&<MultiSelect icon="ti-building-store" label="Cliente" options={uniq("cliente")} selected={fCliente} onChange={setFCliente} allLabel="Todos"/>}
+              {meta?.hasRentabilidad&&<MultiSelect icon="ti-trending-up" label="Rentabilidad" options={["Alta","Media","Baja"]} selected={fRentab} onChange={setFRentab} allLabel="Todas"/>}
               <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8,padding:"0 14px",flexShrink:0,borderLeft:`1px solid #252525`}}>
                 <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
                 {hasData&&<span style={{fontSize:10,color:"#888",background:"rgba(255,255,255,0.05)",padding:"3px 9px",borderRadius:6,whiteSpace:"nowrap",border:"1px solid #252525"}}>{fmtN(filteredRows)} / {fmtN(totalRows)} filas</span>}
