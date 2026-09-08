@@ -198,6 +198,8 @@
       const [selYear,setSelYear]         = useState(CUR_YEAR);
       const [rankSort,setRankSort]       = useState("pct");
       const [ventaFilter,setVentaFilter] = useState([]);
+      const [excludedRows,setExcludedRows] = useState([]);
+      const [showAudit,setShowAudit]     = useState(false);
 
       async function loadAll() {
         setLoading(true); setError(null);
@@ -238,6 +240,7 @@
           //   copy(JSON.stringify(window.__vtDebug.excluded))  → copia el detalle al portapapeles
           //   window.__vtDebug.excluded.reduce((a,b)=>a+b.amount,0)  → suma de las filas excluidas
           window.__vtDebug = {rawTotal, includedTotal, excluded, salesRaw, sales};
+          setExcludedRows(excluded);
 
           const goals={}, sellers=[];
           oR.forEach(r=>{
@@ -339,6 +342,57 @@
           dailyNeed:goal&&remWD?Math.round(Math.max(0,gap)/remWD):0,
           dailyGoal,byDay,cumDias,evalDias,pctDias:evalDias>0?Math.round(cumDias/evalDias*100):0};
       }),[activeSellers,monthSales,goals,selMonth,selYear,elWD,twd2,remWD,dayList,todDay]);
+
+      // Auditoría sobre las ventas ya incluidas (pasaron el filtro básico de
+      // carga). Cuatro señales, cada una evaluando todo el historial:
+      //  - vendedorDesconocido: el nombre no matchea ningún vendedor de Objetivos (typo)
+      //  - fechaSospechosa: el año-mes de la venta no tiene objetivo cargado
+      //    para NINGÚN vendedor → la fecha probablemente esté mal tipeada
+      //  - duplicados: misma fila (vendedor+fecha+importe) repetida
+      //  - sinObjetivo: vendedor conocido, pero sin objetivo cargado ese año-mes
+      //    puntual (a diferencia de fechaSospechosa, el período sí existe:
+      //    otros vendedores tienen objetivo ahí, este vendedor no)
+      const auditoriaVentas=useMemo(()=>{
+        const periodosConObjetivo=new Set();
+        Object.values(goals).forEach(g=>Object.keys(g).forEach(k=>periodosConObjetivo.add(k)));
+
+        const vendedorDesconocido={}, sinObjetivo={}, dupMap={}, fechaSospechosa=[];
+        sales.forEach(s=>{
+          const p=parseDateParts(s.date); if(!p) return;
+          const key=bk(p.m,p.y);
+
+          const dk=`${s.seller}|${s.date}|${s.amount}`;
+          if(!dupMap[dk]) dupMap[dk]={seller:s.seller,date:s.date,amount:s.amount,count:0};
+          dupMap[dk].count++;
+
+          if(!sellers.includes(s.seller)){
+            if(!vendedorDesconocido[s.seller]) vendedorDesconocido[s.seller]={seller:s.seller,count:0,total:0};
+            vendedorDesconocido[s.seller].count++;
+            vendedorDesconocido[s.seller].total+=s.amount;
+          } else if((goals[s.seller]&&goals[s.seller][key])>0) {
+            // tiene objetivo cargado ese período, todo bien
+          } else if(periodosConObjetivo.has(key)) {
+            // el período existe (otros vendedores sí tienen objetivo ahí),
+            // pero este vendedor puntual no
+            const gk=`${s.seller}|${key}`;
+            if(!sinObjetivo[gk]) sinObjetivo[gk]={seller:s.seller,year:p.y,month:p.m,total:0};
+            sinObjetivo[gk].total+=s.amount;
+          } else {
+            // ningún vendedor tiene objetivo cargado para este año-mes:
+            // la fecha de la venta probablemente esté mal tipeada
+            fechaSospechosa.push({...s,motivo:"período sin objetivos cargados"});
+          }
+        });
+        return {
+          vendedorDesconocido: Object.values(vendedorDesconocido).sort((a,b)=>b.total-a.total),
+          sinObjetivo: Object.values(sinObjetivo).sort((a,b)=>b.year-a.year||b.month-a.month||a.seller.localeCompare(b.seller)),
+          duplicados: Object.values(dupMap).filter(d=>d.count>1),
+          fechaSospechosa,
+        };
+      },[sales,sellers,goals]);
+      const {vendedorDesconocido,sinObjetivo,duplicados,fechaSospechosa}=auditoriaVentas;
+      const auditCount=excludedRows.length+sinObjetivo.length+vendedorDesconocido.length+duplicados.length+fechaSospechosa.length;
+
 
       const PeriodSel=()=>(
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,flexWrap:"wrap"}}>
@@ -882,7 +936,145 @@
                 </div>
               </div>
               <button className="btn-g" style={{fontSize:12,padding:"5px 12px"}} onClick={loadAll}>↻ Actualizar</button>
+              {auditCount>0&&(
+                <button className="btn-g" style={{fontSize:12,padding:"5px 12px",borderColor:"#F0A50077",color:"#F0A500"}} onClick={()=>setShowAudit(v=>!v)}>
+                  ⚠ {auditCount}
+                </button>
+              )}
             </div>
+            {showAudit&&auditCount>0&&(
+              <div className="card" style={{borderColor:"#F0A50044",marginBottom:16}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <b style={{color:"#F0A500",fontSize:13}}>⚠ Auditoría de datos</b>
+                  <button className="btn-s" onClick={()=>setShowAudit(false)}>Cerrar ✕</button>
+                </div>
+                {excludedRows.length>0&&(
+                  <div style={{marginBottom:14}}>
+                    <div style={{fontSize:12,color:C.muted,marginBottom:6}}>
+                      {excludedRows.length} fila(s) no incluida(s) al cargar la hoja "Ventas":
+                    </div>
+                    <div style={{overflowX:"auto"}}>
+                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                        <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
+                          {["Fecha","Vendedor","Cliente","Importe","Motivo"].map(h=>
+                            <th key={h} style={{padding:"5px 8px",textAlign:"left",color:C.faint,fontWeight:500}}>{h}</th>)}
+                        </tr></thead>
+                        <tbody>
+                          {excludedRows.slice(0,50).map((r,i)=>(
+                            <tr key={i} style={{borderBottom:"1px solid #1e2530"}}>
+                              <td style={{padding:"5px 8px",color:C.muted}}>{r.date||"—"}</td>
+                              <td style={{padding:"5px 8px",color:C.sub}}>{r.seller||"—"}</td>
+                              <td style={{padding:"5px 8px",color:C.muted}}>{r.client||"—"}</td>
+                              <td style={{padding:"5px 8px",color:C.sub}}>{r.amount?fmt(r.amount):"—"}</td>
+                              <td style={{padding:"5px 8px",color:"#E05C5C"}}>{r.motivo}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                {vendedorDesconocido.length>0&&(
+                  <div style={{marginBottom:14}}>
+                    <div style={{fontSize:12,color:C.muted,marginBottom:6}}>
+                      Vendedor no coincide con ninguno de Objetivos (posible error de tipeo):
+                    </div>
+                    <div style={{overflowX:"auto"}}>
+                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                        <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
+                          {["Vendedor cargado","Ventas","Monto"].map(h=>
+                            <th key={h} style={{padding:"5px 8px",textAlign:"left",color:C.faint,fontWeight:500}}>{h}</th>)}
+                        </tr></thead>
+                        <tbody>
+                          {vendedorDesconocido.map((v,i)=>(
+                            <tr key={i} style={{borderBottom:"1px solid #1e2530"}}>
+                              <td style={{padding:"5px 8px",color:"#E05C5C",fontWeight:600}}>{v.seller}</td>
+                              <td style={{padding:"5px 8px",color:C.muted}}>{v.count}</td>
+                              <td style={{padding:"5px 8px",color:C.sub}}>{fmt(v.total)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                {fechaSospechosa.length>0&&(
+                  <div style={{marginBottom:14}}>
+                    <div style={{fontSize:12,color:C.muted,marginBottom:6}}>
+                      Fecha cuyo período no tiene objetivo cargado para ningún vendedor (posible error de tipeo en la fecha):
+                    </div>
+                    <div style={{overflowX:"auto"}}>
+                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                        <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
+                          {["Fecha","Vendedor","Cliente","Importe","Motivo"].map(h=>
+                            <th key={h} style={{padding:"5px 8px",textAlign:"left",color:C.faint,fontWeight:500}}>{h}</th>)}
+                        </tr></thead>
+                        <tbody>
+                          {fechaSospechosa.slice(0,50).map((r,i)=>(
+                            <tr key={i} style={{borderBottom:"1px solid #1e2530"}}>
+                              <td style={{padding:"5px 8px",color:"#E05C5C",fontWeight:600}}>{r.date}</td>
+                              <td style={{padding:"5px 8px",color:C.sub}}>{r.seller}</td>
+                              <td style={{padding:"5px 8px",color:C.muted}}>{r.client||"—"}</td>
+                              <td style={{padding:"5px 8px",color:C.sub}}>{fmt(r.amount)}</td>
+                              <td style={{padding:"5px 8px",color:C.muted}}>{r.motivo}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                {duplicados.length>0&&(
+                  <div style={{marginBottom:14}}>
+                    <div style={{fontSize:12,color:C.muted,marginBottom:6}}>
+                      Filas duplicadas (mismo vendedor + fecha + importe repetido):
+                    </div>
+                    <div style={{overflowX:"auto"}}>
+                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                        <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
+                          {["Fecha","Vendedor","Importe","Veces"].map(h=>
+                            <th key={h} style={{padding:"5px 8px",textAlign:"left",color:C.faint,fontWeight:500}}>{h}</th>)}
+                        </tr></thead>
+                        <tbody>
+                          {duplicados.map((d,i)=>(
+                            <tr key={i} style={{borderBottom:"1px solid #1e2530"}}>
+                              <td style={{padding:"5px 8px",color:C.muted}}>{d.date}</td>
+                              <td style={{padding:"5px 8px",color:C.sub}}>{d.seller}</td>
+                              <td style={{padding:"5px 8px",color:C.sub}}>{fmt(d.amount)}</td>
+                              <td style={{padding:"5px 8px",color:"#E05C5C",fontWeight:600}}>{d.count}×</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                {sinObjetivo.length>0&&(
+                  <div>
+                    <div style={{fontSize:12,color:C.muted,marginBottom:6}}>
+                      Vendedor conocido, sin objetivo cargado ese período (no suma en Dashboard/Ranking/Rendimiento):
+                    </div>
+                    <div style={{overflowX:"auto"}}>
+                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                        <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
+                          {["Vendedor","Período","Monto en juego"].map(h=>
+                            <th key={h} style={{padding:"5px 8px",textAlign:"left",color:C.faint,fontWeight:500}}>{h}</th>)}
+                        </tr></thead>
+                        <tbody>
+                          {sinObjetivo.map((g,i)=>(
+                            <tr key={i} style={{borderBottom:"1px solid #1e2530"}}>
+                              <td style={{padding:"5px 8px",color:C.sub}}>{g.seller}</td>
+                              <td style={{padding:"5px 8px",color:C.muted}}>{MS[g.month]} {g.year}</td>
+                              <td style={{padding:"5px 8px",color:"#F0A500",fontWeight:600}}>{fmt(g.total)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{display:"flex",overflowX:"auto",borderBottom:"1px solid #2d3440",marginBottom:16}}>
               {TABS.map(t=><button key={t.id} className={`tab ${tab===t.id?"on":""}`} onClick={()=>setTab(t.id)}>{t.l}</button>)}
             </div>
