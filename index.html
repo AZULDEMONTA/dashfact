@@ -2330,6 +2330,8 @@ function App(){
   })
   const filteredRows=filtered.reduce((s,r)=>s+(r.rows||1),0)
   const totalRows=meta?.totalRows||records.reduce((s,r)=>s+(r.rows||1),0)
+  const lastUpdateISO=capas.length?capas.reduce((max,c)=>c.importedAt>max?c.importedAt:max,capas[0].importedAt):null
+  const lastUpdateLabel=lastUpdateISO?(()=>{try{return new Date(lastUpdateISO).toLocaleString("es-AR",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}catch(e){return null}})():null
   const totalVentas=filtered.reduce((s,r)=>s+r.precio,0)
   const totalUnidades=filtered.reduce((s,r)=>s+r.cantidad,0)
   // Filtros de dimensión de la barra superior (SIN año/mes) para la pestaña Comparación,
@@ -2476,6 +2478,7 @@ function App(){
               {meta?.hasRentabilidad&&<MultiSelect icon="ti-trending-up" label="Rentabilidad" options={["Alta","Media","Baja"]} selected={fRentab} onChange={setFRentab} allLabel="Todas"/>}
               <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8,padding:"0 14px",flexShrink:0,borderLeft:`1px solid #252525`}}>
                 <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
+                {lastUpdateLabel&&<span style={{fontSize:10,color:"#888",background:"rgba(255,255,255,0.05)",padding:"3px 9px",borderRadius:6,whiteSpace:"nowrap",border:"1px solid #252525",display:"flex",alignItems:"center",gap:5}}><i className="ti ti-clock" aria-hidden="true"/>Última actualización: {lastUpdateLabel}</span>}
                 {hasData&&<span style={{fontSize:10,color:"#888",background:"rgba(255,255,255,0.05)",padding:"3px 9px",borderRadius:6,whiteSpace:"nowrap",border:"1px solid #252525"}}>{fmtN(filteredRows)} / {fmtN(totalRows)} filas</span>}
               </div>
             </div>
