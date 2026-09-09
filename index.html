@@ -37,12 +37,12 @@
     .nav-item i{font-size:18px;flex-shrink:0;width:20px;text-align:center}
     .fcell{display:flex;flex-direction:column;justify-content:center;padding:6px 13px;border-right:1px solid #252525;cursor:pointer;transition:background .15s;min-width:0}
     .fcell:hover{background:rgba(255,255,255,0.04)}
-    .fcell-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.3px;color:#606060;margin-bottom:3px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+    .fcell-lbl{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:#8a8a8a;margin-bottom:3px;display:flex;align-items:center;gap:4px;white-space:nowrap}
     .fcell-lbl i{font-size:11px}
-    .fcell-val{font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
-    .fcell select{background:transparent;border:none;color:inherit;font-size:11px;outline:none;cursor:pointer;font-family:inherit;padding:0;max-width:110px}
+    .fcell-val{font-size:13.5px;color:#d5d5d5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+    .fcell select{background:transparent;border:none;color:inherit;font-size:13.5px;outline:none;cursor:pointer;font-family:inherit;padding:0;max-width:110px}
     .fcell.on{background:rgba(245,179,1,0.10);border-top:2px solid #F5B301;padding-top:4px}
-    .fcell.on .fcell-lbl{color:#C98F00}
+    .fcell.on .fcell-lbl{color:#c9902a}
     .fcell.on .fcell-val{color:#F5B301;font-weight:500}
     .fcell.on select{color:#F5B301}
     .ms-wrap{position:relative}
@@ -291,9 +291,9 @@ function KpiCard({icon,label,value,sub,accent}){return(
         {icon}
       </div>
     </div>
-    <div style={{fontSize:26,fontWeight:500,color:"#FFFFFF",letterSpacing:"-0.5px",lineHeight:1}}>{value}</div>
-    <div style={{fontSize:11,color:"#A0A0A0",marginTop:6}}>{label}</div>
-    {sub&&<div style={{fontSize:10,color:"#555555",marginTop:3}}>{sub}</div>}
+    <div style={{fontSize:18,fontWeight:600,color:"#FFFFFF",letterSpacing:"-0.2px",lineHeight:1}}>{value}</div>
+    <div style={{fontSize:12,color:"#B0B0B0",marginTop:7}}>{label}</div>
+    {sub&&<div style={{fontSize:11,color:"#6b6b6b",marginTop:3}}>{sub}</div>}
   </div>
 )}
 function Dropdown({label,value,options,onChange}){
