@@ -103,7 +103,7 @@ async function dbDelete(key){
 }
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
-const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1",CK="capas-v1"
+const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1",CK="capas-v1",CANK="canal-base-v1"
 const LOGO_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEF0lEQVR4nO1WXWhcRRT+zrl/m8ZEGmpJk6a2IbFQQUIjSA0VimAj2FqDK0bBR31RRBDNJo3TpU3NFhR9sBCVFqxI01CQKhIf7EMREooiQoNik5jSNO0mWJq/3ezeO3N8uEtd0+puuuqL+eA+3JnhnO/75pzDAKtYxcpBue9/h1MWAGyojz23saHr+fy1UsDFHx0RpRT7gYlns4ESEQJGpFQCRULZAFDbGGtbt6lb1tXtl5rNHXvz9+4UxTpglFLsZ0y3GG0EYnxj3oIIATD/MgFlA3Hz8Wd6n4HXRDAM0Szwmmu2xPYAcVNKLRTjQKg+G3QCjlg2Prcs+hJwxTfSVWotFOhnZQPxoLY+1pYJ7NMEEW+NfoBhe+mUfCcguI7/5NRY75nQhWf0SgkUKiCjlOKjx9OdwBohLAxO/py4AADrN3ecFbNml+9nY0Q4IzJCtxbk/QIMANiWc+iA5DTfdOxvHAjVV9fH2oLAPg0JjOfpliujR4YBodr6jl2ZwP2G4MBxUs9OjfX2r1R9IQKsFHD0ePq8oGI708JX05cSewDlAPEsAKzf9OYxtiq2M6eGAfpEB3IfM9UITCVDiC1OQfCb7fK0Y1vXIp6V3FClZ3bswI14PG6Av7yCUH3fiVibwGsmLCESsQ8DECCe3fpwomIxOdcSaIiRRVdn5TFifhQwSRH6AYwLwjQuLEmb3DkjfoYylq/LtclkkC3CgXz1lc3M8yenJxLttY3dDwW+eUEbaWcuX2v0wg3LorPMVkqMP3ttovflf+AK8u/eOS0SLLquxHSAnSJulNgDzMKP7PC7TY2z/T9N3rVlcZZGQC5bdvqJ5Hjka+C6BVT5Ybz48hb90//tCLBSwAfH0t8DXpMgkybAI17LkPmLjkPdV8d7+kX+OH9PXfoLocpWyPzQzOXEToKicEAVxrJBFE69vhPpfaBIk5iMD7HKQB4zLbx3d7Xz4NRYT78IKOz78Lzj8iFICiC3ZWN9Z+tKpuPySWgAxYFP3SLagNgm5pRrB+3JiZ7XRs/H53K9LuHQiQdA1Joa6x1i0oOAC1/rrpBgcdMxj0CopnrL0lMgt0lEE7M1VxbB7qnxt0/mElOY9FaUOe4hSNoYcVvqtnbtLtaFfAeMUoqNYL8Y0Uzke16w9/IvPd8CLzq5xLdRNaCBqHVp7OAQkx4keJJZ8mPhXmEXOF/9R59mnxZT1sSWa9m26Zy8mDgH9DnAh36hQADguNZBkTQJIo9U3/vG48W4wAAIOKBbW9/3tMbrIEpanDqS/DXxTkjspSKSD2hA8ZXRw8NEwSmQsxgIvRqNRq1CLtxsw23blDtPQZ1Xbs+ExbZiEAA0NLzi3shWVBmT5uuTlVeLbcdliJb82LxDKAak1Dc/hTFKjrOK/wa/A3rQ7dfNECyuAAAAAElFTkSuQmCC"
 
 const BG="#0A0A0A",CARD="#161616",CARD2="#1A1A1A",BORDER="rgba(255,255,255,0.08)",BORDER2="#2A2A2A",TEXT="#FFFFFF",MUTED="#B0B0B0",MUTED2="#666666"
@@ -244,6 +244,20 @@ async function saveData(cube,arts,meta,provArts,ruboArts){
   return kb
 }
 async function clearData(){await Promise.all([dbDelete(SK),dbDelete(AK),dbDelete(MK),dbDelete(PAK),dbDelete(RAK)])}
+
+/* ─── Base Clientes-Canal ────────────────────────────────────────────────────── */
+function normCliente(v){return String(v??"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ")}
+async function loadCanalBase(){
+  try{
+    const v=await dbGet(CANK)
+    return v?JSON.parse(v):null
+  }catch(e){return null}
+}
+async function saveCanalBase(map,fileName,rows,clientCount,canalCount){
+  const payload=JSON.stringify({map,fileName,importedAt:new Date().toISOString(),rows,clientCount,canalCount})
+  await dbSet(CANK,payload)
+}
+async function clearCanalBase(){await dbDelete(CANK)}
 
 const CAMPOS=[
   {key:"fecha",req:true,syn:["fecha","date","dia","día"]},
@@ -663,6 +677,63 @@ function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
           </div>
         ))}
         <div style={{fontSize:11,color:MUTED,marginTop:4}}>Hacé clic en un cliente para ver qué compra.</div>
+      </div>
+    </div>
+  )
+}
+function CanalesTab({filteredRecords,meta,totalVentas,totalUnidades}){
+  const[sel,setSel]=useState(null)
+  const[metric,setMetric]=useState("pesos")
+  const cm={}
+  filteredRecords.forEach(r=>{
+    const k=r.canal||"Sin canal"
+    if(!cm[k]) cm[k]={name:k,ventas:0,cantidad:0,rows:0,clientes:{},rubros:{},proveedores:{},vendedores:{}}
+    const c=cm[k];c.ventas+=r.precio;c.cantidad+=r.cantidad;c.rows+=(r.rows||1)
+    if(r.cliente) c.clientes[r.cliente]=(c.clientes[r.cliente]||0)+r.precio
+    if(r.rubro) c.rubros[r.rubro]=(c.rubros[r.rubro]||0)+r.precio
+    if(r.proveedor) c.proveedores[r.proveedor]=(c.proveedores[r.proveedor]||0)+r.precio
+    if(r.vendedor) c.vendedores[r.vendedor]=(c.vendedores[r.vendedor]||0)+r.precio
+  })
+  const cl=Object.values(cm).sort((a,b)=>b.ventas-a.ventas)
+  cl.forEach((c,i)=>c.color=VENDOR_COLORS[i%VENDOR_COLORS.length])
+  const maxV=cl[0]?.ventas||1
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+        <KpiCard icon="🏷️" label="Canales" value={fmtN(cl.length)} sub="en el período" accent={ACCENT2}/>
+        <KpiCard icon="💰" label="Total Ventas" value={fmtM(totalVentas)} sub="período" accent={BRAND}/>
+        {meta?.hasCantidad&&<KpiCard icon="📦" label="Unidades" value={fmtU(totalUnidades)} sub="período" accent={ACCENT1}/>}
+        {cl[0]&&<KpiCard icon="⭐" label="Top canal" value={cl[0].name} sub={`${fmtM(cl[0].ventas)} · ${fmtPct(totalVentas>0?cl[0].ventas/totalVentas*100:0)}`} accent={ACCENT4}/>}
+      </div>
+      <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px",}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
+          <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED}}>Ranking de canales ({cl.length})</div>
+          {meta?.hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
+        </div>
+        {cl.map((c,i)=>(
+          <div key={c.name} onClick={()=>setSel(sel===c.name?null:c.name)}
+            style={{marginBottom:10,cursor:"pointer",padding:"10px 12px",borderRadius:8,border:`1px solid ${sel===c.name?BRAND:BORDER}`,background:sel===c.name?BRAND_LIGHT:CARD,transition:"all .15s"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
+              <span style={{fontSize:11,color:MUTED,width:24,textAlign:"right",flexShrink:0}}>{i+1}.</span>
+              <div style={{width:8,height:8,borderRadius:"50%",background:c.color,flexShrink:0}}/>
+              <span style={{fontSize:14,fontWeight:500,color:TEXT,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</span>
+              <span style={{fontSize:14,fontWeight:500,color:metric==="pesos"?BRAND:ACCENT2,minWidth:70,textAlign:"right"}}>{metric==="pesos"?fmtM(c.ventas):fmtU(c.cantidad)}</span>
+              <span style={{fontSize:11,color:MUTED,width:44,textAlign:"right"}}>{fmtPct(totalVentas>0?c.ventas/totalVentas*100:0)}</span>
+              <span style={{fontSize:11,color:MUTED,minWidth:70,textAlign:"right"}}>{fmtN(Object.keys(c.clientes).length)} clientes</span>
+            </div>
+            <div style={{height:4,background:"#e0e4f0",borderRadius:2,marginLeft:42}}>
+              <div style={{height:"100%",width:`${(metric==="pesos"?c.ventas:c.cantidad)/maxV*100}%`,background:BRAND,borderRadius:2,opacity:0.55}}/>
+            </div>
+            {sel===c.name&&(
+              <div style={{marginTop:12,display:"flex",gap:10,flexWrap:"wrap"}}>
+                {Object.keys(c.clientes).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Top Clientes</div>{Object.entries(c.clientes).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([n,val])=><div key={n} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{n}</span><span style={{fontSize:11,fontWeight:500,color:ACCENT2}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:ACCENT2,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
+                {Object.keys(c.rubros).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Rubros</div>{Object.entries(c.rubros).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([r,val])=><div key={r} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{r}</span><span style={{fontSize:11,fontWeight:500,color:ACCENT1}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:ACCENT1,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
+                {Object.keys(c.proveedores).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Proveedores</div>{Object.entries(c.proveedores).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([p,val])=><div key={p} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{p}</span><span style={{fontSize:11,fontWeight:500,color:BRAND}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:BRAND,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
+              </div>
+            )}
+          </div>
+        ))}
+        <div style={{fontSize:11,color:MUTED,marginTop:4}}>Hacé clic en un canal para ver el detalle.</div>
       </div>
     </div>
   )
@@ -1321,6 +1392,7 @@ function ComparacionTab({records,provArts,ruboArts,artPeriod,meta}){
     meta?.hasArticulo&&{key:"articulo",label:"Artículo"},
     meta?.hasVendedor&&{key:"vendedor",label:"Vendedor"},
     meta?.hasCliente&&{key:"cliente",label:"Cliente"},
+    meta?.hasCanal&&{key:"canal",label:"Canal"},
     meta?.hasProvincia&&{key:"provincia",label:"Provincia"},
     meta?.hasZona&&{key:"zona",label:"Zona"},
     meta?.hasEmpresa&&{key:"empresa",label:"Empresa"},
@@ -1986,8 +2058,17 @@ function App(){
   const[fCliente,setFCliente]=useState([])
   const[fEmpresa,setFEmpresa]=useState([])
   const[fZona,setFZona]=useState([])
+  const[fCanal,setFCanal]=useState([])
+  const[canalMap,setCanalMap]=useState({})
+  const[canalMeta,setCanalMeta]=useState(null)
+  const[canalMsg,setCanalMsg]=useState("")
+  const[showUnmatched,setShowUnmatched]=useState(false)
+  const canalFileRef=useRef()
 
-  const records=cube||[]
+  const rawRecords=cube||[]
+  const hasCanalBase=Object.keys(canalMap).length>0
+  const records=hasCanalBase?rawRecords.map(r=>r.cliente?{...r,canal:canalMap[normCliente(r.cliente)]||"Sin canal"}:r):rawRecords
+  const unmatchedClientes=hasCanalBase?[...new Set(records.filter(r=>r.canal==="Sin canal"&&r.cliente&&r.cliente!=="Sin cliente").map(r=>r.cliente))].sort():[]
 
   useEffect(()=>{
     const t0=Date.now()
@@ -2000,6 +2081,45 @@ function App(){
       setCube(c||[]);setArticulos(a||[]);setMeta(m||{});setProvArts(pa||{});setRuboArts(ra||{});setArtPeriod(rebuiltAP)
       try{setCapas(capasRaw?JSON.parse(capasRaw):[])}catch(e){setCapas([])}
     })
+    loadCanalBase().then(cb=>{
+      if(!cb) return
+      setCanalMap(cb.map||{})
+      setCanalMeta({fileName:cb.fileName,importedAt:cb.importedAt,rows:cb.rows,clientCount:cb.clientCount,canalCount:cb.canalCount})
+    })
+  },[])
+
+  const handleCanalFile=useCallback(async e=>{
+    const file=e.target.files?.[0]
+    if(!file) return
+    e.target.value=""
+    try{
+      const ab=await file.arrayBuffer()
+      const wb=XLSX.read(ab,{type:"array"})
+      const ws=wb.Sheets[wb.SheetNames[0]]
+      const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:""})
+      if(raw.length<2){alert("El archivo no tiene datos.");return}
+      const headers=raw[0].map(v=>String(v))
+      const normH=s=>s?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim()
+      let ciCliente=headers.findIndex(h=>["cliente","client","cte"].some(x=>normH(h)?.includes(x)))
+      let ciCanal=headers.findIndex(h=>["canal","channel","segmento"].some(x=>normH(h)?.includes(x)))
+      if(ciCliente<0) ciCliente=0
+      if(ciCanal<0) ciCanal=1
+      const map={},canalesSet=new Set()
+      let rows=0
+      raw.slice(1).forEach(row=>{
+        const cli=String(row[ciCliente]??"").trim()
+        const can=String(row[ciCanal]??"").trim()
+        if(!cli||!can) return
+        map[normCliente(cli)]=can;canalesSet.add(can);rows++
+      })
+      if(rows===0){alert("No se encontraron filas válidas con Cliente y Canal en el archivo.");return}
+      const clientCount=Object.keys(map).length,canalCount=canalesSet.size
+      await saveCanalBase(map,file.name,rows,clientCount,canalCount)
+      setCanalMap(map)
+      setCanalMeta({fileName:file.name,importedAt:new Date().toISOString(),rows,clientCount,canalCount})
+      setCanalMsg(`Base de canales actualizada · ${fmtN(clientCount)} clientes · ${fmtN(canalCount)} canales`)
+      setTimeout(()=>setCanalMsg(""),6000)
+    }catch(err){alert("Error al leer la base de canales: "+err)}
   },[])
 
   const parseFile=useCallback(async file=>{
@@ -2327,6 +2447,7 @@ function App(){
     if(fRentab.length&&!fRentab.includes(r.rentabilidad)) return false
     if(fPcia.length&&!fPcia.includes(r.provincia)) return false
     if(fCliente.length&&!fCliente.includes(r.cliente)) return false
+    if(fCanal.length&&!fCanal.includes(r.canal)) return false
     if(fEmpresa.length&&!fEmpresa.includes(r.empresa)) return false
     if(fZona.length&&!fZona.includes(r.zona)) return false
     return true
@@ -2346,6 +2467,7 @@ function App(){
     if(fRentab.length&&!fRentab.includes(r.rentabilidad)) return false
     if(fPcia.length&&!fPcia.includes(r.provincia)) return false
     if(fCliente.length&&!fCliente.includes(r.cliente)) return false
+    if(fCanal.length&&!fCanal.includes(r.canal)) return false
     if(fEmpresa.length&&!fEmpresa.includes(r.empresa)) return false
     if(fZona.length&&!fZona.includes(r.zona)) return false
     return true
@@ -2369,6 +2491,7 @@ function App(){
     {key:"resumen",label:"Resumen",icon:"ti-layout-dashboard"},
     ...(meta?.hasCliente?[{key:"agente",label:"Agente IA",icon:"ti-sparkles"}]:[]),
     ...(meta?.hasCliente?[{key:"clientes",label:"Clientes",icon:"ti-building-store",group:"dim"}]:[]),
+    ...(hasCanalBase?[{key:"canales",label:"Canales",icon:"ti-tag",group:"dim"}]:[]),
     ...(meta?.hasProveedor?[{key:"proveedores",label:"Proveedores",icon:"ti-truck",group:"dim"}]:[]),
     ...(meta?.hasRubro?[{key:"rubros",label:"Rubros",icon:"ti-tag",group:"dim"}]:[]),
     ...(meta?.hasVendedor?[{key:"vendedores",label:"Vendedores",icon:"ti-users",group:"dim"}]:[]),
@@ -2439,8 +2562,13 @@ function App(){
               <i className="ti ti-upload" aria-hidden="true"/>
               <span className="nav-label">Importar Excel</span>
             </div>
+            <div className="nav-item" onClick={()=>canalFileRef.current&&canalFileRef.current.click()} title={canalMeta?`Base actual: ${canalMeta.fileName} (${fmtN(canalMeta.clientCount)} clientes, ${fmtN(canalMeta.canalCount)} canales)`:"Cargar base de Clientes-Canal (Excel: Cliente, Canal)"} style={{color:ACCENT2}}>
+              <i className="ti ti-tag" aria-hidden="true"/>
+              <span className="nav-label">{canalMeta?"Base Clientes-Canal ✓":"Base Clientes-Canal"}</span>
+            </div>
           </div>
           <input key={fileKey} ref={fileRef} type="file" accept=".xlsx,.xls,.csv" multiple onChange={handleFile} style={{display:"none"}}/>
+          <input ref={canalFileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleCanalFile} style={{display:"none"}}/>
         </div>
 
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
@@ -2478,6 +2606,7 @@ function App(){
               {meta?.hasZona&&<MultiSelect icon="ti-map-pin" label="Zona" options={uniq("zona")} selected={fZona} onChange={setFZona} allLabel="Todas"/>}
               {meta?.hasProvincia&&<MultiSelect icon="ti-map" label="Provincia" options={uniq("provincia")} selected={fPcia} onChange={setFPcia} allLabel="Todas"/>}
               {meta?.hasCliente&&<MultiSelect icon="ti-building-store" label="Cliente" options={uniq("cliente")} selected={fCliente} onChange={setFCliente} allLabel="Todos"/>}
+              {hasCanalBase&&<MultiSelect icon="ti-tag" label="Canal" options={uniq("canal")} selected={fCanal} onChange={setFCanal} allLabel="Todos"/>}
               {meta?.hasRentabilidad&&<MultiSelect icon="ti-trending-up" label="Rentabilidad" options={["Alta","Media","Baja"]} selected={fRentab} onChange={setFRentab} allLabel="Todas"/>}
               <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8,padding:"0 14px",flexShrink:0,borderLeft:`1px solid #252525`}}>
                 <SaveBar stage={saveStage} progress={saveProgress} msg={saveMsg}/>
@@ -2487,6 +2616,21 @@ function App(){
             </div>
           </div>
 
+          {canalMsg&&(
+            <div style={{padding:"8px 20px",background:"rgba(34,197,94,0.08)",borderBottom:`1px solid ${BORDER}`,fontSize:12,color:"#22C55E",display:"flex",alignItems:"center",gap:8}}>
+              <i className="ti ti-circle-check" aria-hidden="true"/>{canalMsg}
+            </div>
+          )}
+          {unmatchedClientes.length>0&&(
+            <div style={{padding:"8px 20px",background:"rgba(239,68,68,0.08)",borderBottom:`1px solid ${BORDER}`,fontSize:12,color:"#EF4444"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <i className="ti ti-alert-triangle" aria-hidden="true"/>
+                <span><b>{fmtN(unmatchedClientes.length)}</b> cliente{unmatchedClientes.length===1?"":"s"} de tus ventas no {unmatchedClientes.length===1?"matchea":"matchean"} con ningún canal de la base cargada (se muestra{unmatchedClientes.length===1?"":"n"} como "Sin canal").</span>
+                <span onClick={()=>setShowUnmatched(s=>!s)} style={{cursor:"pointer",textDecoration:"underline",flexShrink:0,marginLeft:"auto"}}>{showUnmatched?"Ocultar lista":"Ver lista"}</span>
+              </div>
+              {showUnmatched&&<div style={{marginTop:8,maxHeight:140,overflow:"auto",background:"rgba(0,0,0,0.2)",borderRadius:6,padding:"8px 10px",lineHeight:1.9}}>{unmatchedClientes.join(" · ")}</div>}
+            </div>
+          )}
           <div id="dashfact-content" style={{flex:1,overflow:"auto",padding:"16px 20px",background:BG}}>
             {!hasData?(
               <div style={{textAlign:"center",padding:"80px 20px"}}>
@@ -2518,6 +2662,7 @@ function App(){
                   </>
                 )}
                 {safeTab==="clientes"&&<ClientesTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
+                {safeTab==="canales"&&<CanalesTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="proveedores"&&<ProveedoresTab data={provData} filteredRecords={filtered} provArts={provArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="rubros"&&<RubrosTab data={rubroData} filteredRecords={filtered} ruboArts={ruboArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="vendedores"&&<VendedoresTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
@@ -2528,7 +2673,7 @@ function App(){
                 {safeTab==="provincias"&&<DetailTab data={pciaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia" color={ACCENT7}/>}
                 {safeTab==="agente"&&<AgenteIATab records={records} meta={meta}/>}
                 {safeTab==="clientes-periodo"&&<ClientesPeriodoTab filteredRecords={filtered} meta={meta}/>}
-                {safeTab==="comparacion"&&<ComparacionTab records={cmpFiltered} provArts={provArts} ruboArts={ruboArts} artPeriod={cmpArtPeriod} meta={meta}/>}
+                {safeTab==="comparacion"&&<ComparacionTab records={cmpFiltered} provArts={provArts} ruboArts={ruboArts} artPeriod={cmpArtPeriod} meta={{...meta,hasCanal:hasCanalBase}}/>}
               </>
             )}
           </div>
