@@ -51,6 +51,9 @@
     .ms-row:hover{background:rgba(245,179,1,0.07)}
     .ms-row input{accent-color:#F5B301;width:13px;height:13px;cursor:pointer;flex-shrink:0}
     .ms-row-all{border-bottom:1px solid #2A2A2A;margin-bottom:4px;padding-bottom:8px;color:#F5B301;font-weight:500}
+    .ms-search{width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid #2A2A2A;border-radius:6px;color:#FFFFFF;font-size:11px;padding:6px 8px;margin-bottom:6px;outline:none}
+    .ms-search:focus{border-color:#F5B301}
+    .ms-empty{padding:6px 8px;font-size:11px;color:#8a8a8a}
     .kpi-card{background:#161616;border:1px solid #2A2A2A;border-radius:12px;padding:16px;transition:border-color .2s;position:relative;overflow:hidden}
     .kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#F5B301,#FFD95A)}
     .kpi-card:hover{border-color:#F5B301}
@@ -2056,31 +2059,42 @@ function AgenteIATab({records,meta}){
 }
 function MultiSelect({icon,label,options,selected,onChange,allLabel}){
   const[open,setOpen]=useState(false)
+  const[msSearch,setMsSearch]=useState("")
   const ref=useRef(null)
   useEffect(()=>{
-    function onDoc(e){if(ref.current&&!ref.current.contains(e.target))setOpen(false)}
+    function onDoc(e){if(ref.current&&!ref.current.contains(e.target)){setOpen(false);setMsSearch("")}}
     document.addEventListener("mousedown",onDoc)
     return()=>document.removeEventListener("mousedown",onDoc)
   },[])
   const isOn=selected.length>0
   const valText=selected.length===0?allLabel:(selected.length===1?selected[0]:`${selected.length} seleccionados`)
   function toggle(v){onChange(selected.includes(v)?selected.filter(x=>x!==v):[...selected,v])}
+  const filteredOptions=msSearch?options.filter(v=>v.toLowerCase().includes(msSearch.toLowerCase())):options
   return(
     <div className={`fcell ms-wrap${isOn?" on":""}`} ref={ref}>
       <div className="fcell-lbl"><i className={`ti ${icon}`} aria-hidden="true"/>{label}</div>
       <div className="fcell-val" onClick={()=>setOpen(o=>!o)} style={{cursor:"pointer"}}>{valText}</div>
       {open&&(
         <div className="ms-menu" onClick={e=>e.stopPropagation()}>
+          <input
+            type="text"
+            className="ms-search"
+            placeholder="Buscar..."
+            value={msSearch}
+            onChange={e=>setMsSearch(e.target.value)}
+            autoFocus
+          />
           <label className="ms-row ms-row-all">
             <input type="checkbox" checked={selected.length===0} onChange={()=>{onChange([]);}}/>
             {allLabel}
           </label>
-          {options.map(v=>(
+          {filteredOptions.map(v=>(
             <label key={v} className="ms-row">
               <input type="checkbox" checked={selected.includes(v)} onChange={()=>toggle(v)}/>
               {v}
             </label>
           ))}
+          {filteredOptions.length===0&&<div className="ms-empty">Sin resultados</div>}
         </div>
       )}
     </div>
