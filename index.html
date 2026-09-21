@@ -721,7 +721,7 @@ function XRefList({label,rows,hasCantidad}){
   const filtered=searchXR?rows.filter(r=>r[0].toLowerCase().includes(searchXR.toLowerCase())):rows
   const shown=showAll?filtered:filtered.slice(0,20)
   return(
-    <div style={{flex:"1 1 100%",marginTop:8,paddingTop:10,borderTop:`1px solid ${BORDER}`}}>
+    <div onClick={e=>e.stopPropagation()} style={{flex:"1 1 100%",marginTop:8,paddingTop:10,borderTop:`1px solid ${BORDER}`}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:8}}>
         <span style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2}}>{label} ({shown.length} de {filtered.length})</span>
         {filtered.length>20&&<span onClick={()=>setShowAll(s=>!s)} style={{fontSize:11,color:BRAND,cursor:"pointer"}}>{showAll?"Ver menos":"Ver todos"}</span>}
