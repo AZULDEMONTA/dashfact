@@ -367,6 +367,15 @@ function MetricToggle({value,onChange}){return(
     ))}
   </div>
 )}
+function PeriodSortToggle({dir,onChange}){return(
+  <div style={{display:"flex",background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER2}`,borderRadius:8,padding:2,gap:2}}>
+    {[["asc","Más antiguo → reciente"],["desc","Más reciente → antiguo"]].map(([v,label])=>(
+      <button key={v} onClick={()=>onChange(v)} title={label} style={{padding:"4px 10px",background:dir===v?"rgba(59,130,246,0.15)":"transparent",border:`1px solid ${dir===v?"rgba(59,130,246,0.4)":"transparent"}`,borderRadius:6,color:dir===v?BRAND:MUTED,cursor:"pointer",fontSize:13,fontWeight:dir===v?500:400,lineHeight:1}}>
+        {v==="asc"?"→":"←"}
+      </button>
+    ))}
+  </div>
+)}
 function SaveBar({stage,progress,msg}){
   if(stage==="idle") return null
   const label=stage==="merging"?"Fusionando...":stage==="compressing"?"Comprimiendo...":stage==="saving"?"Guardando...":stage==="saved"?`✓ ${msg}`:`Error: ${msg}`
@@ -858,28 +867,39 @@ function CanalesTab({filteredRecords,meta,totalVentas,totalUnidades}){
 function EvolucionTab({filteredRecords,meta}){
   const[dim,setDim]=useState(()=>meta?.hasProveedor?"proveedor":meta?.hasRubro?"rubro":"vendedor")
   const[metric,setMetric]=useState("pesos")
+  const[sortDir,setSortDir]=useState("asc")
   const dims=[...(meta?.hasProveedor?[{key:"proveedor",label:"Proveedores",color:BRAND}]:[]),...(meta?.hasRubro?[{key:"rubro",label:"Rubros",color:ACCENT1}]:[]),...(meta?.hasVendedor?[{key:"vendedor",label:"Vendedores",color:ACCENT3}]:[]),...(meta?.hasCliente?[{key:"cliente",label:"Clientes",color:ACCENT2}]:[])]
   const activeDim=dims.find(d=>d.key===dim)||dims[0]
-  const periods=[...new Set(filteredRecords.map(r=>toPeriod(r.y,r.m)).filter(v=>!isNaN(v)&&v>0))].sort((a,b)=>a-b)
+  const chronoPeriods=[...new Set(filteredRecords.map(r=>toPeriod(r.y,r.m)).filter(v=>!isNaN(v)&&v>0))].sort((a,b)=>a-b)
+  const periods=sortDir==="asc"?chronoPeriods:[...chronoPeriods].reverse()
   const matrix={}
   filteredRecords.forEach(r=>{const k=r[dim];if(!k) return;const p=toPeriod(r.y,r.m);if(!matrix[k]) matrix[k]={};if(!matrix[k][p]) matrix[k][p]={ventas:0,cantidad:0};matrix[k][p].ventas+=r.precio;matrix[k][p].cantidad+=r.cantidad})
   const entities=Object.keys(matrix).sort((a,b)=>Object.values(matrix[b]).reduce((s,x)=>s+x.ventas,0)-Object.values(matrix[a]).reduce((s,x)=>s+x.ventas,0))
   const valFn=(e,p)=>{const d=matrix[e]?.[p];return d?(metric==="pesos"?d.ventas:d.cantidad):0}
-  const momPct=(e,pi)=>{if(pi===0) return null;const prev=valFn(e,periods[pi-1]),curr=valFn(e,periods[pi]);return prev>0?((curr-prev)/prev)*100:null}
-  const periodTotals=periods.map(p=>({p,val:filteredRecords.filter(r=>toPeriod(r.y,r.m)===p).reduce((s,r)=>s+(metric==="pesos"?r.precio:r.cantidad),0)}))
+  // La variación % siempre compara contra el mes cronológicamente anterior, sin importar el orden de visualización elegido
+  const momPct=(e,p)=>{const idx=chronoPeriods.indexOf(p);if(idx<=0) return null;const prev=valFn(e,chronoPeriods[idx-1]),curr=valFn(e,p);return prev>0?((curr-prev)/prev)*100:null}
+  const totalsMap={}
+  chronoPeriods.forEach(p=>{totalsMap[p]=filteredRecords.filter(r=>toPeriod(r.y,r.m)===p).reduce((s,r)=>s+(metric==="pesos"?r.precio:r.cantidad),0)})
+  const periodTotals=periods.map(p=>{
+    const idx=chronoPeriods.indexOf(p)
+    const prev=idx>0?totalsMap[chronoPeriods[idx-1]]:null
+    const val=totalsMap[p]
+    return{p,val,pct:prev&&prev>0?((val-prev)/prev)*100:null}
+  })
   const maxBar=Math.max(...periodTotals.map(x=>x.val),1)
   return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{dims.map(d=><button key={d.key} onClick={()=>setDim(d.key)} style={{padding:"5px 14px",background:dim===d.key?BRAND_LIGHT:"transparent",border:`1px solid ${dim===d.key?BRAND:BORDER}`,borderRadius:6,color:dim===d.key?BRAND:MUTED,cursor:"pointer",fontSize:12,fontWeight:500}}>{d.label}</button>)}</div>
         {meta?.hasCantidad&&<MetricToggle value={metric} onChange={setMetric}/>}
+        <PeriodSortToggle dir={sortDir} onChange={setSortDir}/>
       </div>
       {periods.length>0&&(
         <div style={{background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"18px 20px",}}>
           <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.5,color:MUTED,marginBottom:14}}>Evolución total por período</div>
           <div style={{display:"flex",gap:6,alignItems:"flex-end",height:110,overflowX:"auto"}}>
-            {periodTotals.map((pt,i)=>{
-              const h=Math.max(pt.val/maxBar*80,2),prev=i>0?periodTotals[i-1].val:null,pct=prev&&prev>0?((pt.val-prev)/prev)*100:null
+            {periodTotals.map(pt=>{
+              const h=Math.max(pt.val/maxBar*80,2),pct=pt.pct
               return(
                 <div key={pt.p} style={{minWidth:60,flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
                   <span style={{fontSize:10,fontWeight:500,color:pct==null?MUTED:pct>=0?ACCENT2:ACCENT5}}>{pct==null?"—":pct>=0?`+${pct.toFixed(0)}%`:`${pct.toFixed(0)}%`}</span>
@@ -907,10 +927,10 @@ function EvolucionTab({filteredRecords,meta}){
                 return(
                   <tr key={entity} onMouseEnter={e=>e.currentTarget.style.background='#eef0f8'} onMouseLeave={e=>e.currentTarget.style.background="transparent"} style={{borderBottom:`1px solid ${BORDER}`}}>
                     <td style={{padding:"7px 10px",color:TEXT,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:130}}>{entity}</td>
-                    {periods.map((p,pi)=>{const val=valFn(entity,p),pct=momPct(entity,pi);return(
+                    {periods.map(p=>{const val=valFn(entity,p),pct=momPct(entity,p),esPrimero=chronoPeriods.indexOf(p)===0;return(
                       <td key={p} style={{padding:"7px 8px",textAlign:"right",verticalAlign:"top"}}>
                         <div style={{color:val>0?(activeDim?.color||BRAND):MUTED,fontWeight:val>0?500:400}}>{val>0?(metric==="pesos"?fmtM(val):fmtU(val)):"—"}</div>
-                        {pi>0&&val>0&&pct!==null&&<div style={{fontSize:10,color:pct>=0?ACCENT2:ACCENT5,marginTop:1}}>{pct>=0?`▲ +${pct.toFixed(0)}%`:`▼ ${pct.toFixed(0)}%`}</div>}
+                        {!esPrimero&&val>0&&pct!==null&&<div style={{fontSize:10,color:pct>=0?ACCENT2:ACCENT5,marginTop:1}}>{pct>=0?`▲ +${pct.toFixed(0)}%`:`▼ ${pct.toFixed(0)}%`}</div>}
                       </td>
                     )})}
                     <td style={{padding:"7px 8px",textAlign:"right",color:activeDim?.color||BRAND,fontWeight:500}}>{metric==="pesos"?fmtM(tot):fmtU(tot)}</td>
@@ -919,7 +939,7 @@ function EvolucionTab({filteredRecords,meta}){
               })}
               <tr style={{borderTop:`2px solid ${BORDER}`,background:CARD2}}>
                 <td style={{padding:"7px 10px",color:TEXT,fontWeight:500,fontSize:12}}>TOTAL</td>
-                {periodTotals.map((pt,i)=>{const prev=i>0?periodTotals[i-1].val:null,pct=prev&&prev>0?((pt.val-prev)/prev)*100:null;return(
+                {periodTotals.map(pt=>{const pct=pt.pct;return(
                   <td key={pt.p} style={{padding:"7px 8px",textAlign:"right",verticalAlign:"top"}}>
                     <div style={{color:TEXT,fontWeight:500}}>{metric==="pesos"?fmtM(pt.val):fmtU(pt.val)}</div>
                     {pct!==null&&<div style={{fontSize:10,color:pct>=0?ACCENT2:ACCENT5,marginTop:1}}>{pct>=0?`▲ +${pct.toFixed(0)}%`:`▼ ${pct.toFixed(0)}%`}</div>}
@@ -1330,6 +1350,7 @@ function ClientesPeriodoTab({filteredRecords,meta}){
   const[selVends,setSelVends]=useState([])
   const[selZonas,setSelZonas]=useState([])
   const[metric,setMetric]=useState("pesos")
+  const[sortDir,setSortDir]=useState("asc")
   const[searchV,setSearchV]=useState("")
   const[searchZ,setSearchZ]=useState("")
 
@@ -1345,7 +1366,8 @@ function ClientesPeriodoTab({filteredRecords,meta}){
     return true
   })
 
-  const periods=[...new Set(base.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
+  const periods0=[...new Set(base.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
+  const periods=sortDir==="asc"?periods0:[...periods0].reverse()
 
   const zoneData={}
   base.forEach(r=>{
@@ -1428,6 +1450,10 @@ function ClientesPeriodoTab({filteredRecords,meta}){
               <MetricToggle value={metric} onChange={setMetric}/>
             </div>
           )}
+          <div>
+            <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:1.2,color:T3,marginBottom:6,fontWeight:500}}>Orden de meses</div>
+            <PeriodSortToggle dir={sortDir} onChange={setSortDir}/>
+          </div>
           <div style={{display:"flex",gap:14}}>
             <div><div style={{fontSize:9,color:T3,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Clientes</div><div style={{fontSize:16,fontWeight:500,color:BRAND}}>{totalClients}</div></div>
             <div><div style={{fontSize:9,color:T3,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>Total</div><div style={{fontSize:16,fontWeight:500,color:ACCENT1}}>{metric==="pesos"?fmtM(grandTotal):fmtU(grandTotal)}</div></div>
