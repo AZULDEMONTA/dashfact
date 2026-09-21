@@ -106,7 +106,7 @@ async function dbDelete(key){
 }
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
-const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1",APK="art-period-v1",CK="capas-v1",CANK="canal-base-v1"
+const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1",APK="art-period-v1",CK="capas-v1",CANK="canal-base-v1",CLK="cli-arts-v1",ACK="art-cli-v1"
 const LOGO_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEF0lEQVR4nO1WXWhcRRT+zrl/m8ZEGmpJk6a2IbFQQUIjSA0VimAj2FqDK0bBR31RRBDNJo3TpU3NFhR9sBCVFqxI01CQKhIf7EMREooiQoNik5jSNO0mWJq/3ezeO3N8uEtd0+puuuqL+eA+3JnhnO/75pzDAKtYxcpBue9/h1MWAGyojz23saHr+fy1UsDFHx0RpRT7gYlns4ESEQJGpFQCRULZAFDbGGtbt6lb1tXtl5rNHXvz9+4UxTpglFLsZ0y3GG0EYnxj3oIIATD/MgFlA3Hz8Wd6n4HXRDAM0Szwmmu2xPYAcVNKLRTjQKg+G3QCjlg2Prcs+hJwxTfSVWotFOhnZQPxoLY+1pYJ7NMEEW+NfoBhe+mUfCcguI7/5NRY75nQhWf0SgkUKiCjlOKjx9OdwBohLAxO/py4AADrN3ecFbNml+9nY0Q4IzJCtxbk/QIMANiWc+iA5DTfdOxvHAjVV9fH2oLAPg0JjOfpliujR4YBodr6jl2ZwP2G4MBxUs9OjfX2r1R9IQKsFHD0ePq8oGI708JX05cSewDlAPEsAKzf9OYxtiq2M6eGAfpEB3IfM9UITCVDiC1OQfCb7fK0Y1vXIp6V3FClZ3bswI14PG6Av7yCUH3fiVibwGsmLCESsQ8DECCe3fpwomIxOdcSaIiRRVdn5TFifhQwSRH6AYwLwjQuLEmb3DkjfoYylq/LtclkkC3CgXz1lc3M8yenJxLttY3dDwW+eUEbaWcuX2v0wg3LorPMVkqMP3ttovflf+AK8u/eOS0SLLquxHSAnSJulNgDzMKP7PC7TY2z/T9N3rVlcZZGQC5bdvqJ5Hjka+C6BVT5Ybz48hb90//tCLBSwAfH0t8DXpMgkybAI17LkPmLjkPdV8d7+kX+OH9PXfoLocpWyPzQzOXEToKicEAVxrJBFE69vhPpfaBIk5iMD7HKQB4zLbx3d7Xz4NRYT78IKOz78Lzj8iFICiC3ZWN9Z+tKpuPySWgAxYFP3SLagNgm5pRrB+3JiZ7XRs/H53K9LuHQiQdA1Joa6x1i0oOAC1/rrpBgcdMxj0CopnrL0lMgt0lEE7M1VxbB7qnxt0/mElOY9FaUOe4hSNoYcVvqtnbtLtaFfAeMUoqNYL8Y0Uzke16w9/IvPd8CLzq5xLdRNaCBqHVp7OAQkx4keJJZ8mPhXmEXOF/9R59mnxZT1sSWa9m26Zy8mDgH9DnAh36hQADguNZBkTQJIo9U3/vG48W4wAAIOKBbW9/3tMbrIEpanDqS/DXxTkjspSKSD2hA8ZXRw8NEwSmQsxgIvRqNRq1CLtxsw23blDtPQZ1Xbs+ExbZiEAA0NLzi3shWVBmT5uuTlVeLbcdliJb82LxDKAak1Dc/hTFKjrOK/wa/A3rQ7dfNECyuAAAAAElFTkSuQmCC"
 
 const BG="#0A0A0A",CARD="#161616",CARD2="#1A1A1A",BORDER="rgba(255,255,255,0.08)",BORDER2="#2A2A2A",TEXT="#FFFFFF",MUTED="#B0B0B0",MUTED2="#666666"
@@ -157,7 +157,7 @@ function decompressArtPeriod(c){
     arts:r[4].map(a=>({name:artTable[a[0]],precio:a[1],cantidad:a[2],rentabilidad:a[3]>=0?rentTable[a[3]]:null}))}))
 }
 function buildCube(rawRecords){
-  const cm={},am={},pm={},rm={},apm={}
+  const cm={},am={},pm={},rm={},apm={},clm={},acm={}
   for(const r of rawRecords){
     const ck=`${r.y}|${r.m}|${r.proveedor??''} |${r.rubro??''} |${r.vendedor??''} |${r.rentabilidad??''} |${r.provincia??''} |${r.cliente??''} |${r.empresa??''} |${r.localidad??''} |${r.zona??''} `
     if(!cm[ck]) cm[ck]={y:r.y,m:r.m,precio:0,cantidad:0,costo:0,rows:0,proveedor:r.proveedor,rubro:r.rubro,vendedor:r.vendedor,rentabilidad:r.rentabilidad,provincia:r.provincia,cliente:r.cliente,empresa:r.empresa,localidad:r.localidad,zona:r.zona}
@@ -168,6 +168,8 @@ function buildCube(rawRecords){
       const a=am[art];a.precio+=r.precio;a.cantidad+=r.cantidad;a.costo+=r.costo;a.rows++
       if(r.proveedor){if(!pm[r.proveedor]) pm[r.proveedor]={};if(!pm[r.proveedor][art]) pm[r.proveedor][art]={precio:0,cantidad:0};pm[r.proveedor][art].precio+=r.precio;pm[r.proveedor][art].cantidad+=r.cantidad}
       if(r.rubro){if(!rm[r.rubro]) rm[r.rubro]={};if(!rm[r.rubro][art]) rm[r.rubro][art]={precio:0,cantidad:0};rm[r.rubro][art].precio+=r.precio;rm[r.rubro][art].cantidad+=r.cantidad}
+      if(r.cliente){if(!clm[r.cliente]) clm[r.cliente]={};if(!clm[r.cliente][art]) clm[r.cliente][art]={precio:0,cantidad:0};clm[r.cliente][art].precio+=r.precio;clm[r.cliente][art].cantidad+=r.cantidad}
+      if(r.cliente){if(!acm[art]) acm[art]={};if(!acm[art][r.cliente]) acm[art][r.cliente]={precio:0,cantidad:0};acm[art][r.cliente].precio+=r.precio;acm[art][r.cliente].cantidad+=r.cantidad}
       // artPeriod: key = "y|m|prov|rubro" → {art: {precio,cant}}
       const apk=`${r.y}|${r.m}|${r.proveedor??''}|${r.rubro??''}`
       if(!apm[apk]) apm[apk]={y:r.y,m:r.m,proveedor:r.proveedor??null,rubro:r.rubro??null,arts:{}}
@@ -175,9 +177,17 @@ function buildCube(rawRecords){
       ap.arts[art].precio+=r.precio;ap.arts[art].cantidad+=r.cantidad
     }
   }
-  const compressXRef=m=>Object.fromEntries(Object.entries(m).map(([k,arts])=>[k,Object.entries(arts).sort((a,b)=>b[1].precio-a[1].precio).slice(0,20).map(([name,v])=>[name,Math.round(v.precio),v.cantidad])]))
+  const buildXRefs=(m,topN)=>{
+    const out={}
+    Object.entries(m).forEach(([k,arts])=>{
+      let list=Object.entries(arts).sort((a,b)=>b[1].precio-a[1].precio).map(([name,v])=>[name,Math.round(v.precio),v.cantidad])
+      if(topN!=null) list=list.slice(0,topN)
+      out[k]=list
+    })
+    return out
+  }
   const artPeriod=Object.values(apm).map(e=>({y:e.y,m:e.m,proveedor:e.proveedor,rubro:e.rubro,arts:Object.entries(e.arts).map(([name,v])=>({name,precio:Math.round(v.precio),cantidad:v.cantidad,rentabilidad:v.rentabilidad}))}))
-  return{cube:Object.values(cm),articulos:Object.values(am),provArts:compressXRef(pm),ruboArts:compressXRef(rm),artPeriod}
+  return{cube:Object.values(cm),articulos:Object.values(am),provArts:buildXRefs(pm,20),ruboArts:buildXRefs(rm,20),artPeriod,cliArts:buildXRefs(clm,null),artCli:buildXRefs(acm,null)}
 }
 function mergeCubes(a,b){
   const m={}
@@ -232,20 +242,22 @@ function mergeArts(a,b){
   const add=r=>{if(!m[r.name]) m[r.name]={...r};else{m[r.name].precio+=r.precio;m[r.name].cantidad+=r.cantidad;m[r.name].costo+=r.costo;m[r.name].rows+=r.rows}}
   a.forEach(add);b.forEach(add);return Object.values(m)
 }
-function mergeXRef(a,b){
+function mergeXRef(a,b,topN){
   const m={...a}
   Object.entries(b).forEach(([key,arts])=>{
     if(!m[key]){m[key]=arts;return}
     const map={}
     m[key].forEach(([n,p,q])=>{map[n]=[n,p,q]})
     arts.forEach(([n,p,q])=>{if(map[n]){map[n][1]+=p;map[n][2]+=q}else map[n]=[n,p,q]})
-    m[key]=Object.values(map).sort((a,b)=>b[1]-a[1]).slice(0,20)
+    let list=Object.values(map).sort((a,b)=>b[1]-a[1])
+    if(topN!=null) list=list.slice(0,topN)
+    m[key]=list
   })
   return m
 }
 async function loadData(){
   try{
-    const[cv,av,mv,pv,rv,apv]=await Promise.all([dbGet(SK),dbGet(AK),dbGet(MK),dbGet(PAK),dbGet(RAK),dbGet(APK)])
+    const[cv,av,mv,pv,rv,apv,clv,acv]=await Promise.all([dbGet(SK),dbGet(AK),dbGet(MK),dbGet(PAK),dbGet(RAK),dbGet(APK),dbGet(CLK),dbGet(ACK)])
     return{
       cube:cv?decompressCube(JSON.parse(cv)):null,
       articulos:av?decompressArts(JSON.parse(av)):null,
@@ -253,18 +265,21 @@ async function loadData(){
       provArts:pv?JSON.parse(pv):null,
       ruboArts:rv?JSON.parse(rv):null,
       artPeriod:apv?decompressArtPeriod(JSON.parse(apv)):null,
+      cliArts:clv?JSON.parse(clv):null,
+      artCli:acv?JSON.parse(acv):null,
     }
-  }catch(e){return{cube:null,articulos:null,meta:null,provArts:null,ruboArts:null,artPeriod:null,error:String(e)}}
+  }catch(e){return{cube:null,articulos:null,meta:null,provArts:null,ruboArts:null,artPeriod:null,cliArts:null,artCli:null,error:String(e)}}
 }
-async function saveData(cube,arts,meta,provArts,ruboArts,artPeriod){
+async function saveData(cube,arts,meta,provArts,ruboArts,artPeriod,cliArts,artCli){
   const cs=JSON.stringify(compressCube(cube)),as=JSON.stringify(compressArts(arts)),ms=JSON.stringify(meta)
   const ps=JSON.stringify(provArts||{}),rs=JSON.stringify(ruboArts||{})
   const aps=JSON.stringify(compressArtPeriod(artPeriod||[]))
-  const kb=Math.round((cs.length+as.length+ms.length+ps.length+rs.length+aps.length)/1024)
-  await Promise.all([dbSet(SK,cs),dbSet(AK,as),dbSet(MK,ms),dbSet(PAK,ps),dbSet(RAK,rs),dbSet(APK,aps)])
+  const cls=JSON.stringify(cliArts||{}),acs=JSON.stringify(artCli||{})
+  const kb=Math.round((cs.length+as.length+ms.length+ps.length+rs.length+aps.length+cls.length+acs.length)/1024)
+  await Promise.all([dbSet(SK,cs),dbSet(AK,as),dbSet(MK,ms),dbSet(PAK,ps),dbSet(RAK,rs),dbSet(APK,aps),dbSet(CLK,cls),dbSet(ACK,acs)])
   return kb
 }
-async function clearData(){await Promise.all([dbDelete(SK),dbDelete(AK),dbDelete(MK),dbDelete(PAK),dbDelete(RAK),dbDelete(APK)])}
+async function clearData(){await Promise.all([dbDelete(SK),dbDelete(AK),dbDelete(MK),dbDelete(PAK),dbDelete(RAK),dbDelete(APK),dbDelete(CLK),dbDelete(ACK)])}
 
 /* ─── Base Clientes-Canal ────────────────────────────────────────────────────── */
 function normCliente(v){return String(v??"").trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ")}
@@ -410,12 +425,13 @@ function DetailTab({data,hasCantidad,totalVentas,totalUnidades,dimLabel,color}){
     <BarList data={data} colorFn={color} totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={hasCantidad} limit={15}/>
   </ChartCard>
 )}
-function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,artPeriod,provArts,ruboArts,topFilters}){
+function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,artPeriod,provArts,ruboArts,artCli,topFilters}){
   // artPeriod: [{y,m,proveedor,rubro,arts:[{name,precio,cantidad,rentabilidad},...]}]
   // data: artData global (all-time totals), used when no filters applied
   const[metric,setMetric]=useState("pesos")
   const[expanded,setExpanded]=useState(false)
   const[search,setSearch]=useState("")
+  const[selArt,setSelArt]=useState(null)
   const[filterProv,setFilterProv]=useState("__ALL__")
   const[filterRubro,setFilterRubro]=useState("__ALL__")
 
@@ -590,7 +606,8 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,artPeriod,
             <th key={h} style={{padding:"6px 8px",textAlign:h==="Artículo"?"left":"right",color:MUTED2,fontSize:9,textTransform:"uppercase",letterSpacing:1,borderBottom:`1px solid ${BORDER}`,whiteSpace:"nowrap"}}>{h}</th>
           ))}</tr></thead>
           <tbody>{shown.map((d,i)=>(
-            <tr key={d.name} style={{borderBottom:`1px solid ${BORDER}`}}>
+            <React.Fragment key={d.name}>
+            <tr onClick={()=>setSelArt(selArt===d.name?null:d.name)} style={{borderBottom:`1px solid ${BORDER}`,cursor:"pointer",background:selArt===d.name?BRAND_LIGHT:"transparent"}}>
               <td style={{padding:"7px 8px",color:MUTED2,fontSize:10,textAlign:"right",width:24}}>{i+1}</td>
               <td style={{padding:"7px 8px",color:TEXT,maxWidth:200,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.name}</td>
               <td style={{padding:"7px 8px",color:BRAND,textAlign:"right",fontWeight:500}}>{fmtM(d.precio)}</td>
@@ -598,6 +615,14 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,artPeriod,
               {hasRentabilidad&&<td style={{padding:"7px 8px",textAlign:"right"}}><RentBadge nivel={d.rentabilidad||"Sin dato"}/></td>}
               <td style={{padding:"7px 8px",color:MUTED2,textAlign:"right"}}>{fmtPct(totalVentasLocal>0?d.precio/totalVentasLocal*100:0)}</td>
             </tr>
+            {selArt===d.name&&(
+              <tr>
+                <td colSpan={4+(hasCantidad?1:0)+(hasRentabilidad?1:0)} style={{padding:"0 8px 10px 8px"}}>
+                  <XRefList label="Clientes" rows={artCli?.[d.name]} hasCantidad={hasCantidad}/>
+                </td>
+              </tr>
+            )}
+            </React.Fragment>
           ))}</tbody>
         </table>
       </div>}
@@ -680,7 +705,33 @@ function VendedoresTab({filteredRecords,meta,totalVentas,totalUnidades}){
     </div>
   )
 }
-function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
+function XRefList({label,rows,hasCantidad}){
+  const[searchXR,setSearchXR]=useState("")
+  const[showAll,setShowAll]=useState(false)
+  if(!rows||rows.length===0) return null
+  const filtered=searchXR?rows.filter(r=>r[0].toLowerCase().includes(searchXR.toLowerCase())):rows
+  const shown=showAll?filtered:filtered.slice(0,20)
+  return(
+    <div style={{flex:"1 1 100%",marginTop:8,paddingTop:10,borderTop:`1px solid ${BORDER}`}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:8}}>
+        <span style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2}}>{label} ({shown.length} de {filtered.length})</span>
+        {filtered.length>20&&<span onClick={()=>setShowAll(s=>!s)} style={{fontSize:11,color:BRAND,cursor:"pointer"}}>{showAll?"Ver menos":"Ver todos"}</span>}
+      </div>
+      <input value={searchXR} onChange={e=>setSearchXR(e.target.value)} placeholder="Buscar..." style={{width:"100%",boxSizing:"border-box",background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER2}`,borderRadius:6,color:TEXT,fontSize:11,padding:"5px 8px",marginBottom:8,outline:"none"}}/>
+      <div style={{maxHeight:220,overflow:"auto"}}>
+        {shown.map(([name,precio,cantidad])=>(
+          <div key={name} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"4px 0",borderBottom:`1px solid ${BORDER}`}}>
+            <span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{name}</span>
+            <span style={{fontSize:11,fontWeight:500,color:BRAND,minWidth:70,textAlign:"right"}}>{fmtM(precio)}</span>
+            {hasCantidad&&<span style={{fontSize:11,color:MUTED,minWidth:56,textAlign:"right"}}>{fmtU(cantidad)}</span>}
+          </div>
+        ))}
+        {shown.length===0&&<div style={{fontSize:11,color:MUTED,padding:"6px 0"}}>Sin resultados</div>}
+      </div>
+    </div>
+  )
+}
+function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades,cliArts}){
   const[sel,setSel]=useState(null)
   const[search,setSearch]=useState("")
   const[metric,setMetric]=useState("pesos")
@@ -731,11 +782,14 @@ function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades}){
               <div style={{height:"100%",width:`${(metric==="pesos"?c.ventas:c.cantidad)/maxV*100}%`,background:BRAND,borderRadius:2,opacity:0.55}}/>
             </div>
             {sel===c.name&&(
+              <>
               <div style={{marginTop:12,display:"flex",gap:10,flexWrap:"wrap"}}>
                 {Object.keys(c.rubros).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Rubros</div>{Object.entries(c.rubros).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([r,val])=><div key={r} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{r}</span><span style={{fontSize:11,fontWeight:500,color:ACCENT1}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:ACCENT1,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
                 {Object.keys(c.proveedores).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Proveedores</div>{Object.entries(c.proveedores).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([p,val])=><div key={p} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{p}</span><span style={{fontSize:11,fontWeight:500,color:BRAND}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:BRAND,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
                 {Object.keys(c.vendedores).length>0&&<div style={{flex:1,minWidth:150}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Atendido por</div>{Object.entries(c.vendedores).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([v,val])=><div key={v} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{v}</span><span style={{fontSize:11,fontWeight:500,color:ACCENT3}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:ACCENT3,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
               </div>
+              <XRefList label="Artículos" rows={cliArts?.[c.name]} hasCantidad={meta?.hasCantidad}/>
+              </>
             )}
           </div>
         ))}
@@ -2105,6 +2159,8 @@ function App(){
   const[articulos,setArticulos]=useState(null)
   const[provArts,setProvArts]=useState({})
   const[ruboArts,setRuboArts]=useState({})
+  const[cliArts,setCliArts]=useState({})
+  const[artCli,setArtCli]=useState({})
   const[artPeriod,setArtPeriod]=useState([])
   const[meta,setMeta]=useState(null)
   const[storageInfo,setStorageInfo]=useState(null)
@@ -2146,9 +2202,9 @@ function App(){
 
   useEffect(()=>{
     const t0=Date.now()
-    Promise.all([loadData(),dbGet(CK).catch(()=>null)]).then(([{cube:c,articulos:a,meta:m,provArts:pa,ruboArts:ra,artPeriod:apLoaded,error},capasRaw])=>{
+    Promise.all([loadData(),dbGet(CK).catch(()=>null)]).then(([{cube:c,articulos:a,meta:m,provArts:pa,ruboArts:ra,artPeriod:apLoaded,cliArts:cla,artCli:acli,error},capasRaw])=>{
       const ms=Date.now()-t0
-      if(error){setStorageInfo({ok:false,error});setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});setArtPeriod([]);return}
+      if(error){setStorageInfo({ok:false,error});setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});setArtPeriod([]);setCliArts({});setArtCli({});return}
       const rows=c?.length||0,cells=rows*9
       setStorageInfo({ok:true,loaded:true,rows,cells,ms})
       let capasParsed=[]
@@ -2158,7 +2214,7 @@ function App(){
       // solo como último recurso para datos muy viejos sin ninguno de los dos anteriores.
       let ap=(apLoaded&&apLoaded.length>0)?apLoaded:capasParsed.reduce((acc,cp)=>mergeArtPeriod(acc,cp.artPeriod||[]),[])
       if(ap.length===0) ap=rebuildArtPeriod(c||[],pa||{},ra||{})
-      setCube(c||[]);setArticulos(a||[]);setMeta(m||{});setProvArts(pa||{});setRuboArts(ra||{});setArtPeriod(ap)
+      setCube(c||[]);setArticulos(a||[]);setMeta(m||{});setProvArts(pa||{});setRuboArts(ra||{});setArtPeriod(ap);setCliArts(cla||{});setArtCli(acli||{})
       setCapas(capasParsed)
     })
     loadCanalBase().then(cb=>{
@@ -2251,16 +2307,17 @@ function App(){
         localidad:has("localidad")?(String(get(row,"localidad")??"").trim()||"Sin localidad"):null,
         zona:has("zona")?(String(get(row,"zona")??"").trim()||"Sin zona"):null}
     }).filter(r=>r.y>0||r.precio>0)
-    const{cube:nc,articulos:na,provArts:npa,ruboArts:nra,artPeriod:nap}=buildCube(parsed)
+    const{cube:nc,articulos:na,provArts:npa,ruboArts:nra,artPeriod:nap,cliArts:ncla,artCli:naclii}=buildCube(parsed)
     const mc=mergeCubes(records,nc),ma=mergeArts(articulos||[],na)
-    const mpa=mergeXRef(provArts||{},npa),mra=mergeXRef(ruboArts||{},nra)
+    const mpa=mergeXRef(provArts||{},npa,20),mra=mergeXRef(ruboArts||{},nra,20)
+    const mcla=mergeXRef(cliArts||{},ncla),macli=mergeXRef(artCli||{},naclii)
     const cubeKB=Math.round(JSON.stringify(compressCube(mc)).length/1024)
     const ventas=parsed.reduce((s,r)=>s+r.precio,0),unidades=parsed.reduce((s,r)=>s+r.cantidad,0)
     const periods=[...new Set(parsed.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
     setRawHeaders(null);setRawRows(null)
     const map=mergeArtPeriod(artPeriod||[],nap)
-    setPendingImport({newCube:nc,newArts:na,newProvArts:npa,newRuboArts:nra,newMProvArts:mpa,newMRuboArts:mra,newArtPeriod:nap,newMArtPeriod:map,meta:newMeta,fileName:pendingFileName,stats:{rows:parsed.length,ventas,unidades,hasCantidad:has("cantidad"),periods,existingRows:meta?.totalRows||0,cubeKB}})
-  },[rawHeaders,rawRows,records,articulos,meta,pendingFileName])
+    setPendingImport({newCube:nc,newArts:na,newProvArts:npa,newRuboArts:nra,newMProvArts:mpa,newMRuboArts:mra,newArtPeriod:nap,newMArtPeriod:map,newCliArts:ncla,newArtCli:naclii,newMCliArts:mcla,newMArtCli:macli,meta:newMeta,fileName:pendingFileName,stats:{rows:parsed.length,ventas,unidades,hasCantidad:has("cantidad"),periods,existingRows:meta?.totalRows||0,cubeKB}})
+  },[rawHeaders,rawRows,records,articulos,meta,pendingFileName,cliArts,artCli])
 
   const handleImportConfirm=useCallback(async()=>{
     if(!pendingImport) return
@@ -2268,14 +2325,15 @@ function App(){
     setSaveStage("merging");setSaveProgress(15);await new Promise(r=>setTimeout(r,0))
     const mc=mergeCubes(records,pendingImport.newCube),ma=mergeArts(articulos||[],pendingImport.newArts)
     const mpa=pendingImport.newMProvArts||{},mra=pendingImport.newMRuboArts||{}
+    const mcla=pendingImport.newMCliArts||{},macli=pendingImport.newMArtCli||{}
     const map=pendingImport.newMArtPeriod||[]
     const nm={...meta,...pendingImport.meta,totalRows:(meta?.totalRows||0)+pendingImport.stats.rows}
     ;["hasProveedor","hasRubro","hasVendedor","hasRentabilidad","hasProvincia","hasCliente","hasEmpresa","hasLocalidad","hasZona","hasArticulo","hasCantidad","hasCosto"].forEach(k=>{nm[k]=!!(meta?.[k]||pendingImport.meta?.[k])})
     setSaveStage("compressing");setSaveProgress(40);await new Promise(r=>setTimeout(r,0))
-    setCube(mc);setArticulos(ma);setMeta(nm);setProvArts(mpa);setRuboArts(mra);setArtPeriod(map)
+    setCube(mc);setArticulos(ma);setMeta(nm);setProvArts(mpa);setRuboArts(mra);setArtPeriod(map);setCliArts(mcla);setArtCli(macli)
     setSaveStage("saving");setSaveProgress(70);await new Promise(r=>setTimeout(r,0))
     try{
-      const kb=await saveData(mc,ma,nm,mpa,mra,map)
+      const kb=await saveData(mc,ma,nm,mpa,mra,map,mcla,macli)
       const nuevaCapa={
         id:Date.now()+"-"+Math.random().toString(36).slice(2,7),
         name:pendingImport.fileName||"archivo.xlsx",
@@ -2284,6 +2342,7 @@ function App(){
         periods:pendingImport.stats.periods,colsMeta:pendingImport.meta,
         cube:compressCube(pendingImport.newCube),arts:compressArts(pendingImport.newArts),
         provArts:pendingImport.newProvArts||{},ruboArts:pendingImport.newRuboArts||{},artPeriod:pendingImport.newArtPeriod||[],
+        cliArts:pendingImport.newCliArts||{},artCli:pendingImport.newArtCli||{},
       }
       const nuevasCapas=[...capas,nuevaCapa]
       setCapas(nuevasCapas)
@@ -2311,18 +2370,19 @@ function App(){
     const nuevasCapas=capas.filter(c=>c.id!==id)
     if(nuevasCapas.length===0){
       await clearData();try{await dbDelete(CK)}catch(e){}
-      setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});setArtPeriod([]);setCapas([])
+      setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});setArtPeriod([]);setCliArts({});setArtCli({});setCapas([])
       return
     }
-    let mc=[],ma=[],mpa={},mra={},map=[],mm={totalRows:0}
+    let mc=[],ma=[],mpa={},mra={},map=[],mm={totalRows:0},mcla={},macli={}
     nuevasCapas.forEach(c=>{
       mc=mergeCubes(mc,decompressCube(c.cube));ma=mergeArts(ma,decompressArts(c.arts))
-      mpa=mergeXRef(mpa,c.provArts||{});mra=mergeXRef(mra,c.ruboArts||{})
+      mpa=mergeXRef(mpa,c.provArts||{},20);mra=mergeXRef(mra,c.ruboArts||{},20)
+      mcla=mergeXRef(mcla,c.cliArts||{});macli=mergeXRef(macli,c.artCli||{})
       map=mergeArtPeriod(map,c.artPeriod||[])
       mm={...mm,...(c.colsMeta||{}),totalRows:mm.totalRows+(c.rows||0)}
     })
-    try{await saveData(mc,ma,mm,mpa,mra,map);await dbSet(CK,JSON.stringify(nuevasCapas))}catch(e){alert("Error al recalcular: "+e)}
-    setCube(mc);setArticulos(ma);setMeta(mm);setProvArts(mpa);setRuboArts(mra);setArtPeriod(map);setCapas(nuevasCapas)
+    try{await saveData(mc,ma,mm,mpa,mra,map,mcla,macli);await dbSet(CK,JSON.stringify(nuevasCapas))}catch(e){alert("Error al recalcular: "+e)}
+    setCube(mc);setArticulos(ma);setMeta(mm);setProvArts(mpa);setRuboArts(mra);setArtPeriod(map);setCliArts(mcla);setArtCli(macli);setCapas(nuevasCapas)
   },[capas])
 
   const exportarPDF=useCallback(async()=>{
@@ -2578,12 +2638,12 @@ function App(){
     ...(meta?.hasZona?[{key:"zonas",label:"Zonas",icon:"ti-map-pin",group:"dim"}]:[]),
     ...(meta?.hasProvincia?[{key:"provincias",label:"Provincias",icon:"ti-map",group:"dim"}]:[]),
     ...(meta?.hasArticulo?[{key:"articulos",label:"Artículos",icon:"ti-package",group:"prod"}]:[]),
-    ...(meta?.hasRentabilidad?[{key:"rentabilidad",label:"Rentabilidad",icon:"ti-trending-up",group:"prod"}]:[]),
+    ...(meta?.hasRentabilidad?[{key:"rentabilidad",label:"Rentabilidad",icon:"ti-trending-up",group:"dim"}]:[]),
     ...((meta?.hasProveedor||meta?.hasRubro||meta?.hasVendedor||meta?.hasCliente)?[{key:"evolucion",label:"Mes a Mes",icon:"ti-chart-bar",group:"analisis"}]:[]),
     ...((meta?.hasCliente)?[{key:"clientes-periodo",label:"Clientes × Período",icon:"ti-table",group:"analisis"}]:[]),
     ...((meta?.hasProveedor||meta?.hasRubro||meta?.hasVendedor||meta?.hasCliente||meta?.hasProvincia||meta?.hasZona||meta?.hasEmpresa||meta?.hasLocalidad||meta?.hasArticulo)?[{key:"comparacion",label:"Comparación",icon:"ti-arrows-diff",group:"analisis"}]:[]),
   ]
-  const TAB_GROUPS=[{key:"dim",label:"Por Dimensión"},{key:"prod",label:"Producto"},{key:"analisis",label:"Análisis Temporal"}]
+  const TAB_GROUPS=[{key:"dim",label:"Rankings"},{key:"prod",label:"Producto"},{key:"analisis",label:"Análisis Temporal"}]
   const safeTab=TABS.find(t=>t.key===activeTab)?activeTab:"resumen"
 
   return(
@@ -2741,13 +2801,13 @@ function App(){
                     </div>
                   </>
                 )}
-                {safeTab==="clientes"&&<ClientesTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
+                {safeTab==="clientes"&&<ClientesTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades} cliArts={cliArts}/>}
                 {safeTab==="canales"&&<CanalesTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="proveedores"&&<ProveedoresTab data={provData} filteredRecords={filtered} provArts={provArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="rubros"&&<RubrosTab data={rubroData} filteredRecords={filtered} ruboArts={ruboArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="vendedores"&&<VendedoresTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="evolucion"&&<EvolucionTab filteredRecords={filtered} meta={meta}/>}
-                {safeTab==="articulos"&&<ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas} artPeriod={artPeriod} provArts={provArts} ruboArts={ruboArts} topFilters={{fProv,fRubro,fDesde,fHasta,fVend,fPcia,fCliente,fCanal,fEmpresa,fZona}}/>}
+                {safeTab==="articulos"&&<ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas} artPeriod={artPeriod} provArts={provArts} ruboArts={ruboArts} artCli={artCli} topFilters={{fProv,fRubro,fDesde,fHasta,fVend,fPcia,fCliente,fCanal,fEmpresa,fZona}}/>}
                 {safeTab==="rentabilidad"&&<RentabilidadSection data={rentData} artData={artData} hasCantidad={meta?.hasCantidad}/>}
                 {safeTab==="zonas"&&<DetailTab data={zonaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Zona" color={ACCENT6}/>}
                 {safeTab==="provincias"&&<DetailTab data={pciaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia" color={ACCENT7}/>}
