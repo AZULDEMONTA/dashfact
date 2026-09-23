@@ -106,7 +106,7 @@ async function dbDelete(key){
 }
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
-const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1",APK="art-period-v1",CK="capas-v1",CANK="canal-base-v1",CLK="cli-arts-v1",ACK="art-cli-v1"
+const SK="cube",AK="arts",MK="meta",PAK="prov-arts-v1",RAK="rub-arts-v1",APK="art-period-v1",CK="capas-v1",CANK="canal-base-v1",CLK="cli-arts-v1",ACK="art-cli-v1",CAFK="cli-art-fact-v1:"
 const LOGO_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAEF0lEQVR4nO1WXWhcRRT+zrl/m8ZEGmpJk6a2IbFQQUIjSA0VimAj2FqDK0bBR31RRBDNJo3TpU3NFhR9sBCVFqxI01CQKhIf7EMREooiQoNik5jSNO0mWJq/3ezeO3N8uEtd0+puuuqL+eA+3JnhnO/75pzDAKtYxcpBue9/h1MWAGyojz23saHr+fy1UsDFHx0RpRT7gYlns4ESEQJGpFQCRULZAFDbGGtbt6lb1tXtl5rNHXvz9+4UxTpglFLsZ0y3GG0EYnxj3oIIATD/MgFlA3Hz8Wd6n4HXRDAM0Szwmmu2xPYAcVNKLRTjQKg+G3QCjlg2Prcs+hJwxTfSVWotFOhnZQPxoLY+1pYJ7NMEEW+NfoBhe+mUfCcguI7/5NRY75nQhWf0SgkUKiCjlOKjx9OdwBohLAxO/py4AADrN3ecFbNml+9nY0Q4IzJCtxbk/QIMANiWc+iA5DTfdOxvHAjVV9fH2oLAPg0JjOfpliujR4YBodr6jl2ZwP2G4MBxUs9OjfX2r1R9IQKsFHD0ePq8oGI708JX05cSewDlAPEsAKzf9OYxtiq2M6eGAfpEB3IfM9UITCVDiC1OQfCb7fK0Y1vXIp6V3FClZ3bswI14PG6Av7yCUH3fiVibwGsmLCESsQ8DECCe3fpwomIxOdcSaIiRRVdn5TFifhQwSRH6AYwLwjQuLEmb3DkjfoYylq/LtclkkC3CgXz1lc3M8yenJxLttY3dDwW+eUEbaWcuX2v0wg3LorPMVkqMP3ttovflf+AK8u/eOS0SLLquxHSAnSJulNgDzMKP7PC7TY2z/T9N3rVlcZZGQC5bdvqJ5Hjka+C6BVT5Ybz48hb90//tCLBSwAfH0t8DXpMgkybAI17LkPmLjkPdV8d7+kX+OH9PXfoLocpWyPzQzOXEToKicEAVxrJBFE69vhPpfaBIk5iMD7HKQB4zLbx3d7Xz4NRYT78IKOz78Lzj8iFICiC3ZWN9Z+tKpuPySWgAxYFP3SLagNgm5pRrB+3JiZ7XRs/H53K9LuHQiQdA1Joa6x1i0oOAC1/rrpBgcdMxj0CopnrL0lMgt0lEE7M1VxbB7qnxt0/mElOY9FaUOe4hSNoYcVvqtnbtLtaFfAeMUoqNYL8Y0Uzke16w9/IvPd8CLzq5xLdRNaCBqHVp7OAQkx4keJJZ8mPhXmEXOF/9R59mnxZT1sSWa9m26Zy8mDgH9DnAh36hQADguNZBkTQJIo9U3/vG48W4wAAIOKBbW9/3tMbrIEpanDqS/DXxTkjspSKSD2hA8ZXRw8NEwSmQsxgIvRqNRq1CLtxsw23blDtPQZ1Xbs+ExbZiEAA0NLzi3shWVBmT5uuTlVeLbcdliJb82LxDKAak1Dc/hTFKjrOK/wa/A3rQ7dfNECyuAAAAAElFTkSuQmCC"
 
 const BG="#0A0A0A",CARD="#161616",CARD2="#1A1A1A",BORDER="rgba(255,255,255,0.08)",BORDER2="#2A2A2A",TEXT="#FFFFFF",MUTED="#B0B0B0",MUTED2="#666666"
@@ -156,8 +156,21 @@ function decompressArtPeriod(c){
   return rows.map(r=>({y:r[0],m:r[1],proveedor:r[2]>=0?provTable[r[2]]:null,rubro:r[3]>=0?rubTable[r[3]]:null,
     arts:r[4].map(a=>({name:artTable[a[0]],precio:a[1],cantidad:a[2],rentabilidad:a[3]>=0?rentTable[a[3]]:null}))}))
 }
+// v34: fact cliente × artículo con período y dimensiones filtrables (una clave por archivo importado)
+const CAF_DIMS=["cliente","articulo","proveedor","rubro","vendedor","rentabilidad","provincia","empresa","zona"]
+function compressCliArtFact(fact){
+  const tables={},ix={};CAF_DIMS.forEach(f=>{tables[f]=[];ix[f]={}})
+  const gi=(f,v)=>{if(v==null) return -1;if(!(v in ix[f])){ix[f][v]=tables[f].length;tables[f].push(v)}return ix[f][v]}
+  const rows=(fact||[]).map(e=>[e.y,e.m,...CAF_DIMS.map(f=>gi(f,e[f])),Math.round(e.precio),e.cantidad])
+  return{tables,rows}
+}
+function decompressCliArtFact(c){
+  if(!c||!c.rows) return[]
+  const{tables,rows}=c,n=CAF_DIMS.length
+  return rows.map(r=>{const e={y:r[0],m:r[1]};CAF_DIMS.forEach((f,i)=>{const v=r[2+i];e[f]=v>=0?tables[f][v]:null});e.precio=r[2+n];e.cantidad=r[3+n];return e})
+}
 function buildCube(rawRecords){
-  const cm={},am={},pm={},rm={},apm={},clm={},acm={}
+  const cm={},am={},pm={},rm={},apm={},clm={},acm={},cafm={}
   for(const r of rawRecords){
     const ck=`${r.y}|${r.m}|${r.proveedor??''} |${r.rubro??''} |${r.vendedor??''} |${r.rentabilidad??''} |${r.provincia??''} |${r.cliente??''} |${r.empresa??''} |${r.localidad??''} |${r.zona??''} `
     if(!cm[ck]) cm[ck]={y:r.y,m:r.m,precio:0,cantidad:0,costo:0,rows:0,proveedor:r.proveedor,rubro:r.rubro,vendedor:r.vendedor,rentabilidad:r.rentabilidad,provincia:r.provincia,cliente:r.cliente,empresa:r.empresa,localidad:r.localidad,zona:r.zona}
@@ -170,6 +183,11 @@ function buildCube(rawRecords){
       if(r.rubro){if(!rm[r.rubro]) rm[r.rubro]={};if(!rm[r.rubro][art]) rm[r.rubro][art]={precio:0,cantidad:0};rm[r.rubro][art].precio+=r.precio;rm[r.rubro][art].cantidad+=r.cantidad}
       if(r.cliente){if(!clm[r.cliente]) clm[r.cliente]={};if(!clm[r.cliente][art]) clm[r.cliente][art]={precio:0,cantidad:0};clm[r.cliente][art].precio+=r.precio;clm[r.cliente][art].cantidad+=r.cantidad}
       if(r.cliente){if(!acm[art]) acm[art]={};if(!acm[art][r.cliente]) acm[art][r.cliente]={precio:0,cantidad:0};acm[art][r.cliente].precio+=r.precio;acm[art][r.cliente].cantidad+=r.cantidad}
+      if(r.cliente){
+        const fk=`${r.y}|${r.m}|${r.cliente}|${art}|${r.proveedor??''}|${r.rubro??''}|${r.vendedor??''}|${r.rentabilidad??''}|${r.provincia??''}|${r.empresa??''}|${r.zona??''}`
+        if(!cafm[fk]) cafm[fk]={y:r.y,m:r.m,cliente:r.cliente,articulo:art,proveedor:r.proveedor??null,rubro:r.rubro??null,vendedor:r.vendedor??null,rentabilidad:r.rentabilidad??null,provincia:r.provincia??null,empresa:r.empresa??null,zona:r.zona??null,precio:0,cantidad:0}
+        cafm[fk].precio+=r.precio;cafm[fk].cantidad+=r.cantidad
+      }
       // artPeriod: key = "y|m|prov|rubro" → {art: {precio,cant}}
       const apk=`${r.y}|${r.m}|${r.proveedor??''}|${r.rubro??''}`
       if(!apm[apk]) apm[apk]={y:r.y,m:r.m,proveedor:r.proveedor??null,rubro:r.rubro??null,arts:{}}
@@ -187,7 +205,7 @@ function buildCube(rawRecords){
     return out
   }
   const artPeriod=Object.values(apm).map(e=>({y:e.y,m:e.m,proveedor:e.proveedor,rubro:e.rubro,arts:Object.entries(e.arts).map(([name,v])=>({name,precio:Math.round(v.precio),cantidad:v.cantidad,rentabilidad:v.rentabilidad}))}))
-  return{cube:Object.values(cm),articulos:Object.values(am),provArts:buildXRefs(pm,20),ruboArts:buildXRefs(rm,20),artPeriod,cliArts:buildXRefs(clm,null),artCli:buildXRefs(acm,null)}
+  return{cube:Object.values(cm),articulos:Object.values(am),provArts:buildXRefs(pm,20),ruboArts:buildXRefs(rm,20),artPeriod,cliArts:buildXRefs(clm,null),artCli:buildXRefs(acm,null),cliArtFact:Object.values(cafm)}
 }
 function mergeCubes(a,b){
   const m={}
@@ -740,8 +758,50 @@ function XRefList({label,rows,hasCantidad}){
     </div>
   )
 }
-function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades,cliArts}){
+function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades,cliArts,artPeriod,fRubro,fProv,cafByCapa,cafOk,capasSinFact,topFilters}){
   const[sel,setSel]=useState(null)
+  // v33: mapa artículo → rubros/proveedores (desde artPeriod) para acotar los artículos del cliente a los filtros de la barra superior
+  const artDim=React.useMemo(()=>{
+    const m={}
+    ;(artPeriod||[]).forEach(e=>(e.arts||[]).forEach(a=>{
+      if(!m[a.name]) m[a.name]={rubros:new Set(),provs:new Set()}
+      if(e.rubro) m[a.name].rubros.add(e.rubro)
+      if(e.proveedor) m[a.name].provs.add(e.proveedor)
+    }))
+    return m
+  },[artPeriod])
+  const fRub=fRubro||[],fPrv=fProv||[]
+  const artFiltroActivo=(fRub.length>0||fPrv.length>0)&&Object.keys(artDim).length>0
+  // v34: índice cliente → filas del fact (todas las capas)
+  const cafIdx=React.useMemo(()=>{
+    if(!cafOk) return null
+    const ix={};Object.values(cafByCapa||{}).forEach(rows=>rows.forEach(e=>{(ix[e.cliente]||(ix[e.cliente]=[])).push(e)}))
+    return ix
+  },[cafByCapa,cafOk])
+  const tf=topFilters||{}
+  const inc=(arr,v)=>!arr||!arr.length||arr.includes(v)
+  const filtrosNoRubroActivos=(tf.fDesde&&tf.fDesde!=="__ALL__")||(tf.fHasta&&tf.fHasta!=="__ALL__")||[tf.fVend,tf.fRentab,tf.fPcia,tf.fEmpresa,tf.fZona].some(a=>a&&a.length)
+  const artsDeCliente=name=>{
+    if(cafIdx){
+      const agg={}
+      ;(cafIdx[name]||[]).forEach(e=>{
+        const rp=toPeriod(e.y,e.m)
+        if(tf.fDesde&&tf.fDesde!=="__ALL__"&&rp<parseInt(tf.fDesde)) return
+        if(tf.fHasta&&tf.fHasta!=="__ALL__"&&rp>parseInt(tf.fHasta)) return
+        if(!inc(tf.fProv,e.proveedor)||!inc(tf.fRubro,e.rubro)||!inc(tf.fVend,e.vendedor)||!inc(tf.fRentab,e.rentabilidad)||!inc(tf.fPcia,e.provincia)||!inc(tf.fEmpresa,e.empresa)||!inc(tf.fZona,e.zona)) return
+        const a=agg[e.articulo]||(agg[e.articulo]=[e.articulo,0,0]);a[1]+=e.precio;a[2]+=e.cantidad
+      })
+      return Object.values(agg).sort((a,b)=>b[1]-a[1])
+    }
+    const rows=cliArts?.[name]
+    if(!rows||!artFiltroActivo) return rows
+    return rows.filter(([art])=>{
+      const d=artDim[art];if(!d) return false
+      if(fRub.length&&!fRub.some(r=>d.rubros.has(r))) return false
+      if(fPrv.length&&!fPrv.some(p=>d.provs.has(p))) return false
+      return true
+    })
+  }
   const[search,setSearch]=useState("")
   const[metric,setMetric]=useState("pesos")
   const cm={}
@@ -797,7 +857,8 @@ function ClientesTab({filteredRecords,meta,totalVentas,totalUnidades,cliArts}){
                 {Object.keys(c.proveedores).length>0&&<div style={{flex:1,minWidth:160}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Proveedores</div>{Object.entries(c.proveedores).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([p,val])=><div key={p} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:120}}>{p}</span><span style={{fontSize:11,fontWeight:500,color:BRAND}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:BRAND,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
                 {Object.keys(c.vendedores).length>0&&<div style={{flex:1,minWidth:150}}><div style={{fontSize:9,color:MUTED,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8}}>Atendido por</div>{Object.entries(c.vendedores).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([v,val])=><div key={v} style={{marginBottom:4}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:11,color:TEXT,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{v}</span><span style={{fontSize:11,fontWeight:500,color:ACCENT3}}>{fmtM(val)}</span></div><div style={{height:2,background:"#e0e4f0",borderRadius:1}}><div style={{height:"100%",width:`${val/c.ventas*100}%`,background:ACCENT3,borderRadius:1,opacity:0.6}}/></div></div>)}</div>}
               </div>
-              <XRefList label="Artículos" rows={cliArts?.[c.name]} hasCantidad={meta?.hasCantidad}/>
+              {!cafOk&&filtrosNoRubroActivos&&<div onClick={e=>e.stopPropagation()} style={{marginTop:10,fontSize:11,color:BRAND,background:BRAND_LIGHT,border:`1px solid ${BRAND}40`,borderRadius:6,padding:"6px 10px"}}>⚠ Los montos de artículos son acumulados y no respetan fechas, vendedor, zona, provincia, empresa ni rentabilidad.{capasSinFact>0?` Reimportá ${capasSinFact} archivo${capasSinFact===1?"":"s"} marcado${capasSinFact===1?"":"s"} "sin detalle" en Archivos importados para tenerlos exactos.`:" Reimportá los archivos para tenerlos exactos."}</div>}
+              <XRefList label={cafIdx?"Artículos":artFiltroActivo?`Artículos · ${[fRub.length?(fRub.length===1?fRub[0]:`${fRub.length} rubros`):null,fPrv.length?(fPrv.length===1?fPrv[0]:`${fPrv.length} proveedores`):null].filter(Boolean).join(" · ")}`:"Artículos"} rows={artsDeCliente(c.name)} hasCantidad={meta?.hasCantidad}/>
               </>
             )}
           </div>
@@ -1040,7 +1101,7 @@ function ImportedFilesPanel({capas,onAdd,onDelete,onClose,onClearAll}){
               <i className="ti ti-file-spreadsheet" style={{fontSize:20,color:BRAND,flexShrink:0}} aria-hidden="true"/>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{color:TEXT,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
-                <div style={{color:MUTED2,fontSize:11,marginTop:2}}>Cargado {fmtCapaDate(c.importedAt)} · {fmtN(c.rows)} filas{c.periods?.length?` · ${c.periods.length} período${c.periods.length===1?"":"s"}`:""}</div>
+                <div style={{color:MUTED2,fontSize:11,marginTop:2}}>Cargado {fmtCapaDate(c.importedAt)} · {fmtN(c.rows)} filas{c.periods?.length?` · ${c.periods.length} período${c.periods.length===1?"":"s"}`:""}{!c.hasCliArtFact&&<span style={{color:BRAND}}> · sin detalle cliente×artículo</span>}</div>
               </div>
               <div onClick={()=>onDelete(c.id)} title="Eliminar archivo" style={{display:"flex",alignItems:"center",gap:4,cursor:"pointer",color:ACCENT5,flexShrink:0,padding:"4px 8px",borderRadius:6,border:`1px solid ${ACCENT5}40`,fontSize:11}}>
                 <i className="ti ti-trash" style={{fontSize:14}} aria-hidden="true"/>
@@ -2188,6 +2249,7 @@ function App(){
   const[cliArts,setCliArts]=useState({})
   const[artCli,setArtCli]=useState({})
   const[artPeriod,setArtPeriod]=useState([])
+  const[cafByCapa,setCafByCapa]=useState({})
   const[meta,setMeta]=useState(null)
   const[storageInfo,setStorageInfo]=useState(null)
   const[rawHeaders,setRawHeaders]=useState(null)
@@ -2242,6 +2304,9 @@ function App(){
       if(ap.length===0) ap=rebuildArtPeriod(c||[],pa||{},ra||{})
       setCube(c||[]);setArticulos(a||[]);setMeta(m||{});setProvArts(pa||{});setRuboArts(ra||{});setArtPeriod(ap);setCliArts(cla||{});setArtCli(acli||{})
       setCapas(capasParsed)
+      const conFact=capasParsed.filter(cp=>cp.hasCliArtFact)
+      if(conFact.length>0) Promise.all(conFact.map(cp=>dbGet(CAFK+cp.id).then(v=>[cp.id,v?decompressCliArtFact(JSON.parse(v)):null]).catch(()=>[cp.id,null])))
+        .then(pairs=>{const o={};pairs.forEach(([id,rows])=>{if(rows) o[id]=rows});setCafByCapa(o)})
     })
     loadCanalBase().then(cb=>{
       if(!cb) return
@@ -2333,7 +2398,7 @@ function App(){
         localidad:has("localidad")?(String(get(row,"localidad")??"").trim()||"Sin localidad"):null,
         zona:has("zona")?(String(get(row,"zona")??"").trim()||"Sin zona"):null}
     }).filter(r=>r.y>0||r.precio>0)
-    const{cube:nc,articulos:na,provArts:npa,ruboArts:nra,artPeriod:nap,cliArts:ncla,artCli:naclii}=buildCube(parsed)
+    const{cube:nc,articulos:na,provArts:npa,ruboArts:nra,artPeriod:nap,cliArts:ncla,artCli:naclii,cliArtFact:ncaf}=buildCube(parsed)
     const mc=mergeCubes(records,nc),ma=mergeArts(articulos||[],na)
     const mpa=mergeXRef(provArts||{},npa,20),mra=mergeXRef(ruboArts||{},nra,20)
     const mcla=mergeXRef(cliArts||{},ncla),macli=mergeXRef(artCli||{},naclii)
@@ -2342,7 +2407,7 @@ function App(){
     const periods=[...new Set(parsed.map(r=>toPeriod(r.y,r.m)).filter(v=>v>0))].sort((a,b)=>a-b)
     setRawHeaders(null);setRawRows(null)
     const map=mergeArtPeriod(artPeriod||[],nap)
-    setPendingImport({newCube:nc,newArts:na,newProvArts:npa,newRuboArts:nra,newMProvArts:mpa,newMRuboArts:mra,newArtPeriod:nap,newMArtPeriod:map,newCliArts:ncla,newArtCli:naclii,newMCliArts:mcla,newMArtCli:macli,meta:newMeta,fileName:pendingFileName,stats:{rows:parsed.length,ventas,unidades,hasCantidad:has("cantidad"),periods,existingRows:meta?.totalRows||0,cubeKB}})
+    setPendingImport({newCube:nc,newArts:na,newProvArts:npa,newRuboArts:nra,newMProvArts:mpa,newMRuboArts:mra,newArtPeriod:nap,newMArtPeriod:map,newCliArts:ncla,newArtCli:naclii,newMCliArts:mcla,newMArtCli:macli,newCliArtFact:ncaf||[],meta:newMeta,fileName:pendingFileName,stats:{rows:parsed.length,ventas,unidades,hasCantidad:has("cantidad"),periods,existingRows:meta?.totalRows||0,cubeKB}})
   },[rawHeaders,rawRows,records,articulos,meta,pendingFileName,cliArts,artCli])
 
   const handleImportConfirm=useCallback(async()=>{
@@ -2370,6 +2435,11 @@ function App(){
         provArts:pendingImport.newProvArts||{},ruboArts:pendingImport.newRuboArts||{},artPeriod:pendingImport.newArtPeriod||[],
         cliArts:pendingImport.newCliArts||{},artCli:pendingImport.newArtCli||{},
       }
+      const nFact=pendingImport.newCliArtFact||[]
+      if(nFact.length>0){
+        try{await dbSet(CAFK+nuevaCapa.id,JSON.stringify(compressCliArtFact(nFact)));nuevaCapa.hasCliArtFact=true;setCafByCapa(prev=>({...prev,[nuevaCapa.id]:nFact}))}
+        catch(e){console.warn("No se pudo guardar el detalle cliente×artículo:",e)}
+      }
       const nuevasCapas=[...capas,nuevaCapa]
       setCapas(nuevasCapas)
       try{await dbSet(CK,JSON.stringify(nuevasCapas))}catch(e){}
@@ -2388,12 +2458,14 @@ function App(){
     }catch(e){setSaveStage("error");setSaveProgress(0);setSaveMsg(String(e))}
   },[pendingImport,records,articulos,meta,capas,fileQueue,parseFile])
 
-  const handleClear=async()=>{if(!confirm("¿Eliminar todos los datos?")) return;await clearData();try{await dbDelete(CK)}catch(e){};setCube([]);setArticulos([]);setMeta({});setCapas([])}
+  const handleClear=async()=>{if(!confirm("¿Eliminar todos los datos?")) return;await clearData();try{await dbDelete(CK)}catch(e){};await Promise.all(capas.filter(c=>c.hasCliArtFact).map(c=>dbDelete(CAFK+c.id).catch(()=>{})));setCafByCapa({});setCube([]);setArticulos([]);setMeta({});setCapas([])}
 
   const handleDeleteCapa=useCallback(async id=>{
     const capa=capas.find(c=>c.id===id);if(!capa) return
     if(!confirm(`¿Eliminar "${capa.name}"? Se recalculará el dashboard con los archivos restantes.`)) return
     const nuevasCapas=capas.filter(c=>c.id!==id)
+    if(capa.hasCliArtFact){try{await dbDelete(CAFK+id)}catch(e){}}
+    setCafByCapa(prev=>{const o={...prev};delete o[id];return o})
     if(nuevasCapas.length===0){
       await clearData();try{await dbDelete(CK)}catch(e){}
       setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});setArtPeriod([]);setCliArts({});setArtCli({});setCapas([])
@@ -2619,6 +2691,10 @@ function App(){
     return true
   })
   const filteredRows=filtered.reduce((s,r)=>s+(r.rows||1),0)
+  // v34: el detalle cliente×artículo es exacto sólo si TODOS los datos cargados tienen fact
+  const cafCapasRows=capas.reduce((s,c)=>s+(c.hasCliArtFact&&cafByCapa[c.id]?(c.rows||0):0),0)
+  const cafOk=capas.length>0&&capas.every(c=>c.hasCliArtFact&&cafByCapa[c.id])&&cafCapasRows>=(meta?.totalRows||0)
+  const capasSinFact=capas.filter(c=>!c.hasCliArtFact).length
   const totalRows=meta?.totalRows||records.reduce((s,r)=>s+(r.rows||1),0)
   const lastUpdateISO=capas.length?capas.reduce((max,c)=>c.importedAt>max?c.importedAt:max,capas[0].importedAt):null
   const lastUpdateLabel=lastUpdateISO?(()=>{try{return new Date(lastUpdateISO).toLocaleString("es-AR",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}catch(e){return null}})():null
@@ -2827,7 +2903,7 @@ function App(){
                     </div>
                   </>
                 )}
-                {safeTab==="clientes"&&<ClientesTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades} cliArts={cliArts}/>}
+                {safeTab==="clientes"&&<ClientesTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades} cliArts={cliArts} artPeriod={artPeriod} fRubro={fRubro} fProv={fProv} cafByCapa={cafByCapa} cafOk={cafOk} capasSinFact={capasSinFact} topFilters={{fDesde,fHasta,fProv,fRubro,fVend,fRentab,fPcia,fEmpresa,fZona}}/>}
                 {safeTab==="canales"&&<CanalesTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="proveedores"&&<ProveedoresTab data={provData} filteredRecords={filtered} provArts={provArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="rubros"&&<RubrosTab data={rubroData} filteredRecords={filtered} ruboArts={ruboArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
