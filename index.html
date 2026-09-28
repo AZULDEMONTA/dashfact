@@ -470,7 +470,7 @@ function DetailTab({data,hasCantidad,totalVentas,totalUnidades,dimLabel,color}){
     <BarList data={data} colorFn={color} totalVentas={totalVentas} totalUnidades={totalUnidades} hasCantidad={hasCantidad} limit={15}/>
   </ChartCard>
 )}
-function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,artPeriod,provArts,ruboArts,artCli,topFilters}){
+function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,artPeriod,provArts,ruboArts,artCli,topFilters,cafByCapa,cafOk}){
   // artPeriod: [{y,m,proveedor,rubro,arts:[{name,precio,cantidad,rentabilidad},...]}]
   // data: artData global (all-time totals), used when no filters applied
   const[metric,setMetric]=useState("pesos")
@@ -482,6 +482,12 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,artPeriod,
 
   // Derive available years, provs, rubros from artPeriod (if available) else from data
   const hasAP=(artPeriod||[]).length>0
+  // v37: clientes del artículo desde el fact exacto cliente×artículo (respeta año/mes/proveedor/rubro de esta vista)
+  const cafArtIdx=React.useMemo(()=>{
+    if(!cafOk) return null
+    const ix={};Object.values(cafByCapa||{}).forEach(rows=>rows.forEach(e=>{(ix[e.articulo]||(ix[e.articulo]=[])).push(e)}))
+    return ix
+  },[cafByCapa,cafOk])
   const allYears=hasAP?[...new Set(artPeriod.map(e=>e.y).filter(v=>v>0))].sort((a,b)=>a-b):[]
   const[filterYear,setFilterYear]=useState("__ALL__")
   const[mesDesde,setMesDesde]=useState("__ALL__")
@@ -583,6 +589,20 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,artPeriod,
   const inputStyle={background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:6,color:TEXT,fontSize:12,padding:"5px 10px",outline:"none"}
   const selStyle={...inputStyle,cursor:"pointer"}
 
+  const clientesDeArt=name=>{
+    if(!cafArtIdx) return artCli?.[name]
+    const agg={}
+    ;(cafArtIdx[name]||[]).forEach(e=>{
+      if(filterYear!=="__ALL__"&&e.y!==parseInt(filterYear)) return
+      if(mesDesde!=="__ALL__"&&e.m<parseInt(mesDesde)) return
+      if(mesHasta!=="__ALL__"&&e.m>parseInt(mesHasta)) return
+      if(filterProv!=="__ALL__"&&e.proveedor!==filterProv) return
+      if(filterRubro!=="__ALL__"&&e.rubro!==filterRubro) return
+      const a=agg[e.cliente]||(agg[e.cliente]=[e.cliente,0,0]);a[1]+=e.precio;a[2]+=e.cantidad
+    })
+    return Object.values(agg).sort((a,b)=>b[1]-a[1])
+  }
+
   const needsReimport=!hasAP&&(filterYear!=="__ALL__"||mesDesde!=="__ALL__"||mesHasta!=="__ALL__")
 
   return(
@@ -663,7 +683,8 @@ function ArticulosTable({data,hasCantidad,hasRentabilidad,totalVentas,artPeriod,
             {selArt===d.name&&(
               <tr>
                 <td colSpan={4+(hasCantidad?1:0)+(hasRentabilidad?1:0)} style={{padding:"0 8px 10px 8px"}}>
-                  <XRefList label="Clientes" rows={artCli?.[d.name]} hasCantidad={hasCantidad}/>
+                  {!cafArtIdx&&<div style={{marginTop:8,fontSize:11,color:BRAND,background:BRAND_LIGHT,border:`1px solid ${BRAND}40`,borderRadius:6,padding:"6px 10px"}}>⚠ Lista de clientes acumulada: puede faltar algún cliente de archivos importados sin detalle cliente×artículo. Revisá Archivos importados y reimportá los marcados.</div>}
+                  <XRefList label="Clientes" rows={clientesDeArt(d.name)} hasCantidad={hasCantidad}/>
                 </td>
               </tr>
             )}
@@ -754,7 +775,9 @@ function XRefList({label,rows,hasCantidad}){
   const[searchXR,setSearchXR]=useState("")
   const[showAll,setShowAll]=useState(false)
   if(!rows||rows.length===0) return null
-  const filtered=searchXR?rows.filter(r=>r[0].toLowerCase().includes(searchXR.toLowerCase())):rows
+  const normXR=v=>String(v??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()
+  const qTok=normXR(searchXR).split(" ").filter(Boolean)
+  const filtered=qTok.length?rows.filter(r=>{const n=normXR(r[0]);return qTok.every(t=>n.includes(t))}):rows
   const shown=showAll?filtered:filtered.slice(0,20)
   return(
     <div onClick={e=>e.stopPropagation()} style={{flex:"1 1 100%",marginTop:8,paddingTop:10,borderTop:`1px solid ${BORDER}`}}>
@@ -2944,7 +2967,7 @@ function App(){
                 {safeTab==="rubros"&&<RubrosTab data={rubroData} filteredRecords={filtered} ruboArts={ruboArts} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="vendedores"&&<VendedoresTab filteredRecords={filtered} meta={meta} totalVentas={totalVentas} totalUnidades={totalUnidades}/>}
                 {safeTab==="evolucion"&&<EvolucionTab filteredRecords={filtered} meta={meta}/>}
-                {safeTab==="articulos"&&<ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas} artPeriod={artPeriod} provArts={provArts} ruboArts={ruboArts} artCli={artCli} topFilters={{fProv,fRubro,fDesde,fHasta,fVend,fPcia,fCliente,fCanal,fEmpresa,fZona}}/>}
+                {safeTab==="articulos"&&<ArticulosTable data={artData} hasCantidad={meta?.hasCantidad} hasRentabilidad={meta?.hasRentabilidad} totalVentas={totalVentas} artPeriod={artPeriod} provArts={provArts} ruboArts={ruboArts} artCli={artCli} cafByCapa={cafByCapa} cafOk={cafOk} topFilters={{fProv,fRubro,fDesde,fHasta,fVend,fPcia,fCliente,fCanal,fEmpresa,fZona}}/>}
                 {safeTab==="rentabilidad"&&<RentabilidadSection data={rentData} artData={artData} hasCantidad={meta?.hasCantidad}/>}
                 {safeTab==="zonas"&&<DetailTab data={zonaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Zona" color={ACCENT6}/>}
                 {safeTab==="provincias"&&<DetailTab data={pciaData} hasCantidad={meta?.hasCantidad} totalVentas={totalVentas} totalUnidades={totalUnidades} dimLabel="Provincia" color={ACCENT7}/>}
