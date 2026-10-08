@@ -121,6 +121,14 @@ async function getCapaPayload(c){
   if(!v) throw new Error(`No se encontraron los datos del archivo "${c.name}"`)
   return JSON.parse(v)
 }
+// v38: Supabase devuelve errores como objetos ({message,details,hint,code}); esto arma un texto legible
+function errMsg(e){
+  if(!e) return "error desconocido"
+  if(typeof e==="string") return e
+  const p=[e.message,e.details,e.hint,e.code&&`código ${e.code}`].filter(Boolean)
+  if(p.length) return p.join(" · ")
+  try{return JSON.stringify(e)}catch(_){return String(e)}
+}
 async function dbDeletePrefix(prefix){
   const{error}=await _sb.from("dashfact_data").delete().like("key",prefix+"%")
   if(error) throw error
@@ -2495,7 +2503,7 @@ function App(){
       }
       const nuevasCapas=[...capas,nuevaCapa]
       try{await saveCapasIndex(nuevasCapas)}
-      catch(e){console.error("Registro de archivos no guardado:",e);throw new Error(`Las ventas de "${nuevaCapa.name}" se guardaron, pero no su registro en Archivos importados (${e.message||e}). Usá "Eliminar todo" y volvé a cargar.`)}
+      catch(e){console.error("Registro de archivos no guardado:",e);throw new Error(`Las ventas de "${nuevaCapa.name}" se guardaron, pero no su registro en Archivos importados (${errMsg(e)}). Usá "Eliminar todo" y volvé a cargar.`)}
       setCapas(nuevasCapas.map(capaLight))
       if(fileQueue.length>0){
         const[next,...resto]=fileQueue
@@ -2509,7 +2517,7 @@ function App(){
         setSaveStage("saved");setSaveProgress(100);setSaveMsg(`Guardado · ${fmtN(kb)} KB`)
         setTimeout(()=>{setSaveStage("idle");setSaveProgress(0);setSaveMsg("")},5000)
       }
-    }catch(e){setSaveStage("error");setSaveProgress(0);setSaveMsg(String(e))}
+    }catch(e){setSaveStage("error");setSaveProgress(0);setSaveMsg(errMsg(e))}
   },[pendingImport,records,articulos,meta,capas,fileQueue,parseFile])
 
   const handleClear=async()=>{if(!confirm("¿Eliminar todos los datos?")) return;await clearData();try{await dbDelete(CK)}catch(e){};await Promise.all([dbDeletePrefix(CAFK),dbDeletePrefix(CDK)].map(pr=>pr.catch(e=>console.warn("Borrado por prefijo:",e))));setCafByCapa({});setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});setArtPeriod([]);setCliArts({});setArtCli({});setCapas([])}
@@ -2518,17 +2526,18 @@ function App(){
     const capa=capas.find(c=>c.id===id);if(!capa) return
     if(!confirm(`¿Eliminar "${capa.name}"? Se recalculará el dashboard con los archivos restantes.`)) return
     const nuevasCapas=capas.filter(c=>c.id!==id)
-    if(capa.hasCliArtFact){try{await dbDelete(CAFK+id)}catch(e){}}
-    try{await dbDelete(CDK+id)}catch(e){}
-    setCafByCapa(prev=>{const o={...prev};delete o[id];return o})
+    // v38: el detalle del archivo se borra recién DESPUÉS de guardar el recálculo; si algo falla, el archivo queda intacto
+    const borrarDetalle=async()=>{if(capa.hasCliArtFact){try{await dbDelete(CAFK+id)}catch(e){}};try{await dbDelete(CDK+id)}catch(e){}}
     if(nuevasCapas.length===0){
-      await clearData();try{await dbDelete(CK)}catch(e){}
-      setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});setArtPeriod([]);setCliArts({});setArtCli({});setCapas([])
+      try{await clearData();await dbDelete(CK)}catch(e){console.error("Eliminar archivo:",e);alert(`No se pudo eliminar "${capa.name}". El archivo sigue cargado.\n\nDetalle: ${errMsg(e)}`);return}
+      await borrarDetalle()
+      setCafByCapa({});setCube([]);setArticulos([]);setMeta({});setProvArts({});setRuboArts({});setArtPeriod([]);setCliArts({});setArtCli({});setCapas([])
       return
     }
     let mc=[],ma=[],mpa={},mra={},map=[],mm={totalRows:0},mcla={},macli={}
     let payloads
-    try{payloads=await Promise.all(nuevasCapas.map(getCapaPayload))}catch(e){alert("Error al recalcular: "+(e.message||e));return}
+    try{payloads=await Promise.all(nuevasCapas.map(c=>getCapaPayload(c).catch(e=>{throw new Error(`Archivo "${c.name}": ${errMsg(e)}`)})))}
+    catch(e){console.error("Recalcular:",e);alert(`No se pudo eliminar "${capa.name}" (no se modificó nada).\n\nDetalle: ${errMsg(e)}`);return}
     nuevasCapas.forEach((c0,i)=>{const c={...c0,...payloads[i]}
       mc=mergeCubes(mc,decompressCube(c.cube));ma=mergeArts(ma,decompressArts(c.arts))
       mpa=mergeXRef(mpa,c.provArts||{},20);mra=mergeXRef(mra,c.ruboArts||{},20)
@@ -2536,7 +2545,10 @@ function App(){
       map=mergeArtPeriod(map,c.artPeriod||[])
       mm={...mm,...(c.colsMeta||{}),totalRows:mm.totalRows+(c.rows||0)}
     })
-    try{await saveData(mc,ma,mm,mpa,mra,map,mcla,macli);await saveCapasIndex(nuevasCapas)}catch(e){alert("Error al recalcular: "+e)}
+    try{await saveData(mc,ma,mm,mpa,mra,map,mcla,macli);await saveCapasIndex(nuevasCapas)}
+    catch(e){console.error("Guardar recálculo:",e);alert(`No se pudo guardar el recálculo al eliminar "${capa.name}". El archivo sigue cargado; probá de nuevo en un rato.\n\nDetalle: ${errMsg(e)}`);return}
+    await borrarDetalle()
+    setCafByCapa(prev=>{const o={...prev};delete o[id];return o})
     setCube(mc);setArticulos(ma);setMeta(mm);setProvArts(mpa);setRuboArts(mra);setArtPeriod(map);setCliArts(mcla);setArtCli(macli);setCapas(nuevasCapas.map(capaLight))
   },[capas])
 
