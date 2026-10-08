@@ -91,18 +91,51 @@ const { useState, useEffect, useCallback, useRef } = React
 const SUPABASE_URL  = "https://fjgstefynjcjiwxtfxeo.supabase.co"
 const SUPABASE_KEY  = "sb_publishable_tahhaA3A2ZrQh2TquMpTZA_gJ2NqSNT"
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-async function dbGet(key){
+// v39: los valores grandes se guardan partidos en varias filas chicas ("key#gen:i") para no superar el
+// statement timeout de Supabase. La fila "key" queda como puntero {"__chunks":n,"gen":...}.
+// Los valores viejos guardados en una sola fila se siguen leyendo igual.
+const CHUNK=400000
+const CHUNK_TAG='{"__chunks":'
+async function dbGetRaw(key){
   const{data,error}=await _sb.from("dashfact_data").select("value").eq("key",key).maybeSingle()
   if(error) throw error
   return data?data.value:null
 }
-async function dbSet(key,value){
+async function dbSetRaw(key,value){
   const{error}=await _sb.from("dashfact_data").upsert({key,value,updated_at:new Date().toISOString()},{onConflict:"key"})
   if(error) throw error
+}
+async function dbGet(key){
+  const v=await dbGetRaw(key)
+  if(typeof v!=="string"||!v.startsWith(CHUNK_TAG)) return v
+  const ptr=JSON.parse(v)
+  const parts=await Promise.all(Array.from({length:ptr.__chunks},(_,i)=>dbGetRaw(`${key}#${ptr.gen}:${i}`)))
+  const falta=parts.findIndex(x=>x==null)
+  if(falta>=0) throw new Error(`Falta la parte ${falta+1}/${ptr.__chunks} de "${key}"`)
+  return parts.join("")
+}
+async function dbSet(key,value){
+  let gen=null
+  if(typeof value==="string"&&value.length>CHUNK){
+    gen=Date.now().toString(36)+Math.random().toString(36).slice(2,6)
+    const n=Math.ceil(value.length/CHUNK)
+    for(let i=0;i<n;i++) await dbSetRaw(`${key}#${gen}:${i}`,value.slice(i*CHUNK,(i+1)*CHUNK))
+    await dbSetRaw(key,JSON.stringify({__chunks:n,gen}))
+  }else{
+    await dbSetRaw(key,value)
+  }
+  // limpia las partes de guardados anteriores (si falla, solo queda basura inofensiva)
+  try{
+    let q=_sb.from("dashfact_data").delete().like("key",`${key}#%`)
+    if(gen) q=q.not("key","like",`${key}#${gen}:%`)
+    const{error}=await q;if(error) throw error
+  }catch(e){console.warn("Limpieza de partes viejas:",key,e)}
 }
 async function dbDelete(key){
   const{error}=await _sb.from("dashfact_data").delete().eq("key",key)
   if(error) throw error
+  const r=await _sb.from("dashfact_data").delete().like("key",`${key}#%`)
+  if(r.error) throw r.error
 }
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
@@ -320,7 +353,8 @@ async function saveData(cube,arts,meta,provArts,ruboArts,artPeriod,cliArts,artCl
   const aps=JSON.stringify(compressArtPeriod(artPeriod||[]))
   const cls=JSON.stringify(cliArts||{}),acs=JSON.stringify(artCli||{})
   const kb=Math.round((cs.length+as.length+ms.length+ps.length+rs.length+aps.length+cls.length+acs.length)/1024)
-  await Promise.all([dbSet(SK,cs),dbSet(AK,as),dbSet(MK,ms),dbSet(PAK,ps),dbSet(RAK,rs),dbSet(APK,aps),dbSet(CLK,cls),dbSet(ACK,acs)])
+  // v39: de a una (antes iban las 8 en paralelo y saturaban Supabase)
+  for(const[k,v] of [[SK,cs],[AK,as],[MK,ms],[PAK,ps],[RAK,rs],[APK,aps],[CLK,cls],[ACK,acs]]) await dbSet(k,v)
   return kb
 }
 async function clearData(){await Promise.all([dbDelete(SK),dbDelete(AK),dbDelete(MK),dbDelete(PAK),dbDelete(RAK),dbDelete(APK),dbDelete(CLK),dbDelete(ACK)])}
